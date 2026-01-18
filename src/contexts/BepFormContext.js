@@ -88,12 +88,16 @@ export const BepFormProvider = ({ children, initialData = null, bepType = '' }) 
         } = JSON.parse(savedState);
 
         const oneHour = 60 * 60 * 1000;
-        if (timestamp && Date.now() - timestamp < oneHour && !bepTypeState && savedBepType) {
-          reset(savedFormData, { keepDirty: false });
-          setBepTypeState(savedBepType);
-          setCompletedSections(new Set(savedCompleted || []));
-          if (savedDraft) {
+        if (timestamp && Date.now() - timestamp < oneHour) {
+          // Always restore currentDraft if it exists
+          if (savedDraft && !currentDraft) {
             setCurrentDraft(savedDraft);
+          }
+          // Only restore form data and bepType if not already set
+          if (!bepTypeState && savedBepType) {
+            reset(savedFormData, { keepDirty: false });
+            setBepTypeState(savedBepType);
+            setCompletedSections(new Set(savedCompleted || []));
           }
         }
       }

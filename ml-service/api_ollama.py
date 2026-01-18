@@ -18,8 +18,9 @@ from ollama_generator import get_ollama_generator
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Get model from environment or use default
+# Get model and base URL from environment or use defaults
 OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.2:3b')
+OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
 
 # Create FastAPI app
 app = FastAPI(
@@ -91,7 +92,7 @@ async def health_check():
     """Health check endpoint"""
     try:
         import requests
-        response = requests.get("http://localhost:11434/api/tags", timeout=5)
+        response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
         ollama_connected = response.status_code == 200
 
         return HealthResponse(

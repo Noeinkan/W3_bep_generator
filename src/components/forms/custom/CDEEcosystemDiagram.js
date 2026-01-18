@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
   ReactFlow,
   Background,
@@ -6,7 +6,9 @@ import {
   MiniMap,
   MarkerType,
   Position,
-  Handle
+  Handle,
+  useNodesState,
+  useEdgesState
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import {
@@ -38,14 +40,16 @@ const ICON_MAP = {
 /**
  * Custom Platform Node component for ReactFlow
  */
-const PlatformNode = ({ data }) => {
-  const { platform, role, template } = data;
+const PlatformNode = ({ data, selected }) => {
+  const { platform, role, template, editable, onEdit, onDelete } = data;
   const IconComponent = ICON_MAP[template.icon] || Settings;
 
   return (
     <div
-      className="relative bg-white rounded-xl border-2 shadow-lg p-4 min-w-[160px]"
-      style={{ borderColor: role.color }}
+      className={`relative bg-white rounded-xl border-2 shadow-lg p-4 min-w-[160px] transition-all ${
+        selected ? 'ring-2 ring-indigo-500 ring-offset-2' : ''
+      } ${editable ? 'cursor-move' : ''}`}
+      style={{ borderColor: selected ? '#6366f1' : role.color }}
     >
       {/* Handles for connections */}
       <Handle
@@ -107,6 +111,34 @@ const PlatformNode = ({ data }) => {
             )}
           </div>
         )}
+
+        {/* Edit/Delete buttons when selected and editable */}
+        {editable && selected && (
+          <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white rounded-lg shadow-lg border border-gray-200 p-1">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit && onEdit(platform.id);
+              }}
+              className="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+              title="Edit platform"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete && onDelete(platform.id);
+              }}
+              className="p-1.5 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+              title="Delete platform"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -120,18 +152,33 @@ const nodeTypes = {
 /**
  * CDEEcosystemDiagram
  * Auto-generated ecosystem diagram from platform/integration data
+ *
+ * @param {boolean} editable - Enable drag/edit mode
+ * @param {function} onPositionChange - Callback when node is dragged: (platformId, position) => void
+ * @param {function} onPlatformClick - Callback when platform is clicked: (platformId) => void
+ * @param {function} onPlatformEdit - Callback when edit button clicked: (platformId) => void
+ * @param {function} onPlatformDelete - Callback when delete button clicked: (platformId) => void
+ * @param {function} onIntegrationClick - Callback when edge is clicked: (integrationId) => void
+ * @param {string} selectedPlatformId - Currently selected platform ID
  */
 const CDEEcosystemDiagram = ({
   platforms = [],
   integrations = [],
   height = 400,
   showControls = true,
-  showMiniMap = false
+  showMiniMap = false,
+  editable = false,
+  onPositionChange = null,
+  onPlatformClick = null,
+  onPlatformEdit = null,
+  onPlatformDelete = null,
+  onIntegrationClick = null,
+  selectedPlatformId = null
 }) => {
-  // Generate nodes and edges from data
-  const { nodes, edges } = useMemo(() => {
+  // Generate initial nodes and edges from data
+  const { initialNodes, initialEdges } = useMemo(() => {
     if (platforms.length === 0) {
-      return { nodes: [], edges: [] };
+      return { initialNodes: [], initialEdges: [] };
     }
 
     // Group platforms by role
@@ -159,21 +206,27 @@ const CDEEcosystemDiagram = ({
       const x = START_X + (colIndex * COLUMN_WIDTH);
 
       rolePlatforms.forEach((platform, rowIndex) => {
-        const y = START_Y + (rowIndex * ROW_HEIGHT);
+        // Use stored position if available, otherwise calculate
+        const defaultY = START_Y + (rowIndex * ROW_HEIGHT);
+        const position = platform.position || { x, y: defaultY };
         const template = getPlatformById(platform.type);
 
-        platformPositions[platform.id] = { x, y };
+        platformPositions[platform.id] = position;
 
         nodes.push({
           id: platform.id,
           type: 'platform',
-          position: { x, y },
+          position,
           data: {
             platform,
             role,
-            template
+            template,
+            editable,
+            onEdit: onPlatformEdit,
+            onDelete: onPlatformDelete
           },
-          draggable: false
+          draggable: editable,
+          selected: platform.id === selectedPlatformId
         });
       });
     });
@@ -227,8 +280,42 @@ const CDEEcosystemDiagram = ({
       };
     }).filter(Boolean);
 
-    return { nodes, edges };
-  }, [platforms, integrations]);
+    return { initialNodes: nodes, initialEdges: edges };
+  }, [platforms, integrations, editable, selectedPlatformId, onPlatformEdit, onPlatformDelete]);
+
+  // Use state for nodes/edges when editable
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Sync nodes when platforms change
+  React.useEffect(() => {
+    setNodes(initialNodes);
+  }, [initialNodes, setNodes]);
+
+  React.useEffect(() => {
+    setEdges(initialEdges);
+  }, [initialEdges, setEdges]);
+
+  // Handle node drag end - persist position
+  const handleNodeDragStop = useCallback((event, node) => {
+    if (onPositionChange) {
+      onPositionChange(node.id, node.position);
+    }
+  }, [onPositionChange]);
+
+  // Handle node click
+  const handleNodeClick = useCallback((event, node) => {
+    if (onPlatformClick) {
+      onPlatformClick(node.id);
+    }
+  }, [onPlatformClick]);
+
+  // Handle edge click
+  const handleEdgeClick = useCallback((event, edge) => {
+    if (onIntegrationClick) {
+      onIntegrationClick(edge.id);
+    }
+  }, [onIntegrationClick]);
 
   // Empty state
   if (platforms.length === 0) {
@@ -254,11 +341,16 @@ const CDEEcosystemDiagram = ({
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        onNodesChange={editable ? onNodesChange : undefined}
+        onEdgesChange={editable ? onEdgesChange : undefined}
+        onNodeDragStop={editable ? handleNodeDragStop : undefined}
+        onNodeClick={editable ? handleNodeClick : undefined}
+        onEdgeClick={editable ? handleEdgeClick : undefined}
         fitView
         fitViewOptions={{ padding: 0.3 }}
-        nodesDraggable={false}
+        nodesDraggable={editable}
         nodesConnectable={false}
-        elementsSelectable={false}
+        elementsSelectable={editable}
         panOnDrag={true}
         zoomOnScroll={true}
         zoomOnPinch={true}

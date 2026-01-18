@@ -5,14 +5,18 @@ import {
   Trash2,
   Link2,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Layers,
   LayoutTemplate,
   Maximize2,
+  Minimize2,
   Eye,
   Edit3,
   ArrowRight,
   ArrowLeftRight,
-  X
+  X,
+  Grid3x3
 } from 'lucide-react';
 import FieldHeader from '../base/FieldHeader';
 import CDEPlatformCard from './CDEPlatformCard';
@@ -159,6 +163,10 @@ const CDEPlatformEcosystemInner = ({
   const [isNewIntegration, setIsNewIntegration] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [internalEditMode, setInternalEditMode] = useState(false);
+  const [showFocusSidebar, setShowFocusSidebar] = useState(true);
+  const [focusPlatformSelector, setFocusPlatformSelector] = useState(false);
+  const [selectedPlatformId, setSelectedPlatformId] = useState(null);
+  const [snapToGrid, setSnapToGrid] = useState(true);
 
   const saveTimeoutRef = useRef(null);
 
@@ -233,6 +241,35 @@ const CDEPlatformEcosystemInner = ({
       )
     });
   };
+
+  // Handle platform position change from diagram drag
+  const handlePositionChange = useCallback((platformId, position) => {
+    updateData({
+      platforms: data.platforms.map(p =>
+        p.id === platformId ? { ...p, position } : p
+      )
+    });
+  }, [data.platforms, updateData]);
+
+  // Handle platform click in diagram
+  const handlePlatformClick = useCallback((platformId) => {
+    setSelectedPlatformId(prev => prev === platformId ? null : platformId);
+  }, []);
+
+  // Handle platform edit from diagram
+  const handlePlatformEdit = useCallback((platformId) => {
+    setExpandedPlatformId(platformId);
+    setShowFocusSidebar(true);
+  }, []);
+
+  // Handle integration click in diagram
+  const handleIntegrationClick = useCallback((integrationId) => {
+    const integration = data.integrations.find(i => i.id === integrationId);
+    if (integration) {
+      setEditingIntegration(integration);
+      setIsNewIntegration(false);
+    }
+  }, [data.integrations]);
 
   // Integration operations
   const openNewIntegration = () => {
@@ -679,22 +716,268 @@ const CDEPlatformEcosystemInner = ({
         />
       )}
 
-      {/* Fullscreen Modal */}
+      {/* Fullscreen Modal with Full Editing */}
       <FullscreenDiagramModal
         isOpen={showFullscreen}
-        onClose={() => setShowFullscreen(false)}
+        onClose={() => {
+          setShowFullscreen(false);
+          setSelectedPlatformId(null);
+        }}
         closeOnClickOutside={false}
       >
-        <div className="w-full h-full p-6">
-          <ReactFlowProvider>
-            <CDEEcosystemDiagram
-              platforms={data.platforms}
-              integrations={data.integrations}
-              height="100%"
-              showControls={true}
-              showMiniMap={true}
-            />
-          </ReactFlowProvider>
+        <div className="w-full h-full flex flex-col bg-gray-50">
+          {/* Focus Mode Toolbar */}
+          <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between shadow-sm">
+            <div className="flex items-center gap-4">
+              {/* Toggle Sidebar */}
+              <button
+                onClick={() => setShowFocusSidebar(!showFocusSidebar)}
+                className={`p-2 rounded-lg transition-colors ${
+                  showFocusSidebar ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+                title={showFocusSidebar ? 'Hide sidebar' : 'Show sidebar'}
+              >
+                {showFocusSidebar ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+              </button>
+
+              {/* Brand */}
+              <div className="flex items-center gap-2 pr-4 border-r border-gray-200">
+                <Layers className="w-5 h-5 text-indigo-600" />
+                <span className="text-sm font-semibold text-gray-900">Focus Mode</span>
+              </div>
+
+              {/* Add Actions */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setFocusPlatformSelector(!focusPlatformSelector)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    focusPlatformSelector
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                  }`}
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Platform</span>
+                </button>
+
+                <button
+                  onClick={openNewIntegration}
+                  disabled={data.platforms.length < 2}
+                  className="flex items-center gap-1.5 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Link2 className="w-4 h-4" />
+                  <span>Add Integration</span>
+                </button>
+
+                {/* Templates */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowTemplates(!showTemplates)}
+                    className="flex items-center gap-1.5 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-medium"
+                  >
+                    <LayoutTemplate className="w-4 h-4" />
+                    <span>Templates</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showTemplates ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {showTemplates && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowTemplates(false)} />
+                      <div className="absolute left-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 w-72 overflow-hidden">
+                        <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
+                          <h4 className="font-semibold text-sm text-gray-900">Load Template</h4>
+                        </div>
+                        <div className="max-h-80 overflow-y-auto">
+                          {getTemplateList().map((template, idx) => (
+                            <button
+                              key={template.id}
+                              onClick={() => loadTemplate(template.id)}
+                              className={`w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors ${
+                                idx !== getTemplateList().length - 1 ? 'border-b border-gray-100' : ''
+                              }`}
+                            >
+                              <div className="font-medium text-sm text-gray-900">{template.name}</div>
+                              <div className="text-xs text-gray-600 mt-0.5">{template.description}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side Actions */}
+            <div className="flex items-center gap-2">
+              {/* Snap to Grid */}
+              <button
+                onClick={() => setSnapToGrid(!snapToGrid)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  snapToGrid ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+                title="Snap to grid"
+              >
+                <Grid3x3 className="w-4 h-4" />
+              </button>
+
+              {/* Stats */}
+              <div className="flex items-center gap-3 px-3 text-xs text-gray-600 border-l border-gray-200 ml-2">
+                <span><strong>{data.platforms.length}</strong> platforms</span>
+                <span><strong>{data.integrations.length}</strong> integrations</span>
+              </div>
+
+              {/* Close */}
+              <button
+                onClick={() => {
+                  setShowFullscreen(false);
+                  setSelectedPlatformId(null);
+                }}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg ml-2"
+              >
+                <Minimize2 className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Main Content Area */}
+          <div className="flex-1 flex overflow-hidden">
+            {/* Sidebar */}
+            {showFocusSidebar && (
+              <div className="w-80 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
+                {/* Platform Selector */}
+                {focusPlatformSelector && (
+                  <div className="p-4 border-b border-gray-200 bg-gray-50">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-medium text-gray-700">Select Platform</span>
+                      <button
+                        onClick={() => setFocusPlatformSelector(false)}
+                        className="p-1 text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+                      {getPlatformList()
+                        .filter(p => p.id !== 'custom')
+                        .map(platform => (
+                          <CDEPlatformCard
+                            key={platform.id}
+                            platform={{ type: platform.id }}
+                            selectionMode={true}
+                            isSelected={data.platforms.some(p => p.type === platform.id)}
+                            onSelect={() => {
+                              addPlatform(platform.id);
+                              setFocusPlatformSelector(false);
+                            }}
+                          />
+                        ))}
+                      <CDEPlatformCard
+                        platform={{ type: 'custom' }}
+                        selectionMode={true}
+                        isSelected={false}
+                        onSelect={() => {
+                          addPlatform('custom');
+                          setFocusPlatformSelector(false);
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Platform List */}
+                <div className="flex-1 overflow-y-auto p-4">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Platforms ({data.platforms.length})</h4>
+                  {data.platforms.length > 0 ? (
+                    <div className="space-y-2">
+                      {data.platforms.map(platform => (
+                        <CDEPlatformCard
+                          key={platform.id}
+                          platform={platform}
+                          isExpanded={expandedPlatformId === platform.id}
+                          onToggleExpand={(id) => setExpandedPlatformId(
+                            expandedPlatformId === id ? null : id
+                          )}
+                          onUpdate={updatePlatform}
+                          onRemove={removePlatform}
+                          disabled={false}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500 text-sm">
+                      <Layers className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                      <p>No platforms added</p>
+                      <p className="text-xs text-gray-400 mt-1">Click "Add Platform" to start</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Integrations List */}
+                {data.platforms.length >= 2 && (
+                  <div className="border-t border-gray-200 p-4 max-h-64 overflow-y-auto">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold text-gray-700">Integrations ({data.integrations.length})</h4>
+                      <button
+                        onClick={openNewIntegration}
+                        className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                      >
+                        + Add
+                      </button>
+                    </div>
+                    {data.integrations.length > 0 ? (
+                      <div className="space-y-1">
+                        {data.integrations.map(integration => {
+                          const source = data.platforms.find(p => p.id === integration.sourcePlatformId);
+                          const target = data.platforms.find(p => p.id === integration.targetPlatformId);
+                          if (!source || !target) return null;
+                          return (
+                            <button
+                              key={integration.id}
+                              onClick={() => {
+                                setEditingIntegration(integration);
+                                setIsNewIntegration(false);
+                              }}
+                              className="w-full flex items-center gap-2 p-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-xs transition-colors"
+                            >
+                              <span className="font-medium truncate">{source.name || getPlatformById(source.type).name}</span>
+                              {integration.direction === 'bidirectional'
+                                ? <ArrowLeftRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                : <ArrowRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                              }
+                              <span className="font-medium truncate">{target.name || getPlatformById(target.type).name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 text-center py-2">No integrations defined</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Diagram Area */}
+            <div className="flex-1 relative">
+              <ReactFlowProvider>
+                <CDEEcosystemDiagram
+                  platforms={data.platforms}
+                  integrations={data.integrations}
+                  height="100%"
+                  showControls={true}
+                  showMiniMap={true}
+                  editable={true}
+                  onPositionChange={handlePositionChange}
+                  onPlatformClick={handlePlatformClick}
+                  onPlatformEdit={handlePlatformEdit}
+                  onPlatformDelete={removePlatform}
+                  onIntegrationClick={handleIntegrationClick}
+                  selectedPlatformId={selectedPlatformId}
+                />
+              </ReactFlowProvider>
+            </div>
+          </div>
         </div>
       </FullscreenDiagramModal>
 
