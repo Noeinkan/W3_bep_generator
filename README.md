@@ -435,6 +435,55 @@ The optimized production build will be in the `build` folder with:
    - Configure CORS for production domain
    - Set database path if needed
 
+### Docker Production Deployment
+
+The application can be deployed using Docker Compose with the following services:
+- **backend** - Node.js Express server with built React frontend
+- **ml-service** - Python FastAPI service for AI text generation
+- **ollama** - Local LLM runtime
+- **nginx** - Reverse proxy with SSL termination
+
+#### Server Rebuild Commands
+
+**Quick rebuild (after code changes):**
+```bash
+cd /opt/bep-generator
+git pull
+docker compose up -d --build
+```
+
+**Rebuild single service:**
+```bash
+docker compose up -d --build backend      # Just backend
+docker compose up -d --build ml-service   # Just ML service
+```
+
+**Full restart (no rebuild):**
+```bash
+docker compose down
+docker compose up -d
+```
+
+**Full restart with rebuild (nuclear option):**
+```bash
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+```
+
+**Check status:**
+```bash
+docker compose ps                         # Container status
+docker compose logs backend --tail 20     # Backend logs
+docker compose logs ml-service --tail 20  # ML service logs
+```
+
+**Health checks:**
+```bash
+curl https://your-domain/api/ai/health
+docker compose exec backend wget -qO- http://ml-service:8000/health
+```
+
 ## System Requirements
 
 ### Minimum Requirements
