@@ -24,7 +24,7 @@ const PORT = process.env.PORT || 3001;
 // app.use(helmet());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://yourdomain.com']
+    ? ['https://77.42.70.26.nip.io']
     : function (origin, callback) {
         // Allow localhost and Cloudflare tunnel URLs
         const allowedOrigins = [

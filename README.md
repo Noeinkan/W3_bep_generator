@@ -71,11 +71,11 @@ The BEP Suite consists of two integrated products:
 - **Express Rate Limit** - API rate limiting
 
 ### ML/AI Service
+- **Ollama** - Local LLM runtime (llama3.2:3b model)
 - **Python 3.8+** - ML runtime environment
-- **PyTorch 2.6.0+** - Deep learning framework
 - **FastAPI 0.104.1+** - High-performance API server (Port 8000)
 - **Uvicorn** - ASGI server
-- **TensorBoard 2.15.0+** - Training visualization dashboard
+- **PyTorch 2.6.0+** - Deep learning framework (optional, for custom training)
 - **NumPy** - Numerical computing
 
 ### Export Libraries
@@ -105,28 +105,25 @@ The application follows a modern three-tier architecture:
 
 ## AI Text Generation
 
-The ML service uses a custom-trained **character-level LSTM/GRU language model** for context-aware text generation.
+The ML service uses **Ollama** with the **llama3.2:3b** model for high-quality, context-aware text generation.
 
 ### Features
-- Temperature-based sampling with top-k and nucleus (top-p) filtering
+- **Local LLM** - Runs entirely on your machine via Ollama
+- Temperature-based sampling for creative control
 - Field-specific prompts for 24+ BEP field types
-- Mixed precision training with GPU acceleration
-- TensorBoard integration for training visualization
-- Early stopping and learning rate scheduling
-- Support for both LSTM and GRU architectures
+- Fast inference with low latency
+- No internet connection required after setup
+- Support for multiple Ollama models (configurable via environment)
 
-### Training
+### Ollama Setup
+1. Install Ollama from [ollama.ai](https://ollama.ai)
+2. Pull the model:
 ```bash
-cd ml-service
-python scripts/train_model.py
+ollama pull llama3.2:3b
 ```
-
-### TensorBoard Dashboard
-Monitor training in real-time:
+3. Verify installation:
 ```bash
-cd ml-service
-train_with_dashboard.bat
-# Access at http://localhost:6006
+npm run verify:ollama
 ```
 
 ### Supported Field Types
@@ -194,8 +191,8 @@ train_with_dashboard.bat
 
 - **Node.js** v14 or higher
 - **npm** or yarn
-- **(Optional) Python 3.8+** for AI text generation features
-- **(Optional) CUDA-capable GPU** for faster ML training
+- **(Optional) Ollama** for AI text generation features - [Download](https://ollama.ai)
+- **(Optional) Python 3.8+** for running the ML service
 
 ### Installation
 
@@ -210,9 +207,18 @@ train_with_dashboard.bat
    npm install
    ```
 
-3. **(Optional) Set up AI text generation**
+3. **(Optional) Set up AI text generation with Ollama**
 
-   Create Python virtual environment:
+   Install Ollama:
+   - Download from [ollama.ai](https://ollama.ai)
+   - Run the installer
+
+   Pull the required model:
+   ```bash
+   ollama pull llama3.2:3b
+   ```
+
+   Create Python virtual environment for the API:
    ```bash
    cd ml-service
    python -m venv venv
@@ -225,30 +231,21 @@ train_with_dashboard.bat
    pip install -r requirements.txt
    ```
 
-   Train the model (optional, pre-trained model may be available):
-   ```bash
-   python scripts/train_model.py
-   ```
-
 ### Running the Application
 
 #### Option 1: Full Stack with AI (Recommended)
 
-**Terminal 1 - Frontend & Backend:**
+**Single command (starts everything):**
 ```bash
 npm start
 ```
-This starts:
+This automatically starts:
 - React frontend at [http://localhost:3000](http://localhost:3000)
 - Express backend at [http://localhost:3001](http://localhost:3001)
+- ML service with Ollama at [http://localhost:8000](http://localhost:8000)
+- Ollama server (if not already running)
 
-**Terminal 2 - ML Service:**
-```bash
-cd ml-service
-start_service.bat  # Windows
-# python api.py  # Linux/Mac
-```
-This starts the AI service at [http://localhost:8000](http://localhost:8000)
+**Note:** Ensure Ollama is installed and the model is pulled before running.
 
 #### Option 2: Frontend & Backend Only (Without AI)
 
@@ -275,11 +272,9 @@ This launches both the main application and ML service.
 
 #### ML Service
 
-- **`train_model.py`** - Train the language model
-- **`train_with_dashboard.bat`** - Train with TensorBoard visualization
-- **`start_service.bat`** - Start the FastAPI ML service
-- **`test-ai.bat`** - Test AI service functionality
-- **`monitor_gpu.bat`** - Monitor GPU usage during training
+- **`npm run start:ml`** - Start the FastAPI ML service with Ollama
+- **`npm run verify:ollama`** - Verify Ollama installation and model availability
+- **`npm run start:ollama`** - Start Ollama server manually
 
 ## Project Structure
 
@@ -309,13 +304,11 @@ bep-generator/
 │   └── db/                     # Database
 │       └── bep-generator.db    # SQLite database file
 ├── ml-service/                  # Python ML service
-│   ├── api.py                  # FastAPI server
-│   ├── models/                 # Trained models
-│   ├── templates/              # ML prompt templates
-│   ├── data/                   # Training data
-│   ├── runs/                   # TensorBoard logs
-│   ├── scripts/                # Training scripts
-│   │   └── train_model.py     # Model training
+│   ├── api_ollama.py           # FastAPI server with Ollama integration
+│   ├── ollama_generator.py     # Ollama text generation logic
+│   ├── models/                 # Model configurations
+│   ├── data/                   # BEP templates and examples
+│   ├── verify_ollama.py        # Ollama installation verification
 │   └── requirements.txt        # Python dependencies
 ├── public/                      # Static assets
 ├── data/                        # Training data
@@ -452,9 +445,9 @@ The optimized production build will be in the `build` folder with:
 
 ### Recommended for AI Features
 - **CPU:** Quad-core processor or better
-- **RAM:** 8GB (16GB for training)
-- **GPU:** CUDA-capable GPU with 8GB+ VRAM (optional, for faster training)
-- **Storage:** 2GB free space
+- **RAM:** 8GB (16GB recommended for optimal performance)
+- **Storage:** 5GB free space (for Ollama and models)
+- **Ollama:** Latest version with llama3.2:3b model (~2GB)
 
 ## Troubleshooting
 
@@ -476,10 +469,13 @@ If you get "database is locked" errors:
 - Check file permissions on `server/db/bep-generator.db`
 
 ### ML Service Not Starting
+- Verify Ollama is installed and running: `ollama list`
+- Verify the model is available: `ollama pull llama3.2:3b`
 - Verify Python 3.8+ is installed: `python --version`
 - Check all dependencies are installed: `pip install -r ml-service/requirements.txt`
 - Ensure virtual environment is activated
 - Check if port 8000 is available
+- Run verification: `npm run verify:ollama`
 
 ### Build Fails
 - Clear npm cache: `npm cache clean --force`
@@ -525,12 +521,12 @@ For issues, questions, or feature requests, please contact the development team 
 - [UK BIM Framework](https://www.ukbimframework.org/) - Practical guidance
 
 ### Machine Learning
-- [PyTorch Tutorials](https://pytorch.org/tutorials/)
+- [Ollama Documentation](https://ollama.ai/)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [TensorBoard Guide](https://www.tensorflow.org/tensorboard)
+- [Llama 3.2 Model Info](https://ollama.ai/library/llama3.2)
 
 ---
 
 **Version:** 2.0.0
-**Last Updated:** December 2025
-**Developed with:** React, Node.js, Python, and PyTorch
+**Last Updated:** January 2026
+**Developed with:** React, Node.js, Python, and Ollama

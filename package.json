@@ -42,14 +42,14 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-focus-lock": "^2.13.6",
-    "react-hook-form": "^7.69.0",
+    "react-hook-form": "^7.71.1",
     "react-hot-toast": "^2.6.0",
     "react-organizational-chart": "^2.2.1",
     "react-router-dom": "^7.9.3",
     "react-scripts": "5.0.1",
     "web-vitals": "^2.1.4",
     "xlsx": "^0.18.5",
-    "zod": "^4.2.1"
+    "zod": "^4.3.5"
   },
   "scripts": {
     "prestart": "node scripts/check-ports.js && node scripts/start-ollama.js",
