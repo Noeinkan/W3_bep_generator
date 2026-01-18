@@ -7,6 +7,8 @@ const tidpService = require('../services/tidpService');
 const midpService = require('../services/midpService');
 const responsibilityMatrixService = require('../services/responsibilityMatrixService');
 const tidpSyncService = require('../services/tidpSyncService');
+const puppeteerPdfService = require('../services/puppeteerPdfService');
+const htmlTemplateService = require('../services/htmlTemplateService');
 
 /**
  * POST /api/export/tidp/:id/excel
@@ -549,6 +551,104 @@ router.post('/responsibility-matrix/pdf', async (req, res, next) => {
   } catch (error) {
     console.error('Error exporting responsibility matrices to PDF:', error);
     next(error);
+  }
+});
+
+/**
+ * POST /api/export/bep/pdf
+ * Generate BEP PDF using Puppeteer
+ *
+ * Request body:
+ * {
+ *   formData: {...},
+ *   bepType: 'pre-appointment' | 'post-appointment',
+ *   tidpData: [...],
+ *   midpData: [...],
+ *   componentImages: { fieldName: base64String },
+ *   options: {
+ *     orientation: 'portrait' | 'landscape',
+ *     quality: 'standard' | 'high'
+ *   }
+ * }
+ */
+router.post('/bep/pdf', async (req, res, next) => {
+  try {
+    const { formData, bepType, tidpData, midpData, componentImages, options } = req.body;
+
+    // Validation
+    if (!formData || !bepType) {
+      return res.status(400).json({
+        success: false,
+        error: 'formData and bepType are required'
+      });
+    }
+
+    console.log('🚀 Starting BEP PDF generation...');
+    console.log(`   BEP Type: ${bepType}`);
+    console.log(`   Project: ${formData.projectName || 'Unknown'}`);
+    console.log(`   TIDPs: ${tidpData?.length || 0}, MIDPs: ${midpData?.length || 0}`);
+    console.log(`   Component Images: ${Object.keys(componentImages || {}).length}`);
+
+    // Generate HTML from template
+    const html = await htmlTemplateService.generateBEPHTML(
+      formData,
+      bepType,
+      tidpData || [],
+      midpData || [],
+      componentImages || {}
+    );
+
+    console.log(`✅ HTML generated (${(html.length / 1024).toFixed(2)} KB)`);
+
+    // Generate PDF with Puppeteer
+    const pdfOptions = {
+      format: 'A4',
+      orientation: options?.orientation || 'portrait',
+      margins: {
+        top: '25mm',
+        right: '20mm',
+        bottom: '25mm',
+        left: '20mm'
+      },
+      timeout: options?.quality === 'high' ? 120000 : 60000
+    };
+
+    const filepath = await puppeteerPdfService.generatePDFFromHTML(html, pdfOptions);
+
+    // Stream PDF to client
+    const filename = `BEP_${bepType}_${new Date().toISOString().split('T')[0]}.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    const fileStream = fs.createReadStream(filepath);
+    fileStream.pipe(res);
+
+    fileStream.on('end', () => {
+      console.log('✅ PDF sent to client successfully');
+      // Clean up temp file after sending
+      setTimeout(() => {
+        fs.unlink(filepath, (err) => {
+          if (err) console.error('⚠️  Error cleaning up temp file:', err);
+          else console.log('🧹 Temp file cleaned up');
+        });
+      }, 5000);
+    });
+
+    fileStream.on('error', (error) => {
+      console.error('❌ Error streaming PDF:', error);
+      next(error);
+    });
+
+  } catch (error) {
+    console.error('❌ BEP PDF generation failed:', error);
+
+    // Send user-friendly error response
+    const statusCode = error.message.includes('timeout') ? 504 : 500;
+    res.status(statusCode).json({
+      success: false,
+      error: error.message || 'PDF generation failed'
+    });
   }
 });
 

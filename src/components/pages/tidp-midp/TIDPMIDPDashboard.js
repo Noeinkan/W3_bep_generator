@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Upload,
   TrendingUp,
@@ -15,7 +15,6 @@ import ApiService from '../../../services/apiService';
 import Toast from '../../common/Toast';
 import TIDPImportDialog from '../../tidp/TIDPImportDialog';
 import MIDPEvolutionDashboard from '../../midp/MIDPEvolutionDashboard';
-import { usePage } from '../../../contexts/PageContext';
 import { useTIDPFilters } from '../../../hooks/useTIDPFilters';
 import { exportTidpCsvTemplate, exportTidpToCSV, exportMidpToCSV } from '../../../utils/tidpExport';
 import { checkMIDPCompliance, generateComplianceReport } from '../../../utils/complianceCheck';
@@ -30,7 +29,7 @@ import ImportView from './dashboard/ImportView';
 import HelpModal from './dashboard/HelpModal';
 
 const TIDPMIDPDashboard = () => {
-  const { navigateTo } = usePage();
+  const navigate = useNavigate();
   const location = useLocation();
 
   // Parse current view from URL
@@ -79,12 +78,12 @@ const TIDPMIDPDashboard = () => {
   }, []);
 
   useEffect(() => {
-    // Update URL when view changes
+    // Update URL when view changes using React Router
     const newPath = activeView === 'dashboard' ? '/tidp-midp' : `/tidp-midp/${activeView}`;
     if (location.pathname !== newPath) {
-      window.history.replaceState(null, '', newPath);
+      navigate(newPath, { replace: true });
     }
-  }, [activeView, location.pathname]);
+  }, [activeView, location.pathname, navigate]);
 
   const loadData = async () => {
     setLoading(true);
@@ -159,12 +158,12 @@ const TIDPMIDPDashboard = () => {
         const t = resp && resp.data ? resp.data : resp;
         const slugify = require('../../../utils/slugify').default || require('../../../utils/slugify');
   const slug = slugify(t?.taskTeam || t?.name || t?.title || 'tidp');
-  navigateTo(`/tidp-editor/${tidpId}${slug ? '--' + slug : ''}`);
+  navigate(`/tidp-editor/${tidpId}${slug ? '--' + slug : ''}`);
       }).catch(() => {
-  navigateTo(`/tidp-editor/${tidpId}`);
+  navigate(`/tidp-editor/${tidpId}`);
       });
     } catch (e) {
-      navigateTo(`/tidp-editor/${tidpId}`);
+      navigate(`/tidp-editor/${tidpId}`);
     }
   };
 
@@ -256,16 +255,12 @@ const TIDPMIDPDashboard = () => {
             <div className="flex items-center space-x-6">
               <button
                 onClick={() => {
-                  // Try to navigate back in browser history first
-                  if (window.history.length > 1) {
-                    window.history.back();
-                    // Also schedule a fallback to keep PageContext in sync
-                    setTimeout(() => {
-                      try { navigateTo('home'); } catch (e) { /* noop */ }
-                    }, 200);
+                  const returnUrl = sessionStorage.getItem('bep-return-url');
+                  if (returnUrl) {
+                    sessionStorage.removeItem('bep-return-url');
+                    window.location.href = returnUrl;
                   } else {
-                    // If no history, navigate to home via PageContext
-                    navigateTo('home');
+                    navigate(-1);
                   }
                 }}
                 className="inline-flex items-center text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 rounded-md p-2 transition-colors"
@@ -376,7 +371,7 @@ const TIDPMIDPDashboard = () => {
             filterDiscipline={filterDiscipline}
             onFilterChange={setFilterDiscipline}
             disciplines={disciplines}
-            onCreateNew={() => navigateTo('tidp-editor')}
+            onCreateNew={() => navigate('/tidp-editor')}
             onDownloadTemplate={handleExportTidpCsvTemplate}
             onViewDetails={handleViewTidpDetails}
             onDownloadTidp={handleDownloadTidp}

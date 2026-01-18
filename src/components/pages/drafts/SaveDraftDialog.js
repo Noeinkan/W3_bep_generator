@@ -1,4 +1,5 @@
 import React from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 const SaveDraftDialog = ({
   show,
@@ -7,10 +8,67 @@ const SaveDraftDialog = ({
   newDraftNameValidation,
   onNewDraftNameChange,
   onSave,
-  onCancel
+  onCancel,
+  existingDraft = null,
+  onOverwrite,
+  onSaveAsNew
 }) => {
   if (!show) return null;
 
+  // If there's an existing draft with the same name, show confirmation dialog
+  if (existingDraft) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="flex items-start mb-4">
+            <div className="flex-shrink-0">
+              <AlertTriangle className="w-6 h-6 text-yellow-500" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-lg font-semibold text-gray-900">Draft Already Exists</h3>
+              <p className="mt-2 text-sm text-gray-600">
+                A draft named "<span className="font-medium">{existingDraft.name}</span>" already exists.
+              </p>
+              <p className="mt-1 text-sm text-gray-500">
+                Last modified: {new Date(existingDraft.lastModified).toLocaleString()}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-3">
+            <button
+              onClick={onOverwrite}
+              className="w-full inline-flex justify-center items-center px-4 py-3 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Overwrite Existing Draft
+            </button>
+
+            <button
+              onClick={onSaveAsNew}
+              className="w-full inline-flex justify-center items-center px-4 py-3 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Save as New Draft
+            </button>
+
+            <button
+              onClick={onCancel}
+              className="w-full inline-flex justify-center items-center px-4 py-3 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Normal save dialog
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-md">

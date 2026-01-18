@@ -1,13 +1,12 @@
 import React from 'react';
+import { useParams } from 'react-router-dom';
 import TidpMidpManager from './tidp-midp/TidpMidpManager';
 
 const TidpEditorPage = () => {
-  // If URL is /tidp-editor/:id, extract the id and forward to the manager so it can load the existing TIDP
-  const path = window.location.pathname || '';
-  const match = path.match(/^\/tidp-editor\/([^/]+)/);
-  const raw = match ? match[1] : null;
-  // raw may be in the form id-slug; manager expects the id or id-slug but will extract id itself
-  const initialTidpId = raw;
+  // Use React Router's useParams to extract the id from the URL
+  const { id } = useParams();
+  // id may be in the form "id--slug"; manager expects the id or id--slug but will extract id itself
+  const initialTidpId = id || null;
 
   return (
     <div data-page-uri={initialTidpId ? `/tidp-editor/${initialTidpId}` : '/tidp-editor'}>

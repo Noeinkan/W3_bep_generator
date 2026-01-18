@@ -6,18 +6,18 @@ import FieldHeader from '../base/FieldHeader';
  * Dynamic matrix table that reads data from organizationalStructure (OrgStructureChart)
  * and displays Lead Appointed Parties with all their Appointed Parties
  */
-const OrgStructureDataTable = ({ value, field, formData }) => {
+const OrgStructureDataTable = ({ value, field, formData, exportMode = false }) => {
   const [expandedRows, setExpandedRows] = useState(new Set());
 
   // Extract data from organizationalStructure as a matrix
   const tableData = useMemo(() => {
     const orgStructure = formData?.organizationalStructure;
-    
+
     if (!orgStructure) return [];
 
     // Check if we have the tree structure
     const tree = orgStructure.tree || orgStructure;
-    
+
     if (!tree || !tree.leadGroups) return [];
 
     // Map lead groups with their appointed parties
@@ -34,6 +34,13 @@ const OrgStructureDataTable = ({ value, field, formData }) => {
       }))
     }));
   }, [formData?.organizationalStructure]);
+
+  // In export mode, auto-expand all rows
+  React.useEffect(() => {
+    if (exportMode && tableData.length > 0) {
+      setExpandedRows(new Set(tableData.map(row => row.id)));
+    }
+  }, [exportMode, tableData]);
 
   const toggleRow = (rowId) => {
     setExpandedRows(prev => {
@@ -83,13 +90,15 @@ const OrgStructureDataTable = ({ value, field, formData }) => {
                   • {tableData.reduce((sum, row) => sum + row.appointedParties.length, 0)} Total Appointed Parties
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={toggleAll}
-                className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
-              >
-                {expandedRows.size === tableData.length ? 'Collapse All' : 'Expand All'}
-              </button>
+              {!exportMode && (
+                <button
+                  type="button"
+                  onClick={toggleAll}
+                  className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                >
+                  {expandedRows.size === tableData.length ? 'Collapse All' : 'Expand All'}
+                </button>
+              )}
             </div>
 
             {/* Matrix rows */}
@@ -97,21 +106,23 @@ const OrgStructureDataTable = ({ value, field, formData }) => {
               {tableData.map((row, index) => (
                 <div key={row.id} className="border-b border-gray-200 last:border-b-0">
                   {/* Lead Appointed Party header row */}
-                  <div 
-                    className={`bg-gradient-to-r from-indigo-50 to-blue-50 hover:from-indigo-100 hover:to-blue-100 transition-colors cursor-pointer ${
+                  <div
+                    className={`bg-gradient-to-r from-indigo-50 to-blue-50 ${!exportMode ? 'hover:from-indigo-100 hover:to-blue-100 cursor-pointer' : ''} transition-colors ${
                       expandedRows.has(row.id) ? 'border-b border-gray-300' : ''
                     }`}
-                    onClick={() => toggleRow(row.id)}
+                    onClick={exportMode ? undefined : () => toggleRow(row.id)}
                   >
                     <div className="flex items-center px-4 py-3">
                       {/* Expand/Collapse icon */}
-                      <div className="flex-shrink-0 mr-3">
-                        {expandedRows.has(row.id) ? (
-                          <ChevronDown className="w-5 h-5 text-gray-600" />
-                        ) : (
-                          <ChevronRight className="w-5 h-5 text-gray-600" />
-                        )}
-                      </div>
+                      {!exportMode && (
+                        <div className="flex-shrink-0 mr-3">
+                          {expandedRows.has(row.id) ? (
+                            <ChevronDown className="w-5 h-5 text-gray-600" />
+                          ) : (
+                            <ChevronRight className="w-5 h-5 text-gray-600" />
+                          )}
+                        </div>
+                      )}
                       
                       {/* Number */}
                       <div className="flex-shrink-0 w-8 mr-4">
@@ -200,22 +211,24 @@ const OrgStructureDataTable = ({ value, field, formData }) => {
             </div>
           </div>
         )}
-        
-        <div className="mt-3 flex items-start space-x-2 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-3">
-          <div className="flex-shrink-0 mt-0.5">
-            <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-            </svg>
+
+        {!exportMode && (
+          <div className="mt-3 flex items-start space-x-2 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <div className="flex-shrink-0 mt-0.5">
+              <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-medium text-gray-700 mb-1">📝 Auto-synced Matrix Data</p>
+              <p className="text-xs">
+                This matrix automatically reflects the organizational hierarchy with Lead Appointed Parties and their associated Appointed Parties
+                defined in the <strong>Delivery Team's Organisational Structure and Composition</strong> diagram above.
+                Click on any row to expand and view all appointed parties under each lead. Any changes made to the organizational chart will be instantly reflected here.
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="font-medium text-gray-700 mb-1">📝 Auto-synced Matrix Data</p>
-            <p className="text-xs">
-              This matrix automatically reflects the organizational hierarchy with Lead Appointed Parties and their associated Appointed Parties 
-              defined in the <strong>Delivery Team's Organisational Structure and Composition</strong> diagram above. 
-              Click on any row to expand and view all appointed parties under each lead. Any changes made to the organizational chart will be instantly reflected here.
-            </p>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

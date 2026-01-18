@@ -1,7 +1,8 @@
 import axios from 'axios';
 
-// Default API URL: use 3001 for the local backend (can be overridden with REACT_APP_API_URL)
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+// Use relative URL to leverage proxy configuration
+// The proxy in package.json forwards requests to http://localhost:3001
+const BASE_URL = '/api';
 
 // Create axios instance with default configuration
 const apiClient = axios.create({
@@ -761,6 +762,162 @@ class ApiService {
     }
 
     return new Error(defaultMessage);
+  }
+
+  // ======================
+  // IDRM (Information Deliverables Responsibility Matrix) Services
+  // ======================
+
+  // IM Activities
+  async getAllIMActivities(projectId = null) {
+    try {
+      const params = projectId ? { projectId } : {};
+      const response = await apiClient.get('/idrm/im-activities', { params });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to fetch IM activities');
+    }
+  }
+
+  async getIMActivity(id) {
+    try {
+      const response = await apiClient.get(`/idrm/im-activities/${id}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, `Failed to fetch IM activity ${id}`);
+    }
+  }
+
+  async createIMActivity(activityData) {
+    try {
+      const response = await apiClient.post('/idrm/im-activities', activityData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to create IM activity');
+    }
+  }
+
+  async updateIMActivity(id, activityData) {
+    try {
+      const response = await apiClient.put(`/idrm/im-activities/${id}`, activityData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, `Failed to update IM activity ${id}`);
+    }
+  }
+
+  async deleteIMActivity(id) {
+    try {
+      const response = await apiClient.delete(`/idrm/im-activities/${id}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, `Failed to delete IM activity ${id}`);
+    }
+  }
+
+  // Deliverables
+  async getAllDeliverables(projectId = null) {
+    try {
+      const params = projectId ? { projectId } : {};
+      const response = await apiClient.get('/idrm/deliverables', { params });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to fetch deliverables');
+    }
+  }
+
+  async getDeliverable(id) {
+    try {
+      const response = await apiClient.get(`/idrm/deliverables/${id}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, `Failed to fetch deliverable ${id}`);
+    }
+  }
+
+  async createDeliverable(deliverableData) {
+    try {
+      const response = await apiClient.post('/idrm/deliverables', deliverableData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to create deliverable');
+    }
+  }
+
+  async updateDeliverable(id, deliverableData) {
+    try {
+      const response = await apiClient.put(`/idrm/deliverables/${id}`, deliverableData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, `Failed to update deliverable ${id}`);
+    }
+  }
+
+  async deleteDeliverable(id) {
+    try {
+      const response = await apiClient.delete(`/idrm/deliverables/${id}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, `Failed to delete deliverable ${id}`);
+    }
+  }
+
+  // Templates
+  async getAllIDRMTemplates() {
+    try {
+      const response = await apiClient.get('/idrm/templates');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to fetch IDRM templates');
+    }
+  }
+
+  async getIDRMTemplate(id) {
+    try {
+      const response = await apiClient.get(`/idrm/templates/${id}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, `Failed to fetch IDRM template ${id}`);
+    }
+  }
+
+  async createIDRMTemplate(templateData) {
+    try {
+      const response = await apiClient.post('/idrm/templates', templateData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to create IDRM template');
+    }
+  }
+
+  async updateIDRMTemplate(id, templateData) {
+    try {
+      const response = await apiClient.put(`/idrm/templates/${id}`, templateData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, `Failed to update IDRM template ${id}`);
+    }
+  }
+
+  async deleteIDRMTemplate(id) {
+    try {
+      const response = await apiClient.delete(`/idrm/templates/${id}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, `Failed to delete IDRM template ${id}`);
+    }
+  }
+
+  // Export
+  async exportIDRMMatrix(type = 'all', projectId = null) {
+    try {
+      const params = { type };
+      if (projectId) params.projectId = projectId;
+      const response = await apiClient.get('/idrm/export', { params, responseType: 'blob' });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to export IDRM matrix');
+    }
   }
 
   // ======================

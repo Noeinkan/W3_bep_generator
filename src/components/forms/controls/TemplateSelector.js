@@ -1,46 +1,45 @@
 import React, { useEffect, useRef } from 'react';
 import { FileText, X, Sparkles } from 'lucide-react';
-import INITIAL_DATA from '../../../data/initialData';
+import COMMERCIAL_OFFICE_TEMPLATE from '../../../data/templates/commercialOfficeTemplate';
 
 // Map di esempi per diversi field names
 const FIELD_EXAMPLES = {
-  'projectDescription': INITIAL_DATA.projectDescription,
-  'projectContext': INITIAL_DATA.projectContext,
-  'bimStrategy': INITIAL_DATA.bimStrategy,
-  'keyCommitments': INITIAL_DATA.keyCommitments,
-  'valueProposition': INITIAL_DATA.valueProposition,
-  'teamCapabilities': INITIAL_DATA.teamCapabilities,
-  'proposedBimGoals': INITIAL_DATA.proposedBimGoals,
-  'proposedObjectives': INITIAL_DATA.proposedObjectives,
-  'tenderApproach': INITIAL_DATA.tenderApproach,
-  'deliveryApproach': INITIAL_DATA.deliveryApproach,
-  'referencedMaterial': INITIAL_DATA.referencedMaterial,
-  'informationManagementResponsibilities': INITIAL_DATA.informationManagementResponsibilities,
-  'organizationalStructure': INITIAL_DATA.organizationalStructure,
-  'confirmedBimGoals': INITIAL_DATA.confirmedBimGoals,
-  'implementationObjectives': INITIAL_DATA.implementationObjectives,
-  'projectInformationRequirements': INITIAL_DATA.projectInformationRequirements,
-  'midpDescription': INITIAL_DATA.midpDescription,
-  'deliverySchedule': INITIAL_DATA.deliverySchedule,
-  'tidpRequirements': INITIAL_DATA.tidpRequirements,
-  'mobilisationPlan': INITIAL_DATA.mobilisationPlan,
-  'mobilizationPlan': INITIAL_DATA.mobilizationPlan,
-  'proposedMobilizationPlan': INITIAL_DATA.proposedMobilizationPlan,
-  'resourceAllocationTable': INITIAL_DATA.resourceAllocationTable,
-  'proposedResourceAllocation': INITIAL_DATA.proposedResourceAllocation,
-  'teamCapabilitySummary': INITIAL_DATA.teamCapabilitySummary,
-  'taskTeamExchange': INITIAL_DATA.taskTeamExchange,
-  'modelReferencing3d': INITIAL_DATA.modelReferencing3d,
-  'informationBreakdownStrategy': INITIAL_DATA.informationBreakdownStrategy,
-  'federationProcess': INITIAL_DATA.federationProcess,
-  'bimGoals': INITIAL_DATA.bimGoals,
-  'primaryObjectives': INITIAL_DATA.primaryObjectives,
-  'collaborativeProductionGoals': INITIAL_DATA.collaborativeProductionGoals,
-  'alignmentStrategy': INITIAL_DATA.alignmentStrategy,
-  'cdeStrategy': INITIAL_DATA.cdeStrategy,
-  'volumeStrategy': INITIAL_DATA.volumeStrategy,
-  'bimValueApplications': INITIAL_DATA.bimValueApplications,
-  'strategicAlignment': INITIAL_DATA.strategicAlignment,
+  'projectDescription': COMMERCIAL_OFFICE_TEMPLATE.projectDescription,
+  'projectContext': COMMERCIAL_OFFICE_TEMPLATE.projectContext,
+  'bimStrategy': COMMERCIAL_OFFICE_TEMPLATE.bimStrategy,
+  'keyCommitments': COMMERCIAL_OFFICE_TEMPLATE.keyCommitments,
+  'valueProposition': COMMERCIAL_OFFICE_TEMPLATE.valueProposition,
+  'teamCapabilities': COMMERCIAL_OFFICE_TEMPLATE.teamCapabilities,
+  'proposedBimGoals': COMMERCIAL_OFFICE_TEMPLATE.proposedBimGoals,
+  'proposedObjectives': COMMERCIAL_OFFICE_TEMPLATE.proposedObjectives,
+  'tenderApproach': COMMERCIAL_OFFICE_TEMPLATE.tenderApproach,
+  'deliveryApproach': COMMERCIAL_OFFICE_TEMPLATE.deliveryApproach,
+  'referencedMaterial': COMMERCIAL_OFFICE_TEMPLATE.referencedMaterial,
+  'informationManagementResponsibilities': COMMERCIAL_OFFICE_TEMPLATE.informationManagementResponsibilities,
+  'organizationalStructure': COMMERCIAL_OFFICE_TEMPLATE.organizationalStructure,
+  'confirmedBimGoals': COMMERCIAL_OFFICE_TEMPLATE.confirmedBimGoals,
+  'implementationObjectives': COMMERCIAL_OFFICE_TEMPLATE.implementationObjectives,
+  'projectInformationRequirements': COMMERCIAL_OFFICE_TEMPLATE.projectInformationRequirements,
+  'midpDescription': COMMERCIAL_OFFICE_TEMPLATE.midpDescription,
+  'tidpRequirements': COMMERCIAL_OFFICE_TEMPLATE.tidpRequirements,
+  'mobilisationPlan': COMMERCIAL_OFFICE_TEMPLATE.mobilisationPlan,
+  'mobilizationPlan': COMMERCIAL_OFFICE_TEMPLATE.mobilizationPlan,
+  'proposedMobilizationPlan': COMMERCIAL_OFFICE_TEMPLATE.proposedMobilizationPlan,
+  'resourceAllocationTable': COMMERCIAL_OFFICE_TEMPLATE.resourceAllocationTable,
+  'proposedResourceAllocation': COMMERCIAL_OFFICE_TEMPLATE.proposedResourceAllocation,
+  'teamCapabilitySummary': COMMERCIAL_OFFICE_TEMPLATE.teamCapabilitySummary,
+  'taskTeamExchange': COMMERCIAL_OFFICE_TEMPLATE.taskTeamExchange,
+  'modelReferencing3d': COMMERCIAL_OFFICE_TEMPLATE.modelReferencing3d,
+  'informationBreakdownStrategy': COMMERCIAL_OFFICE_TEMPLATE.informationBreakdownStrategy,
+  'federationProcess': COMMERCIAL_OFFICE_TEMPLATE.federationProcess,
+  'bimGoals': COMMERCIAL_OFFICE_TEMPLATE.bimGoals,
+  'primaryObjectives': COMMERCIAL_OFFICE_TEMPLATE.primaryObjectives,
+  'collaborativeProductionGoals': COMMERCIAL_OFFICE_TEMPLATE.collaborativeProductionGoals,
+  'alignmentStrategy': COMMERCIAL_OFFICE_TEMPLATE.alignmentStrategy,
+  'cdeStrategy': COMMERCIAL_OFFICE_TEMPLATE.cdeStrategy,
+  'volumeStrategy': COMMERCIAL_OFFICE_TEMPLATE.volumeStrategy,
+  'bimValueApplications': COMMERCIAL_OFFICE_TEMPLATE.bimValueApplications,
+  'strategicAlignment': COMMERCIAL_OFFICE_TEMPLATE.strategicAlignment,
 };
 
 const TemplateSelector = ({ editor, onClose, fieldName, triggerRef }) => {
@@ -57,7 +56,7 @@ const TemplateSelector = ({ editor, onClose, fieldName, triggerRef }) => {
     if (!editor) return;
 
     // Get example text for the specific field
-    let exampleData = FIELD_EXAMPLES[fieldName] || INITIAL_DATA.projectDescription;
+    let exampleData = FIELD_EXAMPLES[fieldName] || COMMERCIAL_OFFICE_TEMPLATE.projectDescription;
 
     // If the data is an object with intro property, use the intro text
     const exampleText = typeof exampleData === 'object' && exampleData?.intro
@@ -85,7 +84,7 @@ const TemplateSelector = ({ editor, onClose, fieldName, triggerRef }) => {
   };
 
   // Get the example text to show preview
-  let exampleData = FIELD_EXAMPLES[fieldName] || INITIAL_DATA.projectDescription;
+  let exampleData = FIELD_EXAMPLES[fieldName] || COMMERCIAL_OFFICE_TEMPLATE.projectDescription;
   const exampleText = typeof exampleData === 'object' && exampleData?.intro
     ? exampleData.intro
     : exampleData;

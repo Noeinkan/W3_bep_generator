@@ -18,6 +18,7 @@ import ResizableImage from './extensions/ResizableImage';
 import TipTapToolbar from './TipTapToolbar';
 import FindReplaceDialog from '../dialogs/FindReplaceDialog';
 import TableBubbleMenu from '../tables/TableBubbleMenu';
+import { getHelpContent } from '../../../data/helpContent';
 
 const TipTapEditor = ({
   value = '',
@@ -30,6 +31,10 @@ const TipTapEditor = ({
   autoSaveKey = 'tiptap-autosave',
   minHeight = '200px',
   fieldName, // Add fieldName prop
+  compactMode = false, // Add compact mode for tables
+  onFocus, // Add focus handler
+  onBlur, // Add blur handler
+  onMouseDown, // Add mousedown handler
 }) => {
   const [zoom, setZoom] = useState(100);
   const [showFindReplace, setShowFindReplace] = useState(false);
@@ -94,6 +99,21 @@ const TipTapEditor = ({
         'aria-label': 'Rich text editor',
         'aria-multiline': 'true',
         spellcheck: 'true',
+      },
+      // Handle focus/blur events
+      handleDOMEvents: {
+        focus: (_view, event) => {
+          if (onFocus) {
+            onFocus(event);
+          }
+          return false;
+        },
+        blur: (_view, event) => {
+          if (onBlur) {
+            onBlur(event);
+          }
+          return false;
+        },
       },
       // Handle paste with images
       handlePaste: (view, event) => {
@@ -212,7 +232,23 @@ const TipTapEditor = ({
   // Update editor content when value prop changes externally
   useEffect(() => {
     if (editor && value !== editor.getHTML()) {
+      // Preserve focus and cursor position when updating content
+      const { from, to } = editor.state.selection;
+      const wasFocused = editor.isFocused;
+
       editor.commands.setContent(value);
+
+      // Restore focus and cursor position if editor was focused
+      if (wasFocused) {
+        editor.commands.focus();
+        // Try to restore cursor position if still valid
+        try {
+          editor.commands.setTextSelection({ from, to });
+        } catch (e) {
+          // Position no longer valid, just focus at end
+          editor.commands.focus('end');
+        }
+      }
     }
   }, [editor, value]);
 
@@ -228,6 +264,7 @@ const TipTapEditor = ({
   }, [editor]);
 
   const stats = getStats();
+  const helpContent = fieldName ? getHelpContent(fieldName) : null;
 
   if (!editor) {
     return null;
@@ -243,6 +280,7 @@ const TipTapEditor = ({
           onZoomChange={setZoom}
           onFindReplace={() => setShowFindReplace(true)}
           fieldName={fieldName}
+          helpContent={helpContent}
         />
       )}
 
@@ -255,6 +293,7 @@ const TipTapEditor = ({
           transformOrigin: 'top left',
           width: `${10000 / zoom}%`,
         }}
+        onMouseDown={onMouseDown}
       >
         <EditorContent editor={editor} />
       </div>
@@ -274,7 +313,7 @@ const TipTapEditor = ({
       {/* Custom Styles */}
       <style jsx>{`
         .tiptap-editor {
-          padding: 0.75rem;
+          padding: ${compactMode ? '0.375rem 0.5rem' : '0.75rem'};
           min-height: ${minHeight};
           outline: none;
         }
@@ -455,4 +494,6 @@ const TipTapEditor = ({
   );
 };
 
-export default TipTapEditor;
+// Wrap with React.memo to prevent unnecessary re-renders
+// This is critical for performance in tables where many editors exist
+export default React.memo(TipTapEditor);

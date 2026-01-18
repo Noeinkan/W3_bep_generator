@@ -6,23 +6,45 @@ export const useDraftOperations = (user, currentFormData, bepType, onLoadDraft, 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const saveDraft = useCallback(async (name, data = currentFormData) => {
+  const findDraftByName = useCallback((name) => {
+    if (!user?.id) return null;
+
+    const validation = validateDraftName(name);
+    if (!validation.isValid) return null;
+
+    const sanitizedName = validation.sanitized;
+
+    try {
+      const existingDrafts = draftStorageService.loadDrafts(user.id);
+
+      const existingDraft = Object.entries(existingDrafts).find(
+        ([_, draft]) => sanitizeText(draft.name).toLowerCase() === sanitizedName.toLowerCase()
+      );
+
+      return existingDraft ? { id: existingDraft[0], ...existingDraft[1] } : null;
+    } catch (error) {
+      console.error('Error finding draft:', error);
+      return null;
+    }
+  }, [user]);
+
+  const saveDraft = useCallback(async (name, data = currentFormData, overwrite = false) => {
     const validation = validateDraftName(name);
     if (!validation.isValid) {
       setError(validation.error);
-      return;
+      return { success: false, existingDraft: null };
     }
 
     const sanitizedName = validation.sanitized;
 
     if (!user?.id) {
       setError('Cannot save draft - invalid user data');
-      return;
+      return { success: false, existingDraft: null };
     }
 
     if (!data || typeof data !== 'object') {
       setError('Cannot save draft - invalid form data');
-      return;
+      return { success: false, existingDraft: null };
     }
 
     setIsLoading(true);
@@ -31,21 +53,28 @@ export const useDraftOperations = (user, currentFormData, bepType, onLoadDraft, 
     try {
       const existingDrafts = draftStorageService.loadDrafts(user.id);
 
-      const isDuplicateName = Object.values(existingDrafts).some(
-        draft => sanitizeText(draft.name).toLowerCase() === sanitizedName.toLowerCase()
+      const existingDraftEntry = Object.entries(existingDrafts).find(
+        ([_, draft]) => sanitizeText(draft.name).toLowerCase() === sanitizedName.toLowerCase()
       );
 
-      if (isDuplicateName) {
-        setError(`A draft with the name "${sanitizedName}" already exists`);
-        return false;
+      // If draft exists and we're not overwriting, return the existing draft for confirmation
+      if (existingDraftEntry && !overwrite) {
+        setIsLoading(false);
+        return {
+          success: false,
+          existingDraft: { id: existingDraftEntry[0], ...existingDraftEntry[1] }
+        };
       }
 
       const sanitizedProjectName = data.projectName && typeof data.projectName === 'string'
         ? sanitizeText(data.projectName) || 'Unnamed Project'
         : 'Unnamed Project';
 
+      // If overwriting, use the existing draft ID
+      const draftId = existingDraftEntry ? existingDraftEntry[0] : Date.now().toString();
+
       const draft = {
-        id: Date.now().toString(),
+        id: draftId,
         name: sanitizedName,
         data: data,
         bepType: bepType || 'pre-appointment',
@@ -54,11 +83,11 @@ export const useDraftOperations = (user, currentFormData, bepType, onLoadDraft, 
       };
 
       draftStorageService.saveDraft(user.id, draft);
-      return true;
+      return { success: true, existingDraft: null, draftId: draftId };
     } catch (error) {
       console.error('Error saving draft:', error);
       setError('Failed to save draft. Please try again.');
-      return false;
+      return { success: false, existingDraft: null };
     } finally {
       setIsLoading(false);
     }
@@ -152,22 +181,26 @@ export const useDraftOperations = (user, currentFormData, bepType, onLoadDraft, 
   const loadDraft = useCallback((draft) => {
     if (!draft || typeof draft !== 'object' || !draft.data) {
       setError('Invalid draft data - cannot load');
-      return;
+      return false;
     }
 
-    if (typeof onLoadDraft !== 'function' || typeof onClose !== 'function') {
+    if (typeof onLoadDraft !== 'function') {
       setError('Invalid callback functions - cannot load draft');
-      return;
+      return false;
     }
 
     try {
-      onLoadDraft(draft.data, draft.bepType);
-      onClose();
+      // Pass draft info (id, name) to the callback
+      // The callback will handle navigation, so we don't call onClose() here
+      // to avoid interfering with the navigation
+      onLoadDraft(draft.data, draft.bepType, { id: draft.id, name: draft.name });
+      return true;
     } catch (error) {
       console.error('Error loading draft:', error);
       setError('Failed to load draft. Please try again.');
+      return false;
     }
-  }, [onLoadDraft, onClose]);
+  }, [onLoadDraft]);
 
   const exportDraft = useCallback((draft) => {
     if (!draft || typeof draft !== 'object' || !draft.data) {
@@ -194,14 +227,75 @@ export const useDraftOperations = (user, currentFormData, bepType, onLoadDraft, 
     }
   }, []);
 
+  const importBepFromJson = useCallback((file) => {
+    return new Promise((resolve, reject) => {
+      if (!file) {
+        setError('No file selected');
+        reject(new Error('No file selected'));
+        return;
+      }
+
+      if (!file.name.endsWith('.json')) {
+        setError('Invalid file type. Please select a JSON file.');
+        reject(new Error('Invalid file type'));
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        try {
+          const jsonData = JSON.parse(e.target.result);
+
+          // Validate that the imported data has the expected structure
+          if (!jsonData || typeof jsonData !== 'object') {
+            throw new Error('Invalid JSON structure');
+          }
+
+          // Load the imported data into the form
+          if (typeof onLoadDraft === 'function') {
+            // Try to detect BEP type from the data, default to 'pre-appointment'
+            const detectedBepType = jsonData.bepType || 'pre-appointment';
+            onLoadDraft(jsonData, detectedBepType);
+
+            if (typeof onClose === 'function') {
+              onClose();
+            }
+          }
+
+          setIsLoading(false);
+          resolve(jsonData);
+        } catch (error) {
+          console.error('Error parsing JSON:', error);
+          setError('Failed to import BEP. Invalid JSON format.');
+          setIsLoading(false);
+          reject(error);
+        }
+      };
+
+      reader.onerror = () => {
+        setError('Failed to read file');
+        setIsLoading(false);
+        reject(new Error('Failed to read file'));
+      };
+
+      reader.readAsText(file);
+    });
+  }, [onLoadDraft, onClose]);
+
   return {
     isLoading,
     error,
     setError,
     saveDraft,
+    findDraftByName,
     deleteDraft,
     renameDraft,
     loadDraft,
-    exportDraft
+    exportDraft,
+    importBepFromJson
   };
 };

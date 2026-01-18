@@ -64,7 +64,12 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
       }
     });
 
-    setValidationErrors(errors);
+    // Only update validation errors if they have changed to prevent infinite loop
+    setValidationErrors(prev => {
+      const errorsChanged = prev.length !== errors.length ||
+        prev.some((err, idx) => err !== errors[idx]);
+      return errorsChanged ? errors : prev;
+    });
     return errors.length === 0;
   }, [categories]);
 

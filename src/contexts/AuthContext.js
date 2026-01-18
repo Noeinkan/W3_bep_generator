@@ -20,7 +20,8 @@ export const AuthProvider = ({ children }) => {
         // Check if user is already logged in
         const storedUser = localStorage.getItem('currentUser');
         if (storedUser) {
-          setUser(JSON.parse(storedUser));
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
           setLoading(false);
           return;
         }
@@ -28,7 +29,7 @@ export const AuthProvider = ({ children }) => {
         // Auto-login with default credentials
         const email = 'nome.cognome@libero.it';
         const password = 'Password1234';
-        const name = 'Nome Cognome';
+        const name = 'Demo User';
 
         const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
         let user = existingUsers.find(u => u.email === email);

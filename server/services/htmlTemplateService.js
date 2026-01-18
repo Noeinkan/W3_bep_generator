@@ -1,0 +1,1101 @@
+const fs = require('fs');
+const path = require('path');
+
+/**
+ * Default configuration structure
+ * Used as fallback when bepConfig.js cannot be loaded
+ * @type {Object}
+ */
+const DEFAULT_CONFIG = {
+  bepTypeDefinitions: {
+    'pre-appointment': {
+      title: 'Pre-Appointment BEP',
+      subtitle: 'Tender Phase Document',
+      description: 'A document outlining the prospective delivery team\'s proposed approach, capability, and capacity.'
+    },
+    'post-appointment': {
+      title: 'Post-Appointment BEP',
+      subtitle: 'Project Execution Document',
+      description: 'Confirms the delivery team\'s information management approach and includes detailed planning and schedules.'
+    }
+  },
+  steps: [],
+  formFields: {},
+  sharedFormFields: {}
+};
+
+// Mutable config that gets populated
+let CONFIG = { ...DEFAULT_CONFIG };
+
+/**
+ * Attempts to load the BEP configuration from the frontend config file
+ * @returns {Object} Result object with success status and any error details
+ */
+function loadBepConfig() {
+  const result = { success: false, error: null, configPath: null };
+
+  try {
+    const configPath = require.resolve('../../src/config/bepConfig.js');
+    result.configPath = configPath;
+
+    // Clear require cache to get fresh config
+    delete require.cache[configPath];
+
+    const loadedConfig = require('../../src/config/bepConfig');
+
+    // Handle different export formats
+    let configData = null;
+    if (loadedConfig.default) {
+      configData = loadedConfig.default;
+    } else if (loadedConfig.CONFIG) {
+      configData = loadedConfig.CONFIG;
+    } else if (typeof loadedConfig === 'object' && loadedConfig !== null) {
+      configData = loadedConfig;
+    }
+
+    if (!configData) {
+      throw new Error('Config file loaded but no valid configuration object found');
+    }
+
+    // Validate essential properties
+    if (!configData.bepTypeDefinitions) {
+      console.warn('⚠️  Loaded config missing bepTypeDefinitions, using defaults');
+      configData.bepTypeDefinitions = DEFAULT_CONFIG.bepTypeDefinitions;
+    }
+
+    if (!configData.steps || !Array.isArray(configData.steps)) {
+      console.warn('⚠️  Loaded config missing steps array, using defaults');
+      configData.steps = DEFAULT_CONFIG.steps;
+    }
+
+    if (!configData.formFields || typeof configData.formFields !== 'object') {
+      console.warn('⚠️  Loaded config missing formFields, using defaults');
+      configData.formFields = DEFAULT_CONFIG.formFields;
+    }
+
+    if (!configData.sharedFormFields || typeof configData.sharedFormFields !== 'object') {
+      console.warn('⚠️  Loaded config missing sharedFormFields, using defaults');
+      configData.sharedFormFields = DEFAULT_CONFIG.sharedFormFields;
+    }
+
+    CONFIG = { ...DEFAULT_CONFIG, ...configData };
+    result.success = true;
+
+  } catch (error) {
+    result.error = {
+      message: error.message,
+      code: error.code,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    };
+
+    console.warn('⚠️  Could not load bepConfig.js, using default structure');
+    console.warn(`   Reason: ${error.message}`);
+
+    if (error.code === 'MODULE_NOT_FOUND') {
+      console.warn('   Tip: Ensure the frontend config file exists at src/config/bepConfig.js');
+    }
+
+    CONFIG = { ...DEFAULT_CONFIG };
+  }
+
+  return result;
+}
+
+// Initial config load
+const configLoadResult = loadBepConfig();
+if (configLoadResult.success) {
+  console.log('✓ BEP config loaded successfully');
+}
+
+/**
+ * HTML Template Service
+ * Generates complete HTML for BEP PDF generation with support for:
+ * - Table of Contents
+ * - Watermarks (Draft, Confidential, Final)
+ * - Print-optimized styling
+ * - A4-accurate dimensions
+ *
+ * @class HtmlTemplateService
+ */
+class HtmlTemplateService {
+  constructor() {
+    this._cssCache = null;
+  }
+
+  /**
+   * Generate complete BEP HTML document
+   * @param {Object} formData - Form data containing all BEP fields
+   * @param {string} bepType - BEP type ('pre-appointment' or 'post-appointment')
+   * @param {Array} tidpData - TIDP (Task Information Delivery Plan) data
+   * @param {Array} midpData - MIDP (Master Information Delivery Plan) data
+   * @param {Object} componentImages - Map of fieldName -> base64 image data
+   * @param {Object} options - Additional options
+   * @param {string} [options.watermark] - Watermark text (e.g., 'DRAFT', 'CONFIDENTIAL', 'FINAL')
+   * @param {boolean} [options.includeToc=true] - Whether to include table of contents
+   * @returns {Promise<string>} Complete HTML document
+   */
+  async generateBEPHTML(formData, bepType, tidpData = [], midpData = [], componentImages = {}, options = {}) {
+    const { watermark = null, includeToc = true } = options;
+    const css = this.getInlineCSS();
+    const sections = this.collectSections(formData, bepType, tidpData, midpData);
+    const bodyContent = this.renderBEPContent(formData, bepType, tidpData, midpData, componentImages, sections, { watermark, includeToc });
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BIM Execution Plan - ${this.escapeHtml(formData.projectName || 'BEP')}</title>
+  <style>${css}</style>
+</head>
+<body>
+  ${watermark ? this.renderWatermark(watermark) : ''}
+  ${bodyContent}
+</body>
+</html>`;
+  }
+
+  /**
+   * Render watermark element
+   * @param {string} text - Watermark text
+   * @returns {string} Watermark HTML
+   */
+  renderWatermark(text) {
+    const normalizedText = text.toUpperCase().trim();
+    let watermarkClass = 'watermark';
+
+    if (normalizedText === 'DRAFT') {
+      watermarkClass += ' watermark-draft';
+    } else if (normalizedText === 'CONFIDENTIAL') {
+      watermarkClass += ' watermark-confidential';
+    } else if (normalizedText === 'FINAL') {
+      watermarkClass += ' watermark-final';
+    }
+
+    return `<div class="${watermarkClass}">${this.escapeHtml(normalizedText)}</div>`;
+  }
+
+  /**
+   * Collect all sections for TOC generation
+   * @param {Object} formData - Form data
+   * @param {string} bepType - BEP type
+   * @param {Array} tidpData - TIDP data
+   * @param {Array} midpData - MIDP data
+   * @returns {Array} Array of section objects with number, title, and subsections
+   */
+  collectSections(formData, bepType, tidpData, midpData) {
+    const sections = [];
+    const steps = CONFIG.steps || [];
+
+    steps.forEach((step, stepIndex) => {
+      const stepConfig = this.getFormFields(bepType, stepIndex);
+      if (!stepConfig || !stepConfig.fields) return;
+
+      // Check if section has any content
+      const hasContent = stepConfig.fields.some(field => {
+        if (field.type === 'section-header') return false;
+        return this.hasRenderableValue(field, formData[field.name]);
+      });
+
+      if (!hasContent) return;
+
+      const section = {
+        number: stepConfig.number,
+        title: stepConfig.title,
+        subsections: []
+      };
+
+      // Collect subsections (field labels with content)
+      stepConfig.fields.forEach(field => {
+        if (field.type === 'section-header') return;
+        if (!this.hasRenderableValue(field, formData[field.name])) return;
+
+        if (field.number) {
+          section.subsections.push({
+            number: field.number,
+            title: field.label
+          });
+        }
+      });
+
+      sections.push(section);
+    });
+
+    // Add TIDP/MIDP section if present
+    if (tidpData.length > 0 || midpData.length > 0) {
+      const tidpSection = {
+        number: sections.length + 1,
+        title: 'Information Delivery Planning',
+        subsections: []
+      };
+
+      if (tidpData.length > 0) {
+        tidpSection.subsections.push({ number: '', title: 'Task Information Delivery Plans (TIDPs)' });
+      }
+      if (midpData.length > 0) {
+        tidpSection.subsections.push({ number: '', title: 'Master Information Delivery Plan (MIDP)' });
+      }
+
+      sections.push(tidpSection);
+    }
+
+    return sections;
+  }
+
+  /**
+   * Render Table of Contents
+   * @param {Array} sections - Array of section objects
+   * @returns {string} TOC HTML
+   */
+  renderTableOfContents(sections) {
+    if (!sections || sections.length === 0) return '';
+
+    let html = `
+      <div class="toc">
+        <h2 class="toc-title">Table of Contents</h2>
+        <ul class="toc-list">
+    `;
+
+    sections.forEach((section) => {
+      html += `
+        <li class="toc-item">
+          <span class="toc-item-number">${section.number}.</span>
+          <span class="toc-item-title">${this.escapeHtml(section.title)}</span>
+          <span class="toc-item-dots"></span>
+        </li>
+      `;
+
+      // Add subsections
+      section.subsections.forEach(sub => {
+        html += `
+          <li class="toc-item toc-item-subsection">
+            <span class="toc-item-number">${sub.number}</span>
+            <span class="toc-item-title">${this.escapeHtml(sub.title)}</span>
+            <span class="toc-item-dots"></span>
+          </li>
+        `;
+      });
+    });
+
+    html += `
+        </ul>
+      </div>
+    `;
+
+    return html;
+  }
+
+  /**
+   * Render BEP content body
+   * @param {Object} formData - Form data
+   * @param {string} bepType - BEP type
+   * @param {Array} tidpData - TIDP data
+   * @param {Array} midpData - MIDP data
+   * @param {Object} componentImages - Component images map
+   * @param {Array} sections - Collected sections for TOC
+   * @param {Object} options - Render options
+   * @returns {string} Complete body HTML
+   */
+  renderBEPContent(formData, bepType, tidpData, midpData, componentImages, sections, options = {}) {
+    const { includeToc } = options;
+    const bepConfig = CONFIG.bepTypeDefinitions?.[bepType] || CONFIG.bepTypeDefinitions['pre-appointment'];
+
+    let html = '<div class="container">';
+
+    // Cover page
+    html += this.renderCoverPage(formData, bepType, bepConfig);
+
+    // Table of Contents
+    if (includeToc && sections.length > 0) {
+      html += this.renderTableOfContents(sections);
+    }
+
+    // Content sections
+    html += this.renderContentSections(formData, bepType, componentImages);
+
+    // TIDP/MIDP sections
+    if (tidpData.length > 0 || midpData.length > 0) {
+      html += this.renderTIDPMIDPSections(tidpData, midpData);
+    }
+
+    html += '</div>';
+
+    return html;
+  }
+
+  /**
+   * Render cover page
+   * @param {Object} formData - Form data
+   * @param {string} bepType - BEP type
+   * @param {Object} bepConfig - BEP configuration
+   * @returns {string} Cover page HTML
+   */
+  renderCoverPage(formData, bepType, bepConfig) {
+    const projectName = this.escapeHtml(formData.projectName || 'Not specified');
+    const projectNumber = this.escapeHtml(formData.projectNumber || 'Not specified');
+    const bepTitle = this.escapeHtml(bepConfig.title || bepType);
+    const now = new Date();
+    const dateStr = now.toLocaleDateString();
+    const timeStr = now.toLocaleTimeString();
+
+    return `
+      <div class="cover-page">
+        <h1 class="cover-title">BIM EXECUTION PLAN</h1>
+        <p class="cover-subtitle">${bepTitle}</p>
+        <p class="cover-iso">ISO 19650-2:2018 Compliant</p>
+        <div class="cover-info">
+          <p class="cover-info-item"><strong>Project:</strong> ${projectName}</p>
+          <p class="cover-info-item"><strong>Project Number:</strong> ${projectNumber}</p>
+          <p class="cover-info-date">Generated: ${dateStr} ${timeStr}</p>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Render content sections
+   * @param {Object} formData - Form data
+   * @param {string} bepType - BEP type
+   * @param {Object} componentImages - Component images map
+   * @returns {string} Content sections HTML
+   */
+  renderContentSections(formData, bepType, componentImages) {
+    let html = '';
+    const steps = CONFIG.steps || [];
+
+    steps.forEach((step, stepIndex) => {
+      const stepConfig = this.getFormFields(bepType, stepIndex);
+      if (!stepConfig || !stepConfig.fields) return;
+
+      // Check if section has any content
+      const hasContent = stepConfig.fields.some(field => {
+        if (field.type === 'section-header') return false;
+        return this.hasRenderableValue(field, formData[field.name]);
+      });
+
+      if (!hasContent) return;
+
+      // Section header
+      html += `
+        <div class="section">
+          <div class="section-header">
+            <h2 class="section-title">${stepConfig.number}. ${this.escapeHtml(stepConfig.title)}</h2>
+          </div>
+          <div class="section-content">
+      `;
+
+      // Section fields
+      stepConfig.fields.forEach(field => {
+        if (field.type === 'section-header') return;
+
+        const value = formData[field.name];
+        if (!this.hasRenderableValue(field, value)) return;
+
+        html += `
+          <div class="field-group">
+            <h3 class="field-label">${field.number ? field.number + ' ' : ''}${this.escapeHtml(field.label)}</h3>
+            ${this.renderFieldValue(field, value, componentImages)}
+          </div>
+        `;
+      });
+
+      html += `
+          </div>
+        </div>
+      `;
+    });
+
+    return html;
+  }
+
+  /**
+   * Render field value based on type
+   * @param {Object} field - Field configuration
+   * @param {*} value - Field value
+   * @param {Object} componentImages - Component images map
+   * @returns {string} Field value HTML
+   */
+  renderFieldValue(field, value, componentImages) {
+    // Custom visual components - use embedded screenshots
+    const visualComponentTypes = ['orgchart', 'orgstructure-data-table', 'cdeDiagram', 'mindmap', 'fileStructure', 'naming-conventions', 'federation-strategy'];
+
+    if (visualComponentTypes.includes(field.type)) {
+      return this.renderComponentImage(field.name, componentImages);
+    }
+
+    // Standard field types
+    switch (field.type) {
+      case 'table':
+        return this.renderTable(field, value);
+
+      case 'checkbox':
+        return this.renderCheckboxList(value);
+
+      case 'textarea':
+        return this.renderTextarea(value);
+
+      case 'introTable':
+        return this.renderIntroTable(field, value);
+
+      default:
+        return this.renderSimpleField(value);
+    }
+  }
+
+  /**
+   * Determine whether a field has a value that should render in the PDF
+   * @param {Object} field - Field configuration
+   * @param {*} value - Field value
+   * @returns {boolean} True when value should be rendered
+   */
+  hasRenderableValue(field, value) {
+    if (value === null || value === undefined) return false;
+
+    if (typeof value === 'string') {
+      return value.trim().length > 0;
+    }
+
+    if (typeof value === 'number') {
+      return !Number.isNaN(value);
+    }
+
+    if (typeof value === 'boolean') {
+      return true;
+    }
+
+    if (Array.isArray(value)) {
+      return value.length > 0;
+    }
+
+    if (typeof value === 'object') {
+      if (field?.type === 'table') {
+        return Array.isArray(value) && value.length > 0;
+      }
+
+      return Object.keys(value).length > 0;
+    }
+
+    return Boolean(value);
+  }
+
+  /**
+   * Render component screenshot image
+   * @param {string} fieldName - Field name
+   * @param {Object} componentImages - Component images map
+   * @returns {string} Component image HTML
+   */
+  renderComponentImage(fieldName, componentImages) {
+    const imageData = componentImages[fieldName];
+    if (!imageData) {
+      return `<div class="component-placeholder">Visual component not available</div>`;
+    }
+
+    return `
+      <div class="component-image">
+        <img src="${imageData}" alt="${this.escapeHtml(fieldName)}" />
+      </div>
+    `;
+  }
+
+  /**
+   * Render table with improved column handling
+   * @param {Object} field - Field configuration
+   * @param {Array} rows - Table rows
+   * @returns {string} Table HTML
+   */
+  renderTable(field, rows) {
+    if (!Array.isArray(rows) || rows.length === 0) return '';
+
+    const columns = field.columns || [];
+    const columnCount = columns.length;
+
+    // Calculate column widths based on count
+    const columnWidth = columnCount > 0 ? Math.floor(100 / columnCount) : 100;
+
+    let html = '<div class="table-wrapper"><table class="data-table"><thead><tr>';
+
+    columns.forEach((col, idx) => {
+      const width = field.columnWidths?.[idx] || `${columnWidth}%`;
+      html += `<th style="width: ${width}">${this.escapeHtml(col)}</th>`;
+    });
+
+    html += '</tr></thead><tbody>';
+
+    rows.forEach(row => {
+      html += '<tr>';
+      columns.forEach(col => {
+        const cellValue = row[col];
+        html += `<td>${this.escapeHtml(cellValue || '-')}</td>`;
+      });
+      html += '</tr>';
+    });
+
+    html += '</tbody></table></div>';
+
+    return html;
+  }
+
+  /**
+   * Render checkbox list
+   * @param {Array} items - Checked items
+   * @returns {string} Checkbox list HTML
+   */
+  renderCheckboxList(items) {
+    if (!Array.isArray(items) || items.length === 0) return '';
+
+    let html = '<ul class="checkbox-list">';
+
+    items.forEach(item => {
+      html += `<li class="checkbox-item"><span class="checkmark">✓</span> ${this.escapeHtml(item)}</li>`;
+    });
+
+    html += '</ul>';
+
+    return html;
+  }
+
+  /**
+   * Render textarea content
+   * @param {string} value - Text content
+   * @returns {string} Textarea HTML
+   */
+  renderTextarea(value) {
+    return `<p class="textarea-content">${this.escapeHtml(value).replace(/\n/g, '<br>')}</p>`;
+  }
+
+  /**
+   * Render introTable field (intro text + table)
+   * @param {Object} field - Field configuration
+   * @param {Object} value - Field value with intro and rows
+   * @returns {string} IntroTable HTML
+   */
+  renderIntroTable(field, value) {
+    let html = '';
+
+    if (value.intro) {
+      html += `<p class="intro-text">${this.escapeHtml(value.intro).replace(/\n/g, '<br>')}</p>`;
+    }
+
+    if (value.rows && Array.isArray(value.rows) && value.rows.length > 0) {
+      const columns = field.tableColumns || [];
+      const columnCount = columns.length;
+      const columnWidth = columnCount > 0 ? Math.floor(100 / columnCount) : 100;
+
+      html += '<div class="table-wrapper"><table class="data-table"><thead><tr>';
+
+      columns.forEach((col, idx) => {
+        const width = field.columnWidths?.[idx] || `${columnWidth}%`;
+        html += `<th style="width: ${width}">${this.escapeHtml(col)}</th>`;
+      });
+
+      html += '</tr></thead><tbody>';
+
+      value.rows.forEach(row => {
+        html += '<tr>';
+        columns.forEach(col => {
+          html += `<td>${this.escapeHtml(row[col] || '-')}</td>`;
+        });
+        html += '</tr>';
+      });
+
+      html += '</tbody></table></div>';
+    }
+
+    return html;
+  }
+
+  /**
+   * Render simple field value
+   * @param {*} value - Field value
+   * @returns {string} Simple field HTML
+   */
+  renderSimpleField(value) {
+    return `<p class="field-value">${this.escapeHtml(String(value))}</p>`;
+  }
+
+  /**
+   * Render TIDP/MIDP sections
+   * @param {Array} tidpData - TIDP data
+   * @param {Array} midpData - MIDP data
+   * @returns {string} TIDP/MIDP sections HTML
+   */
+  renderTIDPMIDPSections(tidpData, midpData) {
+    let html = `
+      <div class="section">
+        <div class="section-header tidp-header">
+          <h2 class="section-title">Information Delivery Planning</h2>
+        </div>
+        <div class="section-content">
+    `;
+
+    // TIDP table
+    if (tidpData.length > 0) {
+      html += `
+        <h3 class="subsection-title">Task Information Delivery Plans (TIDPs)</h3>
+        <div class="table-wrapper">
+          <table class="data-table tidp-table">
+            <thead>
+              <tr>
+                <th style="width: 30%">Task Team</th>
+                <th style="width: 25%">Discipline</th>
+                <th style="width: 25%">Team Leader</th>
+                <th style="width: 20%">Reference</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      tidpData.forEach((tidp, idx) => {
+        const teamName = this.escapeHtml(tidp.teamName || tidp.taskTeam || `Task Team ${idx + 1}`);
+        const discipline = this.escapeHtml(tidp.discipline || 'N/A');
+        const leader = this.escapeHtml(tidp.leader || tidp.teamLeader || 'TBD');
+        const ref = `TIDP-${String(idx + 1).padStart(2, '0')}`;
+
+        html += `
+          <tr>
+            <td>${teamName}</td>
+            <td>${discipline}</td>
+            <td>${leader}</td>
+            <td class="monospace">${ref}</td>
+          </tr>
+        `;
+      });
+
+      html += '</tbody></table></div>';
+    }
+
+    // MIDP table
+    if (midpData.length > 0) {
+      html += `
+        <h3 class="subsection-title">Master Information Delivery Plan (MIDP)</h3>
+        <div class="table-wrapper">
+          <table class="data-table midp-table">
+            <thead>
+              <tr>
+                <th style="width: 40%">MIDP Reference</th>
+                <th style="width: 30%">Version</th>
+                <th style="width: 30%">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      midpData.forEach((midp, idx) => {
+        const ref = `MIDP-${String(idx + 1).padStart(2, '0')}`;
+        const version = this.escapeHtml(midp.version || '1.0');
+        const status = this.escapeHtml(midp.status || 'Active');
+
+        html += `
+          <tr>
+            <td class="monospace">${ref}</td>
+            <td>${version}</td>
+            <td>${status}</td>
+          </tr>
+        `;
+      });
+
+      html += '</tbody></table></div>';
+    }
+
+    html += '</div></div>';
+
+    return html;
+  }
+
+  /**
+   * Get form fields for step (mirrors frontend CONFIG.getFormFields)
+   * @param {string} bepType - BEP type
+   * @param {number} stepIndex - Step index
+   * @returns {Object|null} Form fields configuration or null if not found
+   */
+  getFormFields(bepType, stepIndex) {
+    try {
+      const formFields = CONFIG.formFields || {};
+      const sharedFormFields = CONFIG.sharedFormFields || {};
+      const typeFields = formFields[bepType] || {};
+
+      if (stepIndex <= 2 && typeFields[stepIndex]) {
+        return typeFields[stepIndex];
+      }
+
+      if (stepIndex >= 3 && sharedFormFields[stepIndex]) {
+        return sharedFormFields[stepIndex];
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error getting form fields:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Escape HTML to prevent XSS
+   * @param {*} text - Text to escape
+   * @returns {string} Escaped HTML string
+   */
+  escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+
+    const str = String(text);
+    const map = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    };
+
+    return str.replace(/[&<>"']/g, m => map[m]);
+  }
+
+  /**
+   * Load CSS from external file with caching
+   * @returns {string} CSS content
+   */
+  loadCSSFromFile() {
+    if (this._cssCache) {
+      return this._cssCache;
+    }
+
+    try {
+      const cssPath = path.join(__dirname, 'templates', 'bepStyles.css');
+      this._cssCache = fs.readFileSync(cssPath, 'utf8');
+      return this._cssCache;
+    } catch (error) {
+      console.warn('⚠️  Could not load external CSS file, using inline fallback');
+      console.warn(`   Reason: ${error.message}`);
+      return this.getInlineCSSFallback();
+    }
+  }
+
+  /**
+   * Get inline CSS (loads from external file with fallback)
+   * @returns {string} CSS content
+   */
+  getInlineCSS() {
+    return this.loadCSSFromFile();
+  }
+
+  /**
+   * Fallback inline CSS if external file fails to load
+   * @returns {string} Fallback CSS content
+   */
+  getInlineCSSFallback() {
+    return `
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        font-size: 11pt;
+        line-height: 1.6;
+        color: #1f2937;
+        background-color: #ffffff;
+      }
+
+      .container {
+        max-width: 170mm;
+        margin: 0 auto;
+        background-color: #ffffff;
+      }
+
+      .cover-page {
+        margin-bottom: 60px;
+        padding: 60px 40px;
+        background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+        color: #ffffff;
+        border-radius: 12px;
+        page-break-after: always;
+      }
+
+      .cover-title {
+        font-size: 36pt;
+        font-weight: 700;
+        margin-bottom: 20px;
+      }
+
+      .cover-subtitle {
+        font-size: 18pt;
+        margin-bottom: 10px;
+      }
+
+      .cover-iso {
+        font-size: 12pt;
+        font-style: italic;
+        opacity: 0.9;
+        margin-bottom: 40px;
+      }
+
+      .cover-info {
+        padding-top: 30px;
+        border-top: 1px solid rgba(255, 255, 255, 0.3);
+      }
+
+      .cover-info-item {
+        font-size: 14pt;
+        margin-bottom: 8px;
+      }
+
+      .cover-info-date {
+        font-size: 10pt;
+        margin-top: 20px;
+        opacity: 0.75;
+      }
+
+      .watermark {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 72pt;
+        font-weight: 700;
+        color: rgba(0, 0, 0, 0.06);
+        pointer-events: none;
+        z-index: 1000;
+        white-space: nowrap;
+        text-transform: uppercase;
+      }
+
+      .toc {
+        page-break-after: always;
+        padding: 40px 0;
+      }
+
+      .toc-title {
+        font-size: 24pt;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 30px;
+        padding-bottom: 10px;
+        border-bottom: 3px solid #2563eb;
+      }
+
+      .toc-list {
+        list-style: none;
+      }
+
+      .toc-item {
+        display: flex;
+        align-items: baseline;
+        margin-bottom: 12px;
+        font-size: 12pt;
+      }
+
+      .toc-item-number {
+        font-weight: 600;
+        color: #2563eb;
+        min-width: 40px;
+      }
+
+      .toc-item-title {
+        flex: 1;
+        color: #1f2937;
+      }
+
+      .toc-item-dots {
+        flex: 1;
+        border-bottom: 1px dotted #d1d5db;
+        margin: 0 8px;
+        min-width: 20px;
+      }
+
+      .section {
+        margin-bottom: 50px;
+      }
+
+      .section-header {
+        margin-bottom: 30px;
+        padding-bottom: 10px;
+        border-bottom: 3px solid #2563eb;
+        page-break-after: avoid;
+        page-break-inside: avoid;
+      }
+
+      .section-title {
+        font-size: 18pt;
+        font-weight: 700;
+        color: #111827;
+      }
+
+      .section-content {
+        padding-left: 20px;
+      }
+
+      .field-group {
+        margin-bottom: 30px;
+        page-break-inside: auto;
+      }
+
+      .field-label {
+        font-size: 13pt;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 10px;
+        page-break-after: avoid;
+      }
+
+      .field-value {
+        margin: 10px 0;
+        color: #4b5563;
+      }
+
+      .table-wrapper {
+        margin: 20px 0;
+        overflow-x: visible;
+      }
+
+      .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid #d1d5db;
+        page-break-inside: auto;
+        table-layout: fixed;
+      }
+
+      .data-table thead {
+        display: table-header-group;
+        background-color: #f3f4f6;
+      }
+
+      .data-table tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+      }
+
+      .data-table th,
+      .data-table td {
+        padding: 10px 12px;
+        text-align: left;
+        border-bottom: 1px solid #d1d5db;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+        vertical-align: top;
+      }
+
+      .data-table th {
+        font-size: 9pt;
+        font-weight: 600;
+        color: #374151;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .data-table td {
+        font-size: 10pt;
+        color: #111827;
+      }
+
+      .component-image {
+        margin: 30px 0;
+        text-align: center;
+        page-break-inside: avoid;
+      }
+
+      .component-image img {
+        max-width: 100%;
+        max-height: 200mm;
+        width: auto;
+        height: auto;
+        border: 1px solid #e5e7eb;
+        border-radius: 4px;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+      }
+
+      .component-placeholder {
+        padding: 60px 20px;
+        background-color: #f3f4f6;
+        border: 2px dashed #d1d5db;
+        border-radius: 8px;
+        text-align: center;
+        color: #9ca3af;
+        font-style: italic;
+      }
+
+      .checkbox-list {
+        list-style: none;
+        margin: 10px 0;
+      }
+
+      .checkbox-item {
+        display: flex;
+        align-items: center;
+        color: #374151;
+        margin-bottom: 5px;
+      }
+
+      .checkmark {
+        color: #059669;
+        margin-right: 8px;
+        font-weight: bold;
+      }
+
+      .textarea-content,
+      .intro-text {
+        margin: 10px 0;
+        color: #4b5563;
+        white-space: pre-wrap;
+      }
+
+      .monospace {
+        font-family: 'Courier New', Courier, monospace;
+      }
+
+      @page {
+        size: A4;
+        margin: 25mm 20mm;
+      }
+
+      @media print {
+        body {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        .container {
+          max-width: 100%;
+        }
+
+        .page-break {
+          page-break-before: always;
+        }
+
+        .no-break {
+          page-break-inside: avoid;
+        }
+      }
+    `;
+  }
+
+  /**
+   * Reload configuration from file
+   * Useful for hot-reloading in development
+   * @returns {Object} Config load result
+   */
+  reloadConfig() {
+    this._cssCache = null; // Clear CSS cache too
+    return loadBepConfig();
+  }
+
+  /**
+   * Get current configuration status
+   * @returns {Object} Status object with config details
+   */
+  getConfigStatus() {
+    return {
+      hasSteps: CONFIG.steps.length > 0,
+      stepCount: CONFIG.steps.length,
+      hasBepTypes: Object.keys(CONFIG.bepTypeDefinitions).length > 0,
+      bepTypes: Object.keys(CONFIG.bepTypeDefinitions),
+      hasFormFields: Object.keys(CONFIG.formFields).length > 0,
+      initialLoadResult: configLoadResult
+    };
+  }
+}
+
+module.exports = new HtmlTemplateService();

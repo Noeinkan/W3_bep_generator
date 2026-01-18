@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { Download, FileText, Eye, FileType, Printer, CheckCircle, AlertCircle, Loader2, Settings, RotateCcw } from 'lucide-react';
+import { Download, FileText, Eye, FileType, Printer, CheckCircle, AlertCircle, Loader2, Settings, RotateCcw, ArrowLeft } from 'lucide-react';
 import { generateBEPContent } from '../../services/bepFormatter';
-import { generatePDF } from '../../services/pdfGenerator';
+import { generateBEPPDFOnServer } from '../../services/backendPdfService';
+import BepPreviewRenderer from '../export/BepPreviewRenderer';
+import { captureCustomComponentScreenshots } from '../../services/componentScreenshotCapture';
+import toast from 'react-hot-toast';
 
 const PreviewExportPage = ({
   formData,
@@ -12,15 +15,13 @@ const PreviewExportPage = ({
   downloadBEP,
   isExporting,
   tidpData = [],
-  midpData = []
+  midpData = [],
+  onBack
 }) => {
-  const [isPreviewLoading, setIsPreviewLoading] = useState(true);
   const [previewError, setPreviewError] = useState(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [pdfQuality, setPdfQuality] = useState('standard'); // 'standard' or 'high'
   const [pdfOrientation, setPdfOrientation] = useState('portrait'); // 'portrait' or 'landscape'
-
-  const content = generateBEPContent(formData, bepType, { tidpData, midpData });
 
   const exportFormats = [
     {
@@ -52,27 +53,59 @@ const PreviewExportPage = ({
     }
   ];
 
-  const handlePreviewLoad = () => {
-    setIsPreviewLoading(false);
-    setPreviewError(null);
-  };
-
-  const handlePreviewError = () => {
-    setIsPreviewLoading(false);
-    setPreviewError('Failed to load preview');
-  };
-
   const handleAdvancedExport = async () => {
     try {
-      await generatePDF(formData, bepType, {
-        orientation: pdfOrientation,
-        filename: `BEP_${bepType}_${new Date().toISOString().split('T')[0]}.pdf`,
+      // Show loading toast
+      const loadingToast = toast.loading('Generating PDF...');
+
+      // Brief wait for components to render
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Capture screenshots of custom components
+      let componentScreenshots = {};
+      try {
+        componentScreenshots = await captureCustomComponentScreenshots(formData);
+        console.log('✅ Component screenshots captured:', Object.keys(componentScreenshots).length);
+      } catch (screenshotError) {
+        console.warn('⚠️  Screenshot capture failed, continuing without images:', screenshotError);
+        toast.dismiss(loadingToast);
+        toast.error('Warning: Some diagrams may not appear in the PDF');
+      }
+
+      // Generate PDF on backend using Puppeteer
+      await generateBEPPDFOnServer(
+        formData,
+        bepType,
         tidpData,
-        midpData
-      });
+        midpData,
+        componentScreenshots,
+        {
+          orientation: pdfOrientation,
+          quality: pdfQuality || 'standard'
+        }
+      );
+
+      // Success
+      toast.dismiss(loadingToast);
+      toast.success('PDF generated successfully!');
+
     } catch (error) {
-      console.error('Advanced PDF export failed:', error);
-      alert('PDF export failed: ' + error.message);
+      console.error('❌ PDF export failed:', error);
+
+      // User-friendly error messages
+      let errorMessage = 'PDF export failed';
+
+      if (error.message.includes('timeout')) {
+        errorMessage = 'PDF generation timed out. Try using standard quality instead of high quality.';
+      } else if (error.message.includes('network') || error.message.includes('connect')) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      } else if (error.message.includes('too large')) {
+        errorMessage = 'BEP data too large. Please reduce the number of components.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast.error(errorMessage);
     }
   };
 
@@ -80,9 +113,20 @@ const PreviewExportPage = ({
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header Section */}
       <div className="mb-8">
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-          Preview & Export
-        </h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
+            Preview & Export
+          </h1>
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 transition-all duration-200"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Editor
+            </button>
+          )}
+        </div>
         <p className="text-lg text-gray-600 max-w-2xl">
           Review your BIM Execution Plan and export it in your preferred format.
           Choose from professional PDF, editable Word, or web-friendly HTML formats.
@@ -332,7 +376,7 @@ const PreviewExportPage = ({
             <div>
               <h3 className="text-xl font-semibold text-gray-900">Live Preview</h3>
               <p className="text-sm text-gray-600 mt-1">
-                See how your BIM Execution Plan will look
+                See how your BIM Execution Plan will look with all diagrams and components
               </p>
             </div>
             {previewError && (
@@ -344,24 +388,15 @@ const PreviewExportPage = ({
           </div>
         </div>
 
-        <div className="relative">
-          {isPreviewLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-              <div className="text-center">
-                <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-3" />
-                <p className="text-gray-600 font-medium">Loading preview...</p>
-              </div>
-            </div>
-          )}
-
-          <iframe
-            srcDoc={content}
-            title="BEP Preview"
-            className="w-full border-0"
-            style={{ height: '700px' }}
-            onLoad={handlePreviewLoad}
-            onError={handlePreviewError}
-          />
+        <div className="relative overflow-y-auto" style={{ maxHeight: '800px' }}>
+          <div className="p-8">
+            <BepPreviewRenderer
+              formData={formData}
+              bepType={bepType}
+              tidpData={tidpData}
+              midpData={midpData}
+            />
+          </div>
         </div>
       </div>
     </div>

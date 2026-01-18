@@ -7,37 +7,65 @@
 
 const express = require('express');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 const router = express.Router();
 
 // Configuration for ML service
-const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
 const ML_SERVICE_TIMEOUT = 30000; // 30 seconds
 
-// Create axios instance with default config
-const mlClient = axios.create({
-  baseURL: ML_SERVICE_URL,
-  timeout: ML_SERVICE_TIMEOUT,
-  headers: {
-    'Content-Type': 'application/json'
+// Function to get current ML service URL
+function getMLServiceURL() {
+  // Try to read from .env file for dynamic tunnel URL
+  try {
+    const envPath = path.join(__dirname, '..', '..', '.env');
+    if (fs.existsSync(envPath)) {
+      const envContent = fs.readFileSync(envPath, 'utf8');
+      const match = envContent.match(/ML_SERVICE_URL=(.+)/);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+    }
+  } catch (err) {
+    console.warn('Could not read .env file:', err.message);
   }
-});
+
+  // Fallback to environment variable or localhost
+  return process.env.ML_SERVICE_URL || 'http://localhost:8000';
+}
+
+// Create axios instance with dynamic config
+function getMLClient() {
+  const baseURL = getMLServiceURL();
+  return axios.create({
+    baseURL,
+    timeout: ML_SERVICE_TIMEOUT,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+}
 
 /**
  * Health check for ML service
  */
 router.get('/health', async (req, res) => {
   try {
+    const mlClient = getMLClient();
+    const mlServiceURL = getMLServiceURL();
     const response = await mlClient.get('/health', { timeout: 5000 });
     res.json({
       status: 'ok',
-      ml_service: response.data
+      ml_service: response.data,
+      ml_service_url: mlServiceURL
     });
   } catch (error) {
     console.error('ML service health check failed:', error.message);
     res.status(503).json({
       status: 'error',
       message: 'ML service unavailable',
-      details: error.message
+      details: error.message,
+      ml_service_url: getMLServiceURL()
     });
   }
 });
@@ -79,7 +107,8 @@ router.post('/generate', async (req, res) => {
 
     console.log(`AI generation request: field_type=${field_type}, prompt_length=${prompt.length}`);
 
-    // Call ML service
+    // Call ML service with dynamic URL
+    const mlClient = getMLClient();
     const response = await mlClient.post('/generate', {
       prompt,
       field_type,
@@ -149,13 +178,12 @@ router.post('/suggest', async (req, res) => {
 
     console.log(`AI suggestion request: field_type=${field_type}, partial_length=${partial_text.length}`);
 
-    // Call ML service
-    const response = await mlClient.post('/suggest', null, {
-      params: {
-        field_type,
-        partial_text,
-        max_length: Math.min(Math.max(max_length, 50), 1000)
-      }
+    // Call ML service with dynamic URL
+    const mlClient = getMLClient();
+    const response = await mlClient.post('/suggest', {
+      field_type,
+      partial_text,
+      max_length: Math.min(Math.max(max_length, 50), 1000)
     });
 
     res.json({

@@ -13,6 +13,20 @@ export const checkMIDPCompliance = (midps) => {
   };
 };
 
+// TEMPORARILY DISABLED - To be migrated to Puppeteer in the future
+// This function was using jsPDF for MIDP compliance reports
+export const generateComplianceReport = async (midps) => {
+  console.warn('⚠️  generateComplianceReport is temporarily disabled');
+  console.log('This feature will be migrated to use Puppeteer PDF generation in a future update');
+
+  // Return success with message for now
+  return {
+    success: false,
+    error: new Error('Compliance report generation is temporarily unavailable. Feature will be restored in next update.')
+  };
+};
+
+/* ORIGINAL IMPLEMENTATION - TO BE MIGRATED TO PUPPETEER
 export const generateComplianceReport = async (midps) => {
   try {
     const { default: jsPDF } = await import('jspdf');
@@ -54,3 +68,4 @@ export const generateComplianceReport = async (midps) => {
     return { success: false, error };
   }
 };
+*/

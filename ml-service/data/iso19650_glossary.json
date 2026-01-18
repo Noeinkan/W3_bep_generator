@@ -1,0 +1,275 @@
+{
+  "glossary": {
+    "title": "ISO 19650 BIM Terminology Glossary",
+    "version": "1.0",
+    "last_updated": "2025-11-23",
+    "description": "Comprehensive glossary of BIM and ISO 19650 terminology for ML training"
+  },
+  "terms": {
+    "AIR": {
+      "full_name": "Asset Information Requirements",
+      "definition": "Information requirements in relation to the operation of an asset",
+      "context": "The AIR defines what information is needed to operate and maintain the built asset throughout its lifecycle",
+      "usage_examples": [
+        "The AIR specifies the level of detail required for asset data",
+        "Asset Information Requirements must align with the organization's strategic objectives"
+      ]
+    },
+    "BEP": {
+      "full_name": "BIM Execution Plan",
+      "definition": "Plan that explains how the information management aspects of the appointment will be carried out by the delivery team",
+      "context": "The BEP is a process management document developed by the delivery team in response to the EIR",
+      "usage_examples": [
+        "The BEP outlines the strategic approach to information management",
+        "This BEP establishes clear protocols for model development and data exchange"
+      ]
+    },
+    "CDE": {
+      "full_name": "Common Data Environment",
+      "definition": "Agreed source of information for any given project or asset, for collecting, managing and disseminating each information container through a managed process",
+      "context": "The CDE provides a single source of truth for project information with defined workflows",
+      "usage_examples": [
+        "All project information shall be managed through an ISO 19650 compliant Common Data Environment",
+        "The CDE workflow comprises Work in Progress, Shared, Published, and Archive states"
+      ]
+    },
+    "EIR": {
+      "full_name": "Employer's Information Requirements",
+      "definition": "Information requirements in relation to the appointment of a lead appointed party and appointed parties",
+      "context": "The EIR defines what information the employer needs and when they need it",
+      "usage_examples": [
+        "This plan responds directly to the EIR and the Employer's strategic objectives",
+        "All deliverables must meet the requirements specified in the EIR"
+      ]
+    },
+    "Information_Manager": {
+      "full_name": "Information Manager",
+      "definition": "Individual responsible for managing the information management processes in accordance with ISO 19650",
+      "context": "The Information Manager coordinates all information management activities and ensures BEP compliance",
+      "usage_examples": [
+        "The Information Manager serves as the primary coordinator for all information management activities",
+        "The Information Manager chairs coordination meetings and manages the CDE workflow"
+      ]
+    },
+    "Lead_Appointed_Party": {
+      "full_name": "Lead Appointed Party",
+      "definition": "Provider of services relating to any information relating to the lead appointed party's appointment",
+      "context": "The Lead Appointed Party coordinates the delivery team's information production",
+      "usage_examples": [
+        "Lead Appointed Party responsibilities include overall project BIM coordination",
+        "The Lead Appointed Party must ensure all deliverables meet the Employer's requirements"
+      ]
+    },
+    "Appointed_Party": {
+      "full_name": "Appointed Party",
+      "definition": "Provider of information concerning works, goods or services",
+      "context": "Appointed parties are members of the delivery team responsible for specific work packages",
+      "usage_examples": [
+        "Each appointed party must submit information according to the agreed schedule",
+        "All appointed parties must comply with the BEP and agreed standards"
+      ]
+    },
+    "Task_Team": {
+      "full_name": "Task Team",
+      "definition": "Individuals organized to perform a specific task",
+      "context": "Task teams are responsible for discipline-specific deliverables within the project",
+      "usage_examples": [
+        "Task Team responsibilities include developing discipline-specific models to agreed standards",
+        "Each Task Team must designate a Task Information Manager"
+      ]
+    },
+    "Level_of_Information_Need": {
+      "full_name": "Level of Information Need",
+      "definition": "Framework which defines the extent and granularity of information",
+      "context": "Specifies how much detail is required at each project stage for decision-making",
+      "usage_examples": [
+        "All models must be developed to the Level of Information Need specified for each project stage",
+        "The Level of Information Need ensures appropriate geometric and alphanumeric detail"
+      ]
+    },
+    "Information_Container": {
+      "full_name": "Information Container",
+      "definition": "Named persistent set of information retrievable from within a file, system or application storage hierarchy",
+      "context": "Files, documents, models, or databases that contain project information",
+      "usage_examples": [
+        "The CDE includes clearly defined information containers for each discipline",
+        "Each information container must follow the project naming convention"
+      ]
+    },
+    "MIDP": {
+      "full_name": "Master Information Delivery Plan",
+      "definition": "Primary plan for when project information is to be prepared, by whom and using what protocols and procedures",
+      "context": "Coordinates all information delivery across the project lifecycle",
+      "usage_examples": [
+        "The Master Information Delivery Plan establishes the overarching schedule for information delivery",
+        "The MIDP identifies key decision points requiring specific information deliverables"
+      ]
+    },
+    "TIDP": {
+      "full_name": "Task Information Delivery Plan",
+      "definition": "Plan setting out when the information is to be prepared by a task team, using what protocols and procedures",
+      "context": "Details discipline-specific deliverables and schedules",
+      "usage_examples": [
+        "Task Information Delivery Plans detail discipline-specific deliverables",
+        "Each TIDP specifies the information container, format, and delivery date"
+      ]
+    },
+    "Federation": {
+      "full_name": "Federation",
+      "definition": "Creation of a composite information model from separate information models",
+      "context": "Combining discipline models into a coordinated whole for clash detection and review",
+      "usage_examples": [
+        "The Delivery Team shall produce coordinated federated models at key milestones",
+        "Federated model creation and maintenance is a Lead Appointed Party responsibility"
+      ]
+    },
+    "Information_Model": {
+      "full_name": "Information Model",
+      "definition": "Set of structured and unstructured information containers",
+      "context": "Digital representation of physical and functional characteristics of a facility",
+      "usage_examples": [
+        "Information models must comply with the project's data schema",
+        "Each information model must pass validation checks before submission"
+      ]
+    },
+    "PIM": {
+      "full_name": "Project Information Model",
+      "definition": "Information model relating to the delivery phase",
+      "context": "Used during design and construction phases",
+      "usage_examples": [
+        "The PIM includes architectural, structural, and MEP models",
+        "All PIM deliverables must meet Level of Information Need requirements"
+      ]
+    },
+    "AIM": {
+      "full_name": "Asset Information Model",
+      "definition": "Information model relating to the operational phase",
+      "context": "Information handed over for facilities management and operations",
+      "usage_examples": [
+        "The AIM supports space management and preventive maintenance",
+        "Asset Information Model data must be COBie-compliant for handover"
+      ]
+    },
+    "Plain_Language_Questions": {
+      "full_name": "Plain Language Questions",
+      "definition": "Questions about the asset to be answered by the project team to inform decision making",
+      "context": "Drive information requirements and define what information is needed",
+      "usage_examples": [
+        "Plain language questions inform the development of the EIR",
+        "Each information requirement should answer specific plain language questions"
+      ]
+    },
+    "Information_Protocol": {
+      "full_name": "Information Protocol",
+      "definition": "Rules for structuring and naming information containers and their content",
+      "context": "Ensures consistency in information production and exchange",
+      "usage_examples": [
+        "All parties must follow the project information protocol",
+        "Information protocols include naming conventions and metadata requirements"
+      ]
+    },
+    "LOD": {
+      "full_name": "Level of Development",
+      "definition": "The degree to which the element's geometry and attached information has been thought through",
+      "context": "Defines the reliability and detail of model elements at different project stages",
+      "usage_examples": [
+        "Geometric modeling shall follow established LOD criteria appropriate to each project stage",
+        "LOD specifications ensure models contain sufficient detail for their intended purpose"
+      ]
+    },
+    "COBie": {
+      "full_name": "Construction Operations Building information exchange",
+      "definition": "Standard for organizing and exchanging asset information",
+      "context": "Structured format for handover information to facilities management",
+      "usage_examples": [
+        "COBie-compliant data must be embedded within models",
+        "All COBie data must pass validation against the COBie UK 2012 schema"
+      ]
+    },
+    "Clash_Detection": {
+      "full_name": "Clash Detection",
+      "definition": "Process of identifying conflicts between model elements from different disciplines",
+      "context": "Critical coordination activity to identify and resolve spatial conflicts",
+      "usage_examples": [
+        "Clash detection reports must be distributed within 24 hours of coordination meetings",
+        "3D coordination identifies and resolves spatial conflicts prior to construction"
+      ]
+    },
+    "IFC": {
+      "full_name": "Industry Foundation Classes",
+      "definition": "Open standard file format for BIM data exchange",
+      "context": "Ensures interoperability between different BIM software platforms",
+      "usage_examples": [
+        "All models must be capable of exporting IFC 2x3 or IFC4 files",
+        "IFC exports are required for coordination purposes"
+      ]
+    },
+    "Uniclass": {
+      "full_name": "Unified Classification for the Construction Industry",
+      "definition": "UK construction industry classification system",
+      "context": "Standard classification for organizing construction information",
+      "usage_examples": [
+        "Metadata requirements include classification according to Uniclass 2015 taxonomy",
+        "Classification verification ensures correct Uniclass coding"
+      ]
+    }
+  },
+  "common_phrases": {
+    "compliance": [
+      "in accordance with ISO 19650",
+      "ensuring compliance with ISO 19650 standards",
+      "compliant with the EIR requirements",
+      "meets the Employer's Information Requirements"
+    ],
+    "responsibilities": [
+      "serves as the primary coordinator for",
+      "is responsible for ensuring",
+      "must ensure compliance with",
+      "shall coordinate all activities related to"
+    ],
+    "information_management": [
+      "manages the information flow",
+      "coordinates information exchanges",
+      "ensures information quality",
+      "maintains information accuracy throughout"
+    ],
+    "deliverables": [
+      "shall be delivered in accordance with",
+      "must meet the specified Level of Information Need",
+      "delivered at agreed project milestones",
+      "submitted to the Common Data Environment"
+    ],
+    "quality": [
+      "must pass validation checks",
+      "subject to quality control procedures",
+      "reviewed for compliance with standards",
+      "verified against project requirements"
+    ]
+  },
+  "sentence_starters": {
+    "executive_summary": [
+      "The BEP establishes",
+      "This BIM Execution Plan outlines",
+      "The primary objectives of this BEP include",
+      "This plan responds directly to the EIR"
+    ],
+    "roles": [
+      "The Information Manager serves as",
+      "Lead Appointed Party responsibilities include",
+      "Task Team responsibilities include",
+      "The Appointed Party is responsible for"
+    ],
+    "technical": [
+      "All models must be developed",
+      "Technical standards compliance requires",
+      "Information shall be delivered",
+      "The project team will utilize"
+    ],
+    "procedures": [
+      "All project information shall be managed",
+      "Collaboration procedures require",
+      "Quality control procedures include",
+      "Validation checks include"
+    ]
+  }
+}

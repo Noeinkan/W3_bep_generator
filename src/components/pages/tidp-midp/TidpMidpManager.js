@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { usePage } from '../../../contexts/PageContext';
 import { ArrowLeft } from 'lucide-react';
 import { useTidpData } from '../../../hooks/useTidpData';
 import { useMidpData } from '../../../hooks/useMidpData';
@@ -18,7 +17,6 @@ import MIDPForm from '../../midp/MIDPForm';
 
 const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidpForm = false, initialTidpId = null }) => {
   const navigate = useNavigate();
-  const { navigateTo } = usePage();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showTidpForm, setShowTidpForm] = useState(initialShowTidpForm);
   const [showMidpForm, setShowMidpForm] = useState(initialShowMidpForm);
@@ -157,7 +155,7 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
         try {
           const slugify = require('../../../utils/slugify').default || require('../../../utils/slugify');
           const slug = slugify(t.taskTeam || t.name || t.title || 'tidp');
-          navigateTo(`/tidp-editor/${t.id}${slug ? '--' + slug : ''}`);
+          navigate(`/tidp-editor/${t.id}${slug ? '--' + slug : ''}`);
         } catch (e) { /* noop */ }
       }
     } catch (err) {
@@ -243,13 +241,13 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
       try {
   const slugify = require('../../../utils/slugify').default || require('../../../utils/slugify');
   const slug = slugify(tidp.taskTeam || tidp.name || tidp.title || tidp.taskTeam);
-  navigateTo(`/tidp-editor/${tidp.id}${slug ? '--' + slug : ''}`);
+  navigate(`/tidp-editor/${tidp.id}${slug ? '--' + slug : ''}`);
       } catch (e) { /* noop */ }
     } else {
       // New TIDP
       setTidpForm((prev) => ({ ...prev }));
       setShowTidpForm(true);
-      try { navigateTo('/tidp-editor'); } catch (e) { /* noop */ }
+      try { navigate('/tidp-editor'); } catch (e) { /* noop */ }
     }
   };
 
@@ -338,7 +336,7 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
     }
 
     if (path.startsWith('/tidp-editor')) {
-      try { navigateTo('tidp-midp'); } catch (e) { /* noop */ }
+      try { navigate('/tidp-midp'); } catch (e) { /* noop */ }
       try { navigate('/tidp-midp'); } catch (e) { /* noop */ }
     }
   };
@@ -384,14 +382,18 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
                 <div className="flex items-center space-x-4">
                   <button
                     onClick={() => {
-                      if (window.history.length > 1) {
+                      const returnUrl = sessionStorage.getItem('bep-return-url');
+                      if (returnUrl) {
+                        sessionStorage.removeItem('bep-return-url');
+                        window.location.href = returnUrl;
+                      } else if (window.history.length > 1) {
                         window.history.back();
                         setTimeout(() => {
-                          try { navigateTo('tidp-midp'); } catch (e) { /* noop */ }
+                          try { navigate('/tidp-midp'); } catch (e) { /* noop */ }
                         }, 200);
                       } else {
                         // Fallback to explicit navigation
-                        try { navigateTo('tidp-midp'); } catch (e) { /* noop */ }
+                        try { navigate('/tidp-midp'); } catch (e) { /* noop */ }
                         try { navigate('/tidp-midp-dashboard'); } catch (e) { /* noop */ }
                       }
                     }}

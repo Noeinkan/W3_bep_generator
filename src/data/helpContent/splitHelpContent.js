@@ -28,7 +28,7 @@ const categories = {
     'documentation', 'geometryLOD', 'informationLOI'
   ],
   deliveryPlanning: [
-    'midpReference', 'tidpReference', 'deliverySchedule', 'keyMilestones',
+    'midpReference', 'tidpReference', 'keyMilestones',
     'informationDeliveryDates', 'coordinationSchedule'
   ],
   cde: [

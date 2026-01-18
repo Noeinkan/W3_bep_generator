@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+**/node_modules
 /.pnp
 .pnp.js
 
@@ -24,3 +25,9 @@ yarn-error.log*
 
 # Windows special files
 nul
+
+# ML Service temporary files
+/ml-service/*.log
+/ml-service/training_state.json
+/ml-service/runs/
+*.pth

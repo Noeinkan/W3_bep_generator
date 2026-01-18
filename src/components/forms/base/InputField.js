@@ -1,6 +1,8 @@
 import OrgStructureField from '../specialized/OrgStructureField';
 import OrgStructureDataTable from '../specialized/OrgStructureDataTable';
 import NamingConventionBuilder from '../custom/NamingConventionBuilder';
+import FederationStrategyBuilder from '../custom/FederationStrategyBuilder';
+import CDEPlatformEcosystem from '../custom/CDEPlatformEcosystem';
 // ...existing code...
 import React, { useState } from 'react';
 import CONFIG from '../../../config/bepConfig';
@@ -8,9 +10,8 @@ import EditableTable from './EditableTable';
 import IntroTableField from './IntroTableField';
 import FieldHeader from './FieldHeader';
 import CheckboxGroup from './CheckboxGroup';
-import FolderStructureDiagram from '../diagrams/FolderStructureDiagram';
-import CDEDiagramBuilderV2 from '../diagrams/CDEDiagramBuilder';
-import VolumeStrategyMindmap from '../diagrams/VolumeStrategyMindmap';
+import FolderStructureDiagram from '../diagrams/diagram-components/FolderStructureDiagram';
+import VolumeStrategyMindmap from '../diagrams/diagram-components/VolumeStrategyMindmap';
 import TipTapEditor from '../editors/TipTapEditor';
 import TimelineInput from '../specialized/TimelineInput';
 import BudgetInput from '../specialized/BudgetInput';
@@ -54,31 +55,32 @@ const InputField = React.memo(({ field, value, onChange, error, formData = {} })
 
     case 'orgchart':
       return (
-        <OrgStructureField
-          field={field}
-          value={value}
-          onChange={(v) => {
-            // If the org chart component emits an object with leadAppointedParty and finalizedParties,
-            // persist those into separate form fields expected elsewhere in the app.
-            if (v && typeof v === 'object') {
-              if (v.leadAppointedParty !== undefined) {
-                onChange('leadAppointedParty', v.leadAppointedParty);
-              }
-              if (v.finalizedParties !== undefined) {
-                onChange('finalizedParties', v.finalizedParties);
-              }
-              // Also keep the organizationalStructure field (the org tree) for compatibility
-              if (v.tree !== undefined) {
-                onChange(name, v.tree);
+        <div data-field-name={name} data-component-type="orgchart">
+          <OrgStructureField
+            field={field}
+            value={value}
+            onChange={(v) => {
+              // The org chart component emits the complete tree structure
+              // Store it directly in the organizationalStructure field
+              if (v && typeof v === 'object') {
+                // If v.tree exists, use it; otherwise use v directly
+                const treeData = v.tree || v;
+                onChange(name, treeData);
+
+                // Also sync leadAppointedParty and finalizedParties for backward compatibility
+                if (v.leadAppointedParty !== undefined) {
+                  onChange('leadAppointedParty', v.leadAppointedParty);
+                }
+                if (v.finalizedParties !== undefined) {
+                  onChange('finalizedParties', v.finalizedParties);
+                }
               } else {
                 onChange(name, v);
               }
-            } else {
-              onChange(name, v);
-            }
-          }}
-          formData={formData}
-        />
+            }}
+            formData={formData}
+          />
+        </div>
       );
     
     case 'orgstructure-data-table':
@@ -122,42 +124,62 @@ const InputField = React.memo(({ field, value, onChange, error, formData = {} })
 
     case 'fileStructure':
       return (
-        <FolderStructureDiagram
-          field={field}
-          value={value}
-          onChange={onChange}
-          error={error}
-        />
+        <div data-field-name={name} data-component-type="fileStructure">
+          <FolderStructureDiagram
+            field={field}
+            value={value}
+            onChange={onChange}
+            error={error}
+          />
+        </div>
       );
 
     case 'cdeDiagram':
       return (
-        <CDEDiagramBuilderV2
-          field={field}
-          value={value}
-          onChange={onChange}
-          error={error}
-        />
+        <div data-field-name={name} data-component-type="cdeDiagram">
+          <CDEPlatformEcosystem
+            field={field}
+            value={value}
+            onChange={onChange}
+            error={error}
+          />
+        </div>
       );
 
     case 'mindmap':
       return (
-        <VolumeStrategyMindmap
-          field={field}
-          value={value}
-          onChange={onChange}
-          error={error}
-        />
+        <div data-field-name={name} data-component-type="mindmap">
+          <VolumeStrategyMindmap
+            field={field}
+            value={value}
+            onChange={onChange}
+            error={error}
+          />
+        </div>
       );
 
     case 'naming-conventions':
       return (
-        <NamingConventionBuilder
-          field={field}
-          value={value}
-          onChange={onChange}
-          error={error}
-        />
+        <div data-field-name={name} data-component-type="naming-conventions">
+          <NamingConventionBuilder
+            field={field}
+            value={value}
+            onChange={onChange}
+            error={error}
+          />
+        </div>
+      );
+
+    case 'federation-strategy':
+      return (
+        <div data-field-name={name} data-component-type="federation-strategy">
+          <FederationStrategyBuilder
+            field={field}
+            value={value}
+            onChange={onChange}
+            error={error}
+          />
+        </div>
       );
 
     case 'textarea':
@@ -378,129 +400,58 @@ const MilestonesTableField = ({ field, value, onChange, error }) => {
 
 const TidpReferenceField = ({ field, value, onChange, error, formData }) => {
   const { label, number } = field;
-  const [showManager, setShowManager] = useState(false);
-  const [tidps, setTidps] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  // Lazy load components and hooks
-  const TidpMidpManager = React.lazy(() => import('../../pages/tidp-midp/TidpMidpManager'));
-
-  // Load TIDPs function
-  const loadTidps = React.useCallback(async () => {
-    try {
-      setLoading(true);
-      // Dynamic import of API service
-      const ApiService = (await import('../../../services/apiService')).default;
-      const response = await ApiService.getAllTIDPs(formData.projectName || 'current');
-      setTidps(response.tidps || []);
-    } catch (error) {
-      console.log('TIDPs not available:', error);
-      setTidps([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [formData.projectName]);
-
-  // Load TIDPs on mount
-  React.useEffect(() => {
-    loadTidps();
-  }, [loadTidps]);
 
   return (
     <div>
-      <FieldHeader 
+      <FieldHeader
         fieldName={field.name}
         label={label}
         number={number}
         required={field.required}
       />
 
-      {showManager ? (
-        <React.Suspense fallback={<div className="p-4 text-center">Loading TIDP Manager...</div>}>
-          <TidpMidpManager
-            onClose={() => {
-              setShowManager(false);
-              // Reload TIDPs after closing manager
-              loadTidps();
-            }}
-            initialShowTidpForm={false}
-          />
-        </React.Suspense>
-      ) : (
-        <div className="space-y-4">
-          {/* TIDPs List */}
-          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border-2 border-indigo-200 rounded-lg p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">Task Information Delivery Plans</h4>
-                  <p className="text-sm text-gray-600">
-                    {loading ? 'Loading TIDPs...' : `${tidps.length} TIDP${tidps.length !== 1 ? 's' : ''} created`}
-                  </p>
-                </div>
+      <div className="space-y-4">
+        {/* TIDPs Summary Box */}
+        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border-2 border-indigo-200 rounded-lg p-6">
+          <div className="flex items-start space-x-4">
+            <div className="flex-shrink-0">
+              <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-white" />
               </div>
-              <button
-                type="button"
-                onClick={() => setShowManager(true)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 font-medium"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Create TIDP</span>
-              </button>
             </div>
-
-            {/* List of existing TIDPs */}
-            {tidps.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
-                {tidps.map((tidp) => (
-                  <div
-                    key={tidp.id}
-                    className="bg-white border border-indigo-200 rounded-lg p-3 hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h5 className="font-medium text-sm text-gray-900 truncate">{tidp.taskTeam}</h5>
-                        <p className="text-xs text-gray-600">{tidp.discipline}</p>
-                      </div>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        tidp.status === 'active' ? 'bg-green-100 text-green-800' :
-                        tidp.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {tidp.status}
-                      </span>
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      <p>Leader: {tidp.teamLeader}</p>
-                      <p>Containers: {tidp.containers?.length || 0}</p>
-                    </div>
-                  </div>
-                ))}
+            <div className="flex-1">
+              <h4 className="font-semibold text-gray-900 mb-1">Task Information Delivery Plans</h4>
+              <p className="text-sm text-gray-600 mb-4">
+                Manage TIDPs for each project team/discipline. Define deliverables, schedules, and responsibilities.
+              </p>
+              <div className="flex items-center space-x-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    sessionStorage.setItem('bep-return-url', window.location.pathname + window.location.search);
+                    window.location.href = '/tidp-editor';
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 font-medium"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Create TIDP</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    sessionStorage.setItem('bep-return-url', window.location.pathname + window.location.search);
+                    window.location.href = '/tidp-midp';
+                  }}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 font-medium"
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span>Open TIDP/MIDP Manager</span>
+                </button>
               </div>
-            ) : (
-              !loading && (
-                <div className="text-center py-6 text-gray-500">
-                  <p className="text-sm">No TIDPs created yet</p>
-                  <p className="text-xs mt-1">Click "Create TIDP" to add your first Task Information Delivery Plan</p>
-                </div>
-              )
-            )}
+            </div>
           </div>
-
-          {/* Button to open full manager */}
-          <button
-            type="button"
-            onClick={() => setShowManager(true)}
-            className="w-full bg-white border-2 border-indigo-300 text-indigo-700 px-6 py-3 rounded-lg hover:bg-indigo-50 transition-colors flex items-center justify-center space-x-2 font-medium"
-          >
-            <Calendar className="w-5 h-5" />
-            <span>Open TIDP/MIDP Manager Dashboard</span>
-          </button>
         </div>
-      )}
+      </div>
       {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
     </div>
   );
@@ -508,46 +459,34 @@ const TidpReferenceField = ({ field, value, onChange, error, formData }) => {
 
 const TidpSectionField = ({ field, value, onChange, error, formData }) => {
   const { name, label, number, placeholder } = field;
-  const [showManager, setShowManager] = useState(false);
-
-  // Lazy load the manager component
-  const TidpMidpManager = React.lazy(() => import('../../pages/tidp-midp/TidpMidpManager'));
 
   return (
     <div>
-      <FieldHeader 
+      <FieldHeader
         fieldName={name}
         label={label}
         number={number}
         required={field.required}
       />
 
-      {showManager ? (
-        <React.Suspense fallback={<div>Loading...</div>}>
-          <TidpMidpManager
-            onClose={() => setShowManager(false)}
-            initialShowTidpForm={true}
-          />
-        </React.Suspense>
-      ) : (
-        <>
-          <textarea
-            value={value || ''}
-            onChange={(e) => onChange(name, e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            rows={3}
-            placeholder={placeholder}
-          />
-          <button
-            type="button"
-            onClick={() => setShowManager(true)}
-            className="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center space-x-2 font-medium"
-          >
-            <Calendar className="w-5 h-5" />
-            <span>Open TIDP/MIDP Manager</span>
-          </button>
-        </>
-      )}
+      <textarea
+        value={value || ''}
+        onChange={(e) => onChange(name, e.target.value)}
+        className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        rows={3}
+        placeholder={placeholder}
+      />
+      <button
+        type="button"
+        onClick={() => {
+          sessionStorage.setItem('bep-return-url', window.location.pathname + window.location.search);
+          window.location.href = '/tidp-midp';
+        }}
+        className="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center space-x-2 font-medium"
+      >
+        <Calendar className="w-5 h-5" />
+        <span>Open TIDP/MIDP Manager</span>
+      </button>
       {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
     </div>
   );

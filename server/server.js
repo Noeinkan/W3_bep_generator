@@ -1,3 +1,5 @@
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -9,6 +11,11 @@ const tidpRoutes = require('./routes/tidp');
 const midpRoutes = require('./routes/midp');
 const exportRoutes = require('./routes/export');
 const validationRoutes = require('./routes/validation');
+const aiRoutes = require('./routes/ai');
+const draftsRoutes = require('./routes/drafts');
+
+// Import services
+const puppeteerPdfService = require('./services/puppeteerPdfService');
 
 const app = require('./app');
 const PORT = process.env.PORT || 3001;
@@ -18,7 +25,22 @@ const PORT = process.env.PORT || 3001;
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
     ? ['https://yourdomain.com']
-    : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3001', 'http://127.0.0.1:3001'],
+    : function (origin, callback) {
+        // Allow localhost and Cloudflare tunnel URLs
+        const allowedOrigins = [
+          'http://localhost:3000',
+          'http://127.0.0.1:3000',
+          'http://localhost:3001',
+          'http://127.0.0.1:3001'
+        ];
+
+        // Allow any trycloudflare.com domain for tunneling
+        if (!origin || allowedOrigins.includes(origin) || /\.trycloudflare\.com$/.test(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
   credentials: true
 }));
 
@@ -56,6 +78,8 @@ app.use('/api/midp', midpRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/validation', validationRoutes);
 app.use('/api/migrate', migrateRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/drafts', draftsRoutes);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
@@ -103,7 +127,30 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 if (require.main === module) {
-  app.listen(PORT, '0.0.0.0', () => {
+  app.listen(PORT, '0.0.0.0', async () => {
     console.log(`Server running on port ${PORT}`);
+
+    // Initialize Puppeteer browser pool
+    try {
+      console.log('🚀 Initializing Puppeteer...');
+      await puppeteerPdfService.initialize();
+      console.log('✅ Puppeteer initialized successfully');
+    } catch (error) {
+      console.error('⚠️  Puppeteer initialization failed:', error.message);
+      console.error('   PDF generation will not be available until server restart');
+    }
   });
 }
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  await puppeteerPdfService.cleanup();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('SIGINT received, shutting down gracefully...');
+  await puppeteerPdfService.cleanup();
+  process.exit(0);
+});

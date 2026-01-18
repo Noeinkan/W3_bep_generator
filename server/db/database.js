@@ -121,6 +121,25 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_deliverables_project_id ON information_deliverables(project_id);
   CREATE INDEX IF NOT EXISTS idx_deliverables_tidp_id ON information_deliverables(tidp_id);
   CREATE INDEX IF NOT EXISTS idx_deliverables_status ON information_deliverables(status);
+
+  CREATE TABLE IF NOT EXISTS drafts (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    project_id TEXT,
+    title TEXT NOT NULL,
+    type TEXT CHECK(type IN ('pre-appointment', 'post-appointment')) NOT NULL,
+    data TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    is_deleted INTEGER DEFAULT 0,
+    version TEXT DEFAULT '1.0',
+    status TEXT DEFAULT 'draft'
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_drafts_user_id ON drafts(user_id);
+  CREATE INDEX IF NOT EXISTS idx_drafts_project_id ON drafts(project_id);
+  CREATE INDEX IF NOT EXISTS idx_drafts_is_deleted ON drafts(is_deleted);
+  CREATE INDEX IF NOT EXISTS idx_drafts_updated_at ON drafts(updated_at);
 `);
 
 console.log('Database initialized at:', dbPath);

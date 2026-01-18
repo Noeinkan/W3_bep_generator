@@ -1,7 +1,10 @@
 import { useState, useCallback } from 'react';
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+// Use relative URLs to leverage the proxy configuration in package.json
+// This ensures API calls work both locally and through Cloudflare tunnel
+// The proxy in package.json forwards /api/* requests to http://localhost:3001
+const API_BASE_URL = '';
 
 /**
  * Custom hook for AI text suggestions

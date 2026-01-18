@@ -194,75 +194,76 @@ export const generateBEPContent = (formData, bepType, options = {}) => {
       <div class="idp-content">
         ${tidpData.length > 0 ? `
           <div class="tidp-overview">
-            <h3>Task Information Delivery Plans (TIDPs)</h3>
-            <p>The following TIDPs have been created for this project, defining specific information delivery requirements for each task team:</p>
+            <h3>6.1.4 Task Information Delivery Plans (TIDPs)</h3>
+            <p>The following TIDPs have been established for this project. Each TIDP is maintained as a separate controlled document:</p>
 
-            <div class="tidp-grid">
-              ${tidpData.map((tidp, index) => `
-                <div class="tidp-card">
-                  <div class="tidp-header">
-                    <h4>${tidp.teamName || tidp.taskTeam || `Task Team ${index + 1}`}</h4>
-                    <span class="tidp-discipline">${tidp.discipline || 'N/A'}</span>
-                  </div>
-                  <div class="tidp-details">
-                    <div class="tidp-field">
-                      <strong>Team Leader:</strong> ${tidp.leader || tidp.teamLeader || 'TBD'}
-                    </div>
-                    <div class="tidp-field">
-                      <strong>Responsibilities:</strong> ${tidp.responsibilities || tidp.description || 'TBD'}
-                    </div>
-                    ${tidp.containers && tidp.containers.length > 0 ? `
-                      <div class="tidp-containers">
-                        <strong>Information Containers:</strong>
-                        <ul>
-                          ${tidp.containers.map(container => `<li>${container.name || container}</li>`).join('')}
-                        </ul>
-                      </div>
-                    ` : ''}
-                  </div>
-                </div>
-              `).join('')}
-            </div>
+            <table class="tidp-summary-table">
+              <thead>
+                <tr>
+                  <th>Task Team</th>
+                  <th>Discipline</th>
+                  <th>Team Leader</th>
+                  <th>Deliverables</th>
+                  <th>Document Reference</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tidpData.map((tidp, index) => `
+                  <tr>
+                    <td><strong>${tidp.teamName || tidp.taskTeam || `Task Team ${index + 1}`}</strong></td>
+                    <td>${tidp.discipline || 'N/A'}</td>
+                    <td>${tidp.leader || tidp.teamLeader || 'TBD'}</td>
+                    <td>${tidp.containers?.length || 0} containers</td>
+                    <td>TIDP-${String(index + 1).padStart(2, '0')}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <p class="document-note"><em>Note: Detailed TIDP documents including all information containers, delivery schedules, and LOIN specifications are available as separate appendices.</em></p>
           </div>
         ` : `
           <div class="no-tidp-notice">
-            <p><em>No TIDPs have been created yet. Use the TIDP/MIDP Manager to define task team information delivery requirements.</em></p>
+            <p><em>Task teams will develop individual TIDPs defining their information delivery requirements in accordance with the project EIR.</em></p>
           </div>
         `}
 
         ${midpData.length > 0 ? `
           <div class="midp-overview">
-            <h3>Master Information Delivery Plan (MIDP)</h3>
-            <p>The consolidated MIDP provides a project-wide view of all information delivery milestones:</p>
+            <h3>6.1.1 Master Information Delivery Plan (MIDP)</h3>
+            <p>The MIDP consolidates all task team delivery requirements into a single coordinated schedule:</p>
 
-            <div class="midp-summary">
-              ${midpData.map((midp, index) => `
-                <div class="midp-item">
-                  <div class="midp-header">
-                    <h4>${midp.name || `MIDP ${index + 1}`}</h4>
-                    <span class="midp-status">${midp.status || 'Active'}</span>
-                  </div>
-                  <div class="midp-details">
-                    <div class="midp-field">
-                      <strong>Description:</strong> ${midp.description || 'Consolidated information delivery plan'}
-                    </div>
-                    ${midp.milestones && midp.milestones.length > 0 ? `
-                      <div class="midp-milestones">
-                        <strong>Key Milestones:</strong>
-                        <ul>
-                          ${midp.milestones.slice(0, 5).map(milestone => `<li>${milestone.name || milestone.title || milestone} - ${milestone.date || 'TBD'}</li>`).join('')}
-                        </ul>
-                        ${midp.milestones.length > 5 ? `<p><em>... and ${midp.milestones.length - 5} more milestones</em></p>` : ''}
-                      </div>
-                    ` : ''}
-                  </div>
-                </div>
-              `).join('')}
+            <table class="midp-summary-table">
+              <thead>
+                <tr>
+                  <th>MIDP Reference</th>
+                  <th>Version</th>
+                  <th>Aggregated TIDPs</th>
+                  <th>Total Deliverables</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${midpData.map((midp, index) => `
+                  <tr>
+                    <td><strong>MIDP-${String(index + 1).padStart(2, '0')}</strong></td>
+                    <td>${midp.version || '1.0'}</td>
+                    <td>${midp.aggregatedTidps?.length || tidpData.length} TIDPs</td>
+                    <td>${midp.totalDeliverables || '-'}</td>
+                    <td><span class="status-badge status-${(midp.status || 'Active').toLowerCase()}">${midp.status || 'Active'}</span></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+
+            <div class="midp-description">
+              <p><strong>Description:</strong> ${midpData[0]?.description || 'The MIDP provides a project-wide consolidated view of information delivery milestones, integrating all task team schedules into a coordinated programme aligned with project stages.'}</p>
             </div>
+
+            <p class="document-note"><em>Note: The complete MIDP including detailed milestone schedules, dependencies, and RACI matrices is maintained as a separate controlled document (MIDP-01).</em></p>
           </div>
         ` : `
           <div class="no-midp-notice">
-            <p><em>No MIDP has been generated yet. Create TIDPs first, then use the MIDP Manager to generate a consolidated plan.</em></p>
+            <p><em>The MIDP will be generated by aggregating all approved TIDPs into a consolidated master delivery schedule.</em></p>
           </div>
         `}
 
@@ -893,6 +894,80 @@ export const generateBEPContent = (formData, bepType, options = {}) => {
           color: #6b7280;
         }
 
+        .tidp-summary-table,
+        .midp-summary-table {
+          width: 100%;
+          margin-top: 15px;
+          border-collapse: collapse;
+          font-size: 0.9rem;
+        }
+
+        .tidp-summary-table thead,
+        .midp-summary-table thead {
+          background: #2563eb;
+          color: white;
+        }
+
+        .tidp-summary-table th,
+        .midp-summary-table th {
+          padding: 10px 12px;
+          text-align: left;
+          font-weight: 600;
+          border: 1px solid #dbeafe;
+        }
+
+        .tidp-summary-table td,
+        .midp-summary-table td {
+          padding: 8px 12px;
+          border: 1px solid #e5e7eb;
+          color: #374151;
+        }
+
+        .tidp-summary-table tbody tr:nth-child(even),
+        .midp-summary-table tbody tr:nth-child(even) {
+          background: #f9fafb;
+        }
+
+        .tidp-summary-table tbody tr:hover,
+        .midp-summary-table tbody tr:hover {
+          background: #eff6ff;
+        }
+
+        .document-note {
+          margin-top: 12px;
+          padding: 10px 15px;
+          background: #fef3c7;
+          border-left: 4px solid #f59e0b;
+          font-size: 0.85rem;
+          color: #92400e;
+        }
+
+        .status-badge {
+          display: inline-block;
+          padding: 3px 10px;
+          border-radius: 12px;
+          font-size: 0.8rem;
+          font-weight: 600;
+        }
+
+        .status-active {
+          background: #d1fae5;
+          color: #065f46;
+        }
+
+        .status-draft {
+          background: #fef3c7;
+          color: #92400e;
+        }
+
+        .midp-description {
+          margin-top: 15px;
+          padding: 12px;
+          background: #f9fafb;
+          border-radius: 6px;
+          line-height: 1.6;
+        }
+
         .midp-summary {
           margin-top: 20px;
         }
@@ -940,14 +1015,36 @@ export const generateBEPContent = (formData, bepType, options = {}) => {
           color: #92400e;
         }
 
-        .midp-milestones ul {
+        .midp-milestones ul,
+        .midp-tidps ul {
           margin-top: 5px;
           padding-left: 20px;
         }
 
-        .midp-milestones li {
+        .midp-milestones li,
+        .midp-tidps li {
           margin-bottom: 3px;
           color: #6b7280;
+        }
+
+        .midp-tidps {
+          margin-bottom: 12px;
+        }
+
+        .midp-tidps strong {
+          color: #92400e;
+        }
+
+        .midp-stats {
+          margin-top: 12px;
+          padding: 10px;
+          background: #fffbeb;
+          border-radius: 6px;
+          border-left: 3px solid #f59e0b;
+        }
+
+        .midp-stats strong {
+          color: #92400e;
         }
 
         .no-tidp-notice,

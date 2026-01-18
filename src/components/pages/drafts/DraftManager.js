@@ -1,6 +1,7 @@
 
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Save, FolderOpen, ArrowLeft, Filter } from 'lucide-react';
 import DraftListItem from './DraftListItem';
 import SaveDraftDialog from './SaveDraftDialog';
@@ -11,10 +12,9 @@ import { useDraftOperations } from '../../../hooks/useDraftOperations';
 import { validateDraftName } from '../../../utils/validationUtils';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import Toast from '../../common/Toast';
-import { usePage } from '../../../contexts/PageContext';
 
 const DraftManager = ({ user, currentFormData, onLoadDraft, onClose, bepType }) => {
-  const { navigateTo } = usePage();
+  const navigate = useNavigate();
   // Load and validate drafts
   const { rawDrafts, isLoading: loadingDrafts, error: draftsError, isValidComponent, refreshDrafts } = useDrafts(user, currentFormData, onLoadDraft, onClose);
   // Filtering, searching, sorting
@@ -115,25 +115,14 @@ const DraftManager = ({ user, currentFormData, onLoadDraft, onClose, bepType }) 
       open: true,
       title: 'Load Draft',
       message: 'Loading this draft will overwrite your current work. Continue?',
-      onConfirm: async () => {
+      onConfirm: () => {
         setConfirmDialog((d) => ({ ...d, open: false }));
-        const success = await operations.loadDraft(draft);
-        if (success) {
-          setToast({ open: true, message: 'Draft loaded.', type: 'success' });
-          // Ensure the URL reflects the opened draft so each draft has its own URI
-          try {
-            if (draft && draft.id) {
-              // include a slug made from the draft name for readability
-              const slugify = require('../../../utils/slugify').default || require('../../../utils/slugify');
-              const slug = slugify(draft.name || draft.title || 'draft');
-              navigateTo(`/tidp-editor/${draft.id}${slug ? '--' + slug : ''}`);
-            }
-          } catch (e) {
-            console.warn('Failed to navigate to tidp-editor with draft id', e);
-          }
-        } else {
+        const success = operations.loadDraft(draft);
+        if (!success) {
           setToast({ open: true, message: operations.error || 'Failed to load draft.', type: 'error' });
         }
+        // If successful, onLoadDraft callback will handle closing and navigation
+        // No need to show toast or do anything else here
       }
     });
   };
@@ -175,12 +164,12 @@ const DraftManager = ({ user, currentFormData, onLoadDraft, onClose, bepType }) 
                   if (window.history.length > 1) {
                     window.history.back();
                     setTimeout(() => {
-                      try { navigateTo('home'); } catch (e) { /* noop */ }
+                      try { navigate('/home'); } catch (e) { /* noop */ }
                     }, 200);
                   } else if (onClose) {
                     onClose();
                   } else {
-                    try { navigateTo('home'); } catch (e) { /* noop */ }
+                    try { navigate('/home'); } catch (e) { /* noop */ }
                   }
                 }}
                 className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"

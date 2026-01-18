@@ -13,11 +13,14 @@ const AISuggestionButton = ({
   fieldType = 'default',
   currentValue = '',
   onSuggestion,
+  onReplace,
   className = ''
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingSuggestion, setPendingSuggestion] = useState(null);
 
   const handleGenerateSuggestion = async () => {
     setIsLoading(true);
@@ -33,7 +36,19 @@ const AISuggestionButton = ({
       });
 
       if (response.data.success) {
-        onSuggestion(response.data.text);
+        const suggestion = response.data.text;
+
+        // Check if there's existing content (more than just whitespace)
+        const hasContent = currentValue && currentValue.trim().length > 0;
+
+        if (hasContent) {
+          // Show confirmation dialog
+          setPendingSuggestion(suggestion);
+          setShowConfirmDialog(true);
+        } else {
+          // No content, insert directly
+          onSuggestion(suggestion);
+        }
       } else {
         setError(response.data.message || 'Failed to generate suggestion');
       }
@@ -54,6 +69,27 @@ const AISuggestionButton = ({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleConfirmReplace = () => {
+    if (pendingSuggestion && onReplace) {
+      onReplace(pendingSuggestion);
+    }
+    setShowConfirmDialog(false);
+    setPendingSuggestion(null);
+  };
+
+  const handleConfirmAppend = () => {
+    if (pendingSuggestion) {
+      onSuggestion(pendingSuggestion);
+    }
+    setShowConfirmDialog(false);
+    setPendingSuggestion(null);
+  };
+
+  const handleConfirmCancel = () => {
+    setShowConfirmDialog(false);
+    setPendingSuggestion(null);
   };
 
   return (
@@ -106,6 +142,40 @@ const AISuggestionButton = ({
           >
             ✕
           </button>
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+              Content Already Exists
+            </h3>
+            <p className="text-sm text-gray-600 mb-6">
+              This field already contains text. How would you like to add the AI suggestion?
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handleConfirmReplace}
+                className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+              >
+                Replace existing content
+              </button>
+              <button
+                onClick={handleConfirmAppend}
+                className="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm"
+              >
+                Append to existing content
+              </button>
+              <button
+                onClick={handleConfirmCancel}
+                className="w-full px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
