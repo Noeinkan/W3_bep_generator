@@ -172,7 +172,7 @@ const SmartHelpDialog = ({
     setAiSuccess(false);
 
     try {
-      const response = await axios.post('http://localhost:3001/api/ai/suggest', {
+      const response = await axios.post('/api/ai/suggest', {
         field_type: fieldType || fieldName,
         partial_text: '',
         max_length: 200
@@ -225,7 +225,7 @@ const SmartHelpDialog = ({
         ? `Rewrite the following text to ${instructions.join(', ')}. Output ONLY the improved text without any introduction, explanation, or commentary.\n\nText to improve:\n${currentContent}`
         : currentContent;
 
-      const response = await axios.post('http://localhost:3001/api/ai/suggest', {
+      const response = await axios.post('/api/ai/suggest', {
         field_type: fieldType || fieldName,
         partial_text: prompt,
         max_length: 300
