@@ -25,22 +25,7 @@ const PORT = process.env.PORT || 3001;
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
     ? ['https://77.42.70.26.nip.io']
-    : function (origin, callback) {
-        // Allow localhost and Cloudflare tunnel URLs
-        const allowedOrigins = [
-          'http://localhost:3000',
-          'http://127.0.0.1:3000',
-          'http://localhost:3001',
-          'http://127.0.0.1:3001'
-        ];
-
-        // Allow any trycloudflare.com domain for tunneling
-        if (!origin || allowedOrigins.includes(origin) || /\.trycloudflare\.com$/.test(origin)) {
-          callback(null, true);
-        } else {
-          callback(new Error('Not allowed by CORS'));
-        }
-      },
+    : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3001', 'http://127.0.0.1:3001'],
   credentials: true
 }));
 

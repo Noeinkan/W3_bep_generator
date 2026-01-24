@@ -58,8 +58,6 @@
     "start:frontend": "cross-env NODE_OPTIONS=--max-old-space-size=8192 react-scripts start",
     "start:backend": "node server/server.js",
     "start:ml": "cd ml-service && venv\\Scripts\\python.exe api_ollama.py",
-    "start:tunnel": "node scripts/start-tunnel.js",
-    "tunnel": "node scripts/tunnel-now.js",
     "start:ml:old": "cd ml-service && venv\\Scripts\\python.exe api.py",
     "start:3000": "cross-env NODE_OPTIONS=--max-old-space-size=8192 react-scripts start",
     "build": "cross-env NODE_OPTIONS=--max-old-space-size=8192 react-scripts build",
