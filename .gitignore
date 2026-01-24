@@ -31,3 +31,6 @@ nul
 /ml-service/training_state.json
 /ml-service/runs/
 *.pth
+
+# Exclude sensitive deployment notes
+hetzner.md
