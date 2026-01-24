@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useContext } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useBepForm } from '../../../contexts/BepFormContext';
 import FormStepRHF from '../../steps/FormStepRHF';
+import { FormBuilderProvider, DynamicFormStepRHF, FormBuilderContext } from '../../form-builder';
 import CONFIG from '../../../config/bepConfig';
 import { useTidpData } from '../../../hooks/useTidpData';
 import { useMidpData } from '../../../hooks/useMidpData';
@@ -14,10 +15,27 @@ import { BepSidebar, BepHeader, BepFooter, SuccessToast } from './components';
 import { ROUTES } from '../../../constants/routes';
 
 /**
- * Main form view component for BEP Generator
+ * Inner component that renders the form content
+ * This is separated to allow conditional use of dynamic mode
+ */
+const FormStepRenderer = ({ stepIndex, bepType }) => {
+  // Check if we're in FormBuilder context (dynamic mode)
+  const formBuilderContext = useContext(FormBuilderContext);
+
+  if (formBuilderContext) {
+    // Dynamic mode - use DynamicFormStepRHF
+    return <DynamicFormStepRHF stepIndex={stepIndex} />;
+  }
+
+  // Static mode - use original FormStepRHF
+  return <FormStepRHF stepIndex={stepIndex} bepType={bepType} />;
+};
+
+/**
+ * Main form view content component
  * Handles form step navigation and displays the current step
  */
-const BepFormView = () => {
+const BepFormViewContent = () => {
   const { slug, step: stepParam } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,12 +53,20 @@ const BepFormView = () => {
     getFormData,
   } = useBepForm();
 
+  // Check if FormBuilder context is available for dynamic step count
+  const formBuilderContext = useContext(FormBuilderContext);
+  const isDynamicMode = formBuilderContext !== null;
+
   // TIDP and MIDP data
   const { tidps } = useTidpData();
   const { midps } = useMidpData();
 
   const currentStep = parseInt(stepParam, 10) || 0;
-  const totalSteps = CONFIG.steps?.length || 0;
+
+  // Get total steps - from context if dynamic, from CONFIG if static
+  const totalSteps = isDynamicMode
+    ? formBuilderContext.visibleSteps?.length || CONFIG.steps?.length || 0
+    : CONFIG.steps?.length || 0;
 
   // Get current form data
   const formData = getFormData();
@@ -164,7 +190,7 @@ const BepFormView = () => {
                 isTransitioning ? 'opacity-50 transform scale-95' : 'opacity-100 transform scale-100'
               }`}
             >
-              <FormStepRHF stepIndex={currentStep} bepType={bepType} />
+              <FormStepRenderer stepIndex={currentStep} bepType={bepType} />
             </div>
           </div>
         </div>
@@ -199,6 +225,24 @@ const BepFormView = () => {
       {/* Hidden components for PDF screenshot capture */}
       <HiddenComponentsRenderer formData={formData} bepType={bepType} />
     </div>
+  );
+};
+
+/**
+ * Main form view component for BEP Generator
+ * Wraps the content with FormBuilderProvider for dynamic form building
+ */
+const BepFormView = () => {
+  const { bepType } = useBepForm();
+  const { currentDraft } = useBepForm();
+
+  // Get project ID from current draft if available
+  const projectId = currentDraft?.id || null;
+
+  return (
+    <FormBuilderProvider projectId={projectId} bepType={bepType}>
+      <BepFormViewContent />
+    </FormBuilderProvider>
   );
 };
 

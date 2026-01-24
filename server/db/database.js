@@ -140,6 +140,55 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_drafts_project_id ON drafts(project_id);
   CREATE INDEX IF NOT EXISTS idx_drafts_is_deleted ON drafts(is_deleted);
   CREATE INDEX IF NOT EXISTS idx_drafts_updated_at ON drafts(updated_at);
+
+  -- BEP Structure: Step configurations (H1 level)
+  CREATE TABLE IF NOT EXISTS bep_step_configs (
+    id TEXT PRIMARY KEY,
+    project_id TEXT,
+    step_number TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    category TEXT,
+    order_index INTEGER NOT NULL,
+    is_visible INTEGER DEFAULT 1,
+    icon TEXT,
+    bep_type TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    is_deleted INTEGER DEFAULT 0
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_step_configs_project ON bep_step_configs(project_id);
+  CREATE INDEX IF NOT EXISTS idx_step_configs_order ON bep_step_configs(order_index);
+  CREATE INDEX IF NOT EXISTS idx_step_configs_deleted ON bep_step_configs(is_deleted);
+
+  -- BEP Structure: Field configurations (H2 level)
+  CREATE TABLE IF NOT EXISTS bep_field_configs (
+    id TEXT PRIMARY KEY,
+    project_id TEXT,
+    step_id TEXT NOT NULL,
+    field_id TEXT NOT NULL,
+    label TEXT NOT NULL,
+    type TEXT NOT NULL,
+    number TEXT,
+    order_index INTEGER NOT NULL,
+    is_visible INTEGER DEFAULT 1,
+    is_required INTEGER DEFAULT 0,
+    placeholder TEXT,
+    help_text TEXT,
+    config TEXT,
+    default_value TEXT,
+    bep_type TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    is_deleted INTEGER DEFAULT 0,
+    FOREIGN KEY(step_id) REFERENCES bep_step_configs(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_field_configs_step ON bep_field_configs(step_id, order_index);
+  CREATE INDEX IF NOT EXISTS idx_field_configs_project ON bep_field_configs(project_id);
+  CREATE INDEX IF NOT EXISTS idx_field_configs_deleted ON bep_field_configs(is_deleted);
+  CREATE INDEX IF NOT EXISTS idx_field_configs_bep_type ON bep_field_configs(bep_type);
 `);
 
 console.log('Database initialized at:', dbPath);

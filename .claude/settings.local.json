@@ -42,7 +42,8 @@
       "Bash(rm:*)",
       "Bash(where:*)",
       "Bash(git rm:*)",
-      "Bash(git grep:*)"
+      "Bash(git grep:*)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []

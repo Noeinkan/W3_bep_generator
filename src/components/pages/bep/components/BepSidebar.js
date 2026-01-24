@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Zap, FolderOpen, ExternalLink } from 'lucide-react';
 import ProgressSidebar from '../../../forms/controls/ProgressSidebar';
+import { FormBuilderContext, DynamicProgressSidebar } from '../../../form-builder';
 import CONFIG from '../../../../config/bepConfig';
 import { ROUTES } from '../../../../constants/routes';
 
 /**
  * BEP Form sidebar component with navigation and progress
+ * Supports both static mode (ProgressSidebar) and dynamic mode (DynamicProgressSidebar)
+ *
  * @param {Object} props
  * @param {string} props.bepType - Current BEP type
  * @param {Object} props.currentDraft - Current draft info
@@ -30,6 +33,10 @@ const BepSidebar = ({
   user,
 }) => {
   const navigate = useNavigate();
+
+  // Check if we're in FormBuilder context (dynamic mode)
+  const formBuilderContext = useContext(FormBuilderContext);
+  const isDynamicMode = formBuilderContext !== null;
 
   const goToTidpManager = () => navigate(ROUTES.TIDP_MIDP);
   const goHome = () => navigate(ROUTES.HOME);
@@ -85,17 +92,28 @@ const BepSidebar = ({
         </button>
       </div>
 
-      {/* Progress Sidebar */}
+      {/* Progress Sidebar - Dynamic or Static */}
       <div className="flex-1 overflow-y-auto">
-        <ProgressSidebar
-          steps={CONFIG.steps || []}
-          currentStep={currentStep}
-          completedSections={completedSections}
-          onStepClick={onStepClick}
-          validateStep={validateStep}
-          tidpData={tidpData}
-          midpData={midpData}
-        />
+        {isDynamicMode ? (
+          <DynamicProgressSidebar
+            currentStep={currentStep}
+            completedSections={completedSections}
+            onStepClick={onStepClick}
+            validateStep={validateStep}
+            tidpData={tidpData}
+            midpData={midpData}
+          />
+        ) : (
+          <ProgressSidebar
+            steps={CONFIG.steps || []}
+            currentStep={currentStep}
+            completedSections={completedSections}
+            onStepClick={onStepClick}
+            validateStep={validateStep}
+            tidpData={tidpData}
+            midpData={midpData}
+          />
+        )}
       </div>
     </div>
   );

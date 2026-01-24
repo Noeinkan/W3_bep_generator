@@ -11,6 +11,7 @@ const exportRoutes = require('./routes/export');
 const validationRoutes = require('./routes/validation');
 const responsibilityMatrixRoutes = require('./routes/responsibility-matrix');
 const aiRoutes = require('./routes/ai');
+const bepStructureRoutes = require('./routes/bep-structure');
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.use('/api/validation', validationRoutes);
 app.use('/api/migrate', migrateRoutes);
 app.use('/api/responsibility-matrix', responsibilityMatrixRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/bep-structure', bepStructureRoutes);
 
 // Error handling
 app.use((err, req, res, next) => {
