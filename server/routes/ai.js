@@ -254,4 +254,83 @@ router.get('/field-types', (req, res) => {
   });
 });
 
+/**
+ * Generate suggestions based on EIR analysis
+ *
+ * POST /api/ai/suggest-from-eir
+ * Body: {
+ *   analysis_json: object,
+ *   field_type: string,
+ *   partial_text?: string
+ * }
+ */
+router.post('/suggest-from-eir', async (req, res) => {
+  try {
+    const {
+      analysis_json,
+      field_type,
+      partial_text = ''
+    } = req.body;
+
+    // Validate request
+    if (!analysis_json || typeof analysis_json !== 'object') {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'analysis_json is required and must be an object'
+      });
+    }
+
+    if (!field_type || typeof field_type !== 'string') {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'field_type is required and must be a string'
+      });
+    }
+
+    console.log(`EIR suggestion request: field_type=${field_type}`);
+
+    // Call ML service
+    const mlClient = getMLClient();
+    const response = await mlClient.post('/suggest-from-eir', {
+      analysis_json,
+      field_type,
+      partial_text
+    }, {
+      timeout: 60000 // 60 seconds for EIR suggestions
+    });
+
+    res.json({
+      success: true,
+      suggestion: response.data.suggestion,
+      field_type: response.data.field_type,
+      model: response.data.model
+    });
+
+  } catch (error) {
+    console.error('EIR suggestion error:', error.message);
+
+    if (error.response) {
+      return res.status(error.response.status).json({
+        success: false,
+        error: 'EIR suggestion failed',
+        message: error.response.data.detail || error.message
+      });
+    }
+
+    if (error.code === 'ECONNREFUSED') {
+      return res.status(503).json({
+        success: false,
+        error: 'ML service unavailable',
+        message: 'AI service is not running'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;

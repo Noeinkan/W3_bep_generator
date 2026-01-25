@@ -20,15 +20,11 @@ const BepSelectTypeView = () => {
   }, [navigate, loadFormData, setCurrentDraft]);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-4 lg:py-6">
-      <div className="bg-transparent rounded-xl p-0">
-        <BepTypeSelector
-          bepType={bepType}
-          setBepType={setBepType}
-          onProceed={handleTypeSelect}
-        />
-      </div>
-    </div>
+    <BepTypeSelector
+      bepType={bepType}
+      setBepType={setBepType}
+      onProceed={handleTypeSelect}
+    />
   );
 };
 

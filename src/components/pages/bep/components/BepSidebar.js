@@ -1,10 +1,11 @@
-import React, { useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Zap, FolderOpen, ExternalLink } from 'lucide-react';
+import { useContext } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Zap, FolderOpen, ExternalLink, Upload, Sparkles, CheckCircle } from 'lucide-react';
 import ProgressSidebar from '../../../forms/controls/ProgressSidebar';
 import { FormBuilderContext, DynamicProgressSidebar } from '../../../form-builder';
 import CONFIG from '../../../../config/bepConfig';
 import { ROUTES } from '../../../../constants/routes';
+import { useEir } from '../../../../contexts/EirContext';
 
 /**
  * BEP Form sidebar component with navigation and progress
@@ -33,13 +34,23 @@ const BepSidebar = ({
   user,
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Check if we're in FormBuilder context (dynamic mode)
   const formBuilderContext = useContext(FormBuilderContext);
   const isDynamicMode = formBuilderContext !== null;
 
+  // Get EIR context (returns defaults if provider not available)
+  const { hasAnalysis } = useEir();
+
   const goToTidpManager = () => navigate(ROUTES.TIDP_MIDP);
   const goHome = () => navigate(ROUTES.HOME);
+
+  // Navigate to EIR step
+  const goToEirStep = () => {
+    const basePath = location.pathname.split('/step/')[0];
+    navigate(`${basePath}/step/eir`);
+  };
 
   return (
     <div className="w-80 bg-white shadow-xl border-r border-gray-200 flex flex-col">
@@ -90,6 +101,38 @@ const BepSidebar = ({
           <FolderOpen className="w-4 h-4 mr-2" />
           Drafts
         </button>
+
+        {/* EIR Upload Button */}
+        <button
+          onClick={goToEirStep}
+          className={`w-full mt-2 inline-flex items-center justify-center px-3 py-2 border shadow-sm text-sm font-medium rounded-lg transition-all duration-200 ${
+            hasAnalysis
+              ? 'border-green-300 text-green-700 bg-green-50 hover:bg-green-100'
+              : 'border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100'
+          }`}
+        >
+          {hasAnalysis ? (
+            <>
+              <CheckCircle className="w-4 h-4 mr-2" />
+              EIR Analyzed
+            </>
+          ) : (
+            <>
+              <Upload className="w-4 h-4 mr-2" />
+              Upload EIR
+            </>
+          )}
+        </button>
+
+        {/* EIR Analysis Indicator */}
+        {hasAnalysis && (
+          <div className="mt-2 p-2 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+            <div className="flex items-center gap-2 text-xs text-purple-700">
+              <Sparkles className="w-3 h-3" />
+              <span>AI suggestions active</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Progress Sidebar - Dynamic or Static */}

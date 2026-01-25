@@ -189,6 +189,30 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_field_configs_project ON bep_field_configs(project_id);
   CREATE INDEX IF NOT EXISTS idx_field_configs_deleted ON bep_field_configs(is_deleted);
   CREATE INDEX IF NOT EXISTS idx_field_configs_bep_type ON bep_field_configs(bep_type);
+
+  -- Client Documents: EIR and other client-provided documents for analysis
+  CREATE TABLE IF NOT EXISTS client_documents (
+    id TEXT PRIMARY KEY,
+    draft_id TEXT,
+    user_id TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    original_filename TEXT NOT NULL,
+    filepath TEXT NOT NULL,
+    file_size INTEGER,
+    mime_type TEXT,
+    extracted_text TEXT,
+    analysis_json TEXT,
+    summary_markdown TEXT,
+    status TEXT DEFAULT 'uploaded' CHECK(status IN ('uploaded', 'extracting', 'extracted', 'analyzing', 'analyzed', 'error')),
+    error_message TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (draft_id) REFERENCES drafts(id) ON DELETE SET NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_documents_draft_id ON client_documents(draft_id);
+  CREATE INDEX IF NOT EXISTS idx_documents_user_id ON client_documents(user_id);
+  CREATE INDEX IF NOT EXISTS idx_documents_status ON client_documents(status);
 `);
 
 console.log('Database initialized at:', dbPath);

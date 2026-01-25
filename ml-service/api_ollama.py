@@ -5,14 +5,17 @@ Provides REST API endpoints for AI-assisted text generation in BEP documents.
 Uses Ollama's local LLM for high-quality, fast text generation.
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Dict, Any
 import logging
 import os
+import tempfile
 
 from ollama_generator import get_ollama_generator
+from text_extractor import get_extractor
+from eir_analyzer import get_analyzer
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -227,6 +230,190 @@ async def list_models():
     except Exception as e:
         logger.error(f"Error listing models: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# EIR Document Analysis Endpoints
+# ============================================================================
+
+class ExtractTextResponse(BaseModel):
+    """Response model for text extraction"""
+    text: str = Field(..., description="Extracted text content")
+    pages: int = Field(..., description="Number of pages (estimated for DOCX)")
+    word_count: int = Field(..., description="Word count")
+    char_count: int = Field(..., description="Character count")
+    tables_found: int = Field(0, description="Number of tables found")
+
+
+@app.post("/extract-text", response_model=ExtractTextResponse, tags=["EIR Analysis"])
+async def extract_text(file: UploadFile = File(...)):
+    """
+    Extract text from a PDF or DOCX document.
+
+    Supports:
+    - PDF files (using pdfplumber)
+    - DOCX files (using python-docx)
+
+    Returns the full text content along with metadata about the document.
+    """
+    try:
+        # Validate file type
+        filename = file.filename or "document"
+        ext = os.path.splitext(filename)[1].lower()
+
+        if ext not in {'.pdf', '.docx', '.doc'}:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported file type: {ext}. Supported: .pdf, .docx"
+            )
+
+        # Read file content
+        file_bytes = await file.read()
+
+        if len(file_bytes) == 0:
+            raise HTTPException(status_code=400, detail="Empty file")
+
+        if len(file_bytes) > 50 * 1024 * 1024:  # 50MB limit
+            raise HTTPException(status_code=413, detail="File too large (max 50MB)")
+
+        # Extract text
+        extractor = get_extractor()
+        text, metadata = extractor.extract(file_bytes=file_bytes, filename=filename)
+
+        logger.info(f"Extracted {metadata.get('word_count', 0)} words from {filename}")
+
+        return ExtractTextResponse(
+            text=text,
+            pages=metadata.get('pages', 1),
+            word_count=metadata.get('word_count', 0),
+            char_count=metadata.get('char_count', len(text)),
+            tables_found=metadata.get('tables_found', 0)
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Text extraction error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Text extraction failed: {str(e)}"
+        )
+
+
+class AnalyzeEirRequest(BaseModel):
+    """Request model for EIR analysis"""
+    text: str = Field(..., description="Extracted text from EIR document")
+    filename: Optional[str] = Field(None, description="Original filename for context")
+
+
+class AnalyzeEirResponse(BaseModel):
+    """Response model for EIR analysis"""
+    analysis_json: Dict[str, Any] = Field(..., description="Structured analysis JSON")
+    summary_markdown: str = Field(..., description="Markdown summary of the analysis")
+    model: str = Field(..., description="Model used for analysis")
+
+
+@app.post("/analyze-eir", response_model=AnalyzeEirResponse, tags=["EIR Analysis"])
+async def analyze_eir(request: AnalyzeEirRequest):
+    """
+    Analyze an EIR document text using AI.
+
+    Extracts structured information according to ISO 19650 standards:
+    - Project information
+    - BIM objectives
+    - Information requirements (OIR, AIR, PIR)
+    - Delivery milestones
+    - Standards and protocols
+    - CDE requirements
+    - Roles and responsibilities
+    - Software requirements
+    - And more...
+
+    Returns both a structured JSON analysis and a markdown summary.
+    """
+    try:
+        if not request.text or len(request.text.strip()) < 100:
+            raise HTTPException(
+                status_code=400,
+                detail="Text too short for meaningful analysis (min 100 chars)"
+            )
+
+        analyzer = get_analyzer(model=OLLAMA_MODEL)
+        analysis_json, summary_markdown = analyzer.analyze(
+            text=request.text,
+            filename=request.filename
+        )
+
+        logger.info(f"Analyzed EIR document: {request.filename or 'unknown'}")
+
+        return AnalyzeEirResponse(
+            analysis_json=analysis_json,
+            summary_markdown=summary_markdown,
+            model=OLLAMA_MODEL
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"EIR analysis error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"EIR analysis failed: {str(e)}"
+        )
+
+
+class SuggestFromEirRequest(BaseModel):
+    """Request model for EIR-based field suggestions"""
+    analysis_json: Dict[str, Any] = Field(..., description="EIR analysis JSON")
+    field_type: str = Field(..., description="BEP field type to get suggestion for")
+    partial_text: str = Field("", description="Existing text in the field")
+
+
+class SuggestFromEirResponse(BaseModel):
+    """Response model for EIR-based suggestions"""
+    suggestion: str = Field(..., description="Suggested text for the field")
+    field_type: str = Field(..., description="Field type")
+    model: str = Field(..., description="Model used")
+
+
+@app.post("/suggest-from-eir", response_model=SuggestFromEirResponse, tags=["EIR Analysis"])
+async def suggest_from_eir(request: SuggestFromEirRequest):
+    """
+    Generate a suggestion for a BEP field based on EIR analysis.
+
+    Uses the structured EIR analysis to generate contextually appropriate
+    suggestions for specific BEP fields like:
+    - bimGoals, bimObjectives
+    - projectDescription
+    - namingConventions
+    - cdeStrategy
+    - And more...
+
+    The suggestion is tailored to the specific field and incorporates
+    information extracted from the client's EIR document.
+    """
+    try:
+        analyzer = get_analyzer(model=OLLAMA_MODEL)
+        suggestion = analyzer.suggest_for_field(
+            analysis_json=request.analysis_json,
+            field_type=request.field_type,
+            partial_text=request.partial_text
+        )
+
+        logger.info(f"Generated EIR-based suggestion for {request.field_type}")
+
+        return SuggestFromEirResponse(
+            suggestion=suggestion,
+            field_type=request.field_type,
+            model=OLLAMA_MODEL
+        )
+
+    except Exception as e:
+        logger.error(f"EIR suggestion error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Suggestion generation failed: {str(e)}"
+        )
 
 
 if __name__ == "__main__":

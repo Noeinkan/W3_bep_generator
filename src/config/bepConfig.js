@@ -1,6 +1,15 @@
-import { Building, CheckCircle, Users, Target, Database, Calendar, Monitor, Settings, FileText, Shield, BookOpen, AlertCircle } from 'lucide-react';
+import { Building, CheckCircle, Users, Target, Database, Calendar, Monitor, Settings, FileText, Shield, BookOpen, AlertCircle, Upload } from 'lucide-react';
 
 const CONFIG = {
+  // Optional EIR upload step (shown before regular wizard steps)
+  eirStep: {
+    enabled: true,
+    title: 'Carica EIR',
+    description: 'Carica documenti EIR del cliente per analisi automatica',
+    icon: Upload,
+    isOptional: true
+  },
+
   categories: {
     Commercial: { name: 'COMMERCIAL ASPECTS', bg: 'bg-blue-100 text-blue-800' },
     Management: { name: 'MANAGEMENT ASPECTS', bg: 'bg-green-100 text-green-800' },

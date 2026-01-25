@@ -13,6 +13,7 @@ const exportRoutes = require('./routes/export');
 const validationRoutes = require('./routes/validation');
 const aiRoutes = require('./routes/ai');
 const draftsRoutes = require('./routes/drafts');
+const documentsRoutes = require('./routes/documents');
 
 // Import services
 const puppeteerPdfService = require('./services/puppeteerPdfService');
@@ -65,6 +66,7 @@ app.use('/api/validation', validationRoutes);
 app.use('/api/migrate', migrateRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/drafts', draftsRoutes);
+app.use('/api/documents', documentsRoutes);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {

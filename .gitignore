@@ -32,5 +32,8 @@ nul
 /ml-service/runs/
 *.pth
 
+# Server uploads directory (client documents)
+/server/uploads/
+
 # Exclude sensitive deployment notes
 hetzner.md
