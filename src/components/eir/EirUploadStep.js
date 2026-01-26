@@ -33,18 +33,21 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
 
   // Progress overlay state
   const [showProgressOverlay, setShowProgressOverlay] = useState(false);
+  const [isBackgrounded, setIsBackgrounded] = useState(false);
   const [analysisStatus, setAnalysisStatus] = useState('extracting');
   const [analyzingDocName, setAnalyzingDocName] = useState('');
   const [elapsedTime, setElapsedTime] = useState(0);
   const statusPollRef = useRef(null);
   const elapsedTimerRef = useRef(null);
+  const pollStartRef = useRef(null);
+  const isPollingRef = useRef(false);
 
   const userId = user?.id || 'anonymous';
 
   // Cleanup timers on unmount
   useEffect(() => {
     return () => {
-      if (statusPollRef.current) clearInterval(statusPollRef.current);
+      if (statusPollRef.current) clearTimeout(statusPollRef.current);
       if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
     };
   }, []);
@@ -178,7 +181,23 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
 
   // Start polling for status updates
   const startStatusPolling = (docId) => {
-    statusPollRef.current = setInterval(async () => {
+    if (statusPollRef.current) {
+      clearTimeout(statusPollRef.current);
+    }
+
+    isPollingRef.current = true;
+    pollStartRef.current = Date.now();
+
+    const getPollInterval = (elapsedSeconds) => {
+      if (elapsedSeconds < 20) return 2000;
+      if (elapsedSeconds < 60) return 4000;
+      if (elapsedSeconds < 180) return 7000;
+      return 10000;
+    };
+
+    const pollStatus = async () => {
+      if (!isPollingRef.current) return;
+
       try {
         const result = await getDocument(docId, userId);
         if (result.success && result.document) {
@@ -196,7 +215,7 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
 
             // Small delay to show completion state
             setTimeout(() => {
-              setShowProgressOverlay(false);
+              closeOverlay();
               if (onAnalysisComplete && result.document.analysis_json) {
                 onAnalysisComplete({
                   analysisJson: result.document.analysis_json,
@@ -206,7 +225,7 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
             }, 1000);
           } else if (status === 'error') {
             stopPolling();
-            setShowProgressOverlay(false);
+            closeOverlay();
             setFailedDocId(docId);
 
             // Provide detailed error message
@@ -233,13 +252,21 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
       } catch (err) {
         console.error('Status poll error:', err);
       }
-    }, 2000); // Poll every 2 seconds
+
+      if (!isPollingRef.current) return;
+      const elapsedSeconds = Math.floor((Date.now() - (pollStartRef.current || Date.now())) / 1000);
+      const nextDelay = getPollInterval(elapsedSeconds);
+      statusPollRef.current = setTimeout(pollStatus, nextDelay);
+    };
+
+    pollStatus();
   };
 
   // Stop polling and timers
   const stopPolling = () => {
+    isPollingRef.current = false;
     if (statusPollRef.current) {
-      clearInterval(statusPollRef.current);
+      clearTimeout(statusPollRef.current);
       statusPollRef.current = null;
     }
     if (elapsedTimerRef.current) {
@@ -247,6 +274,11 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
       elapsedTimerRef.current = null;
     }
   };
+
+  const closeOverlay = useCallback(() => {
+    setShowProgressOverlay(false);
+    setIsBackgrounded(false);
+  }, []);
 
   // Start elapsed time counter
   const startElapsedTimer = () => {
@@ -274,6 +306,7 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
 
     // Show progress overlay
     setShowProgressOverlay(true);
+    setIsBackgrounded(false);
     setAnalysisStatus('extracting');
     setAnalyzingDocName(doc.original_filename || doc.originalFilename || 'Document');
     startElapsedTimer();
@@ -309,13 +342,13 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
 
         // Small delay to show completion state
         setTimeout(() => {
-          setShowProgressOverlay(false);
+          closeOverlay();
           if (onAnalysisComplete) {
             onAnalysisComplete(result.data);
           }
         }, 1000);
       } else {
-        setShowProgressOverlay(false);
+        closeOverlay();
         setFailedDocId(doc.id);
         const errorMessage = result.message || 'Analysis failed';
         setError(errorMessage);
@@ -352,7 +385,7 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
         // The polling will detect when analysis is complete or errors
       } else {
         stopPolling();
-        setShowProgressOverlay(false);
+        closeOverlay();
         setFailedDocId(doc.id);
         setError('Analysis failed unexpectedly');
         setDetailedError(`Network error: ${err.message || 'Could not connect to the analysis service'}`);
@@ -412,10 +445,13 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
     <div className="max-w-2xl mx-auto">
       {/* Analysis Progress Overlay */}
       <AnalysisProgressOverlay
-        isOpen={showProgressOverlay}
+        isOpen={showProgressOverlay && !isBackgrounded}
         currentStatus={analysisStatus}
         documentName={analyzingDocName}
         elapsedTime={elapsedTime}
+        canClose={showProgressOverlay}
+        onClose={() => setIsBackgrounded(true)}
+        showBackgroundHint={!isBackgrounded}
       />
 
       <div className="pb-24">
@@ -431,6 +467,23 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
             Upload your ISO 19650 information requirements to get AI-powered suggestions while filling out the BEP.
           </p>
         </div>
+
+        {/* Background mode banner */}
+        {showProgressOverlay && isBackgrounded && (
+          <div className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3">
+            <div className="flex items-center gap-3 text-sm text-purple-700">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Analysis is running in the background. You can keep working here.
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsBackgrounded(false)}
+              className="px-3 py-1.5 text-xs font-semibold bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              Reopen
+            </button>
+          </div>
+        )}
 
         {/* Error message */}
         {error && (

@@ -17,7 +17,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { FileText, Brain, Sparkles, CheckCircle, Loader2 } from 'lucide-react';
+import { FileText, Brain, Sparkles, CheckCircle, Loader2, X, Clock, Info } from 'lucide-react';
 
 // Inject keyframes if not already in global CSS
 if (typeof document !== 'undefined') {
@@ -53,6 +53,11 @@ const STAGES = [
     label: 'Extracting Text',
     description: 'Reading document content',
     icon: FileText,
+    checks: [
+      'Detecting page structure',
+      'Reading text and tables',
+      'Preserving section headings'
+    ],
     messages: [
       'Reading your document...',
       'Extracting text from pages...',
@@ -65,6 +70,11 @@ const STAGES = [
     label: 'Processing',
     description: 'Preparing for AI analysis',
     icon: Brain,
+    checks: [
+      'Organizing requirements',
+      'Grouping by ISO 19650 areas',
+      'Preparing AI context'
+    ],
     messages: [
       'Organizing document structure...',
       'Identifying key sections...',
@@ -77,6 +87,11 @@ const STAGES = [
     label: 'AI Analysis',
     description: 'Extracting BIM requirements',
     icon: Sparkles,
+    checks: [
+      'Extracting objectives and standards',
+      'Identifying roles and deliverables',
+      'Mapping to BEP sections'
+    ],
     messages: [
       'Identifying BIM objectives...',
       'Extracting ISO 19650 requirements...',
@@ -93,6 +108,11 @@ const STAGES = [
     label: 'Finalizing',
     description: 'Generating summary',
     icon: CheckCircle,
+    checks: [
+      'Building summary',
+      'Preparing BEP suggestions',
+      'Final checks'
+    ],
     messages: [
       'Generating analysis summary...',
       'Preparing suggestions for BEP...',
@@ -124,7 +144,10 @@ const AnalysisProgressOverlay = ({
   currentStatus = 'extracting',
   documentName = 'Document',
   elapsedTime = 0,
-  progressOverride = null
+  progressOverride = null,
+  onClose = null,
+  canClose = false,
+  showBackgroundHint = false
 }) => {
   const [messageIndex, setMessageIndex] = useState(0);
   const [tipIndex, setTipIndex] = useState(0);
@@ -179,6 +202,17 @@ const AnalysisProgressOverlay = ({
   if (!isOpen) return null;
 
   const currentMessage = currentStage?.messages?.[messageIndex] || 'Processing...';
+  const currentChecks = currentStage?.checks || [];
+
+  const getEtaSeconds = () => {
+    if (!progress || progress <= 1) return null;
+    const totalEstimate = elapsedTime / (progress / 100);
+    const remaining = Math.max(0, Math.round(totalEstimate - elapsedTime));
+    if (Number.isNaN(remaining) || remaining === Infinity) return null;
+    return Math.min(60 * 10, remaining);
+  };
+
+  const etaSeconds = getEtaSeconds();
 
   return (
     <div
@@ -195,7 +229,8 @@ const AnalysisProgressOverlay = ({
       <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
         {/* Header with gradient */}
         <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-5 text-white">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 justify-between">
+            <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
               <Brain className="w-5 h-5" />
             </div>
@@ -203,6 +238,17 @@ const AnalysisProgressOverlay = ({
               <h3 id="analysis-title" className="font-semibold text-lg">Analyzing Document</h3>
               <p className="text-purple-100 text-sm truncate max-w-xs">{documentName}</p>
             </div>
+            </div>
+            {canClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex items-center gap-2 text-xs font-medium bg-white/15 hover:bg-white/25 px-3 py-1.5 rounded-full transition"
+              >
+                <X className="w-3.5 h-3.5" />
+                Continue in background
+              </button>
+            )}
           </div>
         </div>
 
@@ -256,6 +302,55 @@ const AnalysisProgressOverlay = ({
             </div>
           </div>
 
+          {/* Insight + ETA */}
+          <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="rounded-xl border border-purple-100 bg-purple-50/60 p-3">
+              <div className="flex items-center gap-2 text-xs font-semibold text-purple-700">
+                <Sparkles className="w-3.5 h-3.5" />
+                Live insight
+              </div>
+              <p className="mt-1 text-sm text-purple-900">
+                {currentMessage}
+              </p>
+              <p className="mt-1 text-[11px] text-purple-700/80">
+                We match findings to BEP sections as we go.
+              </p>
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-white p-3">
+              <div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+                <Clock className="w-3.5 h-3.5" />
+                Estimated time remaining
+              </div>
+              <p className="mt-1 text-sm text-gray-900">
+                {etaSeconds !== null ? formatTime(etaSeconds) : 'Calculating...'}
+              </p>
+              <p className="mt-1 text-[11px] text-gray-500">
+                Best‑effort estimate based on document size and model load.
+              </p>
+            </div>
+          </div>
+
+          {/* What we're checking */}
+          <div className="mb-6 rounded-xl border border-gray-200 bg-gray-50 p-3">
+            <div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+              <Info className="w-3.5 h-3.5" />
+              What we’re checking now
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {currentChecks.map((check) => (
+                <span
+                  key={check}
+                  className="text-[11px] text-gray-600 bg-white border border-gray-200 px-2 py-1 rounded-full"
+                >
+                  {check}
+                </span>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] text-gray-500">
+              Your document stays in this workspace and is only used to generate your analysis.
+            </p>
+          </div>
+
           {/* Stepper */}
           <div className="mb-6">
             {STAGES.map((stage, index) => {
@@ -282,12 +377,12 @@ const AnalysisProgressOverlay = ({
                       ${isCompleted
                         ? 'bg-green-100 text-green-600'
                         : isCurrent
-                          ? 'bg-purple-100 text-purple-600'
+                          ? 'bg-purple-100 text-purple-600 animate-pulse'
                           : 'bg-gray-100 text-gray-400'
                       }
                     `}>
                       {isCompleted ? (
-                        <CheckCircle className="w-6 h-6" />
+                        <CheckCircle className="w-6 h-6 transition-transform duration-300" />
                       ) : isCurrent ? (
                         <Loader2 className="w-6 h-6 animate-spin" />
                       ) : (
@@ -346,6 +441,20 @@ const AnalysisProgressOverlay = ({
               <span className="font-medium">Tip:</span> {TIPS[tipIndex]}
             </p>
           </div>
+
+          {/* Background hint */}
+          {showBackgroundHint && (
+            <div className="mt-3 text-[11px] text-gray-500 text-center">
+              You can continue working — analysis will keep running in the background.
+            </div>
+          )}
+
+          {/* Next step hint */}
+          {currentStatus === 'analyzed' && (
+            <div className="mt-3 text-xs text-green-700 text-center">
+              All set. Preparing your summary and BEP suggestions now…
+            </div>
+          )}
         </div>
       </div>
     </div>

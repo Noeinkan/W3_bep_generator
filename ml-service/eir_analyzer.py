@@ -10,6 +10,7 @@ import json
 import re
 import logging
 import os
+import time
 from typing import Dict, Any, List, Optional, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -224,14 +225,14 @@ Required format:
 JSON ANALYSIS:
 {analysis_json}
 
-ITALIAN MARKDOWN SUMMARY:"""
+ENGLISH MARKDOWN SUMMARY:"""
 
 
-# Prompt for field-specific suggestions based on EIR analysis (output in Italian for BEP)
+# Prompt for field-specific suggestions based on EIR analysis (output in English for BEP)
 FIELD_SUGGESTION_PROMPT = """You are a BIM ISO 19650 expert. Based on the provided EIR analysis, generate a specific suggestion for the "{field_type}" field of the BEP.
 
 The suggestion must:
-- Be in Italian
+- Be in English
 - Be directly relevant to the requested field
 - Be based on data extracted from the EIR
 - Be ready for insertion in the BEP (formal and professional text)
@@ -245,7 +246,7 @@ EXISTING TEXT IN FIELD (if empty, generate from scratch):
 
 BEP FIELD: {field_type}
 
-ITALIAN SUGGESTION:"""
+ENGLISH SUGGESTION:"""
 
 
 # ============================================================================
@@ -299,6 +300,42 @@ class EirAnalyzer:
         """
         self.generator = get_ollama_generator(model=model)
         self.model = model or self.generator.model
+        self.single_pass_char_limit = self._get_env_int(
+            "EIR_SINGLE_PASS_CHAR_LIMIT",
+            default=30000,
+            min_value=12000,
+            max_value=50000
+        )
+        self.chunk_token_limit = self._get_env_int(
+            "EIR_CHUNK_TOKENS",
+            default=7000,
+            min_value=3000,
+            max_value=7500
+        )
+        self.auto_latency_threshold = self._get_env_int(
+            "EIR_AUTO_CONCURRENCY_LATENCY",
+            default=60,
+            min_value=20,
+            max_value=180
+        )
+
+    @staticmethod
+    def _get_env_int(name: str, default: int, min_value: int, max_value: int) -> int:
+        value = os.getenv(name)
+        if value is None or value == "":
+            return default
+        try:
+            parsed = int(value)
+        except ValueError:
+            logger.warning(f"Invalid {name} value '{value}', using default {default}")
+            return default
+        if parsed < min_value:
+            logger.warning(f"{name} too low ({parsed}), clamping to {min_value}")
+            return min_value
+        if parsed > max_value:
+            logger.warning(f"{name} too high ({parsed}), clamping to {max_value}")
+            return max_value
+        return parsed
 
     def analyze(self, text: str, filename: Optional[str] = None) -> Tuple[Dict[str, Any], str]:
         """
@@ -315,8 +352,7 @@ class EirAnalyzer:
         logger.info(f"Text length: {len(text)} chars")
 
         # Check if text needs chunking (increased threshold with larger context window)
-        # With num_ctx=8192, we can handle ~24000 chars in one pass
-        if len(text) > 24000:
+        if len(text) > self.single_pass_char_limit:
             logger.info("Document is large, using chunked analysis")
             analysis_json = self._analyze_chunked(text)
         else:
@@ -339,7 +375,7 @@ class EirAnalyzer:
     def _analyze_single(self, text: str) -> Dict[str, Any]:
         """Analyze text in a single pass with optimized parameters and retry logic."""
         # Use larger text limit with increased context window
-        prompt = EIR_ANALYSIS_PROMPT.format(eir_text=text[:30000])
+        prompt = EIR_ANALYSIS_PROMPT.format(eir_text=text[:self.single_pass_char_limit])
 
         try:
             response = self.generator.generate_text(
@@ -363,8 +399,8 @@ class EirAnalyzer:
         """Analyze long text in chunks using parallel processing for speed."""
         from text_extractor import TextExtractor
 
-        # Larger chunks with increased context window (8192 tokens ~= 6000 token chunks)
-        extractor = TextExtractor(max_chunk_tokens=6000)
+        # Larger chunks with increased context window (8192 tokens ~= 7000 token chunks)
+        extractor = TextExtractor(max_chunk_tokens=self.chunk_token_limit)
         chunks = extractor.chunk_text(text)
 
         logger.info(f"Split into {len(chunks)} chunks for parallel analysis")
@@ -372,18 +408,61 @@ class EirAnalyzer:
         # Dynamic worker count: balance between speed and Ollama capacity
         # Use OLLAMA_MAX_CONCURRENCY env var, or default to min(cpu_count, 6)
         cpu_count = os.cpu_count() or 4
-        ollama_concurrency = int(os.getenv("OLLAMA_MAX_CONCURRENCY", str(min(cpu_count, 6))))
+        concurrency_env = os.getenv("OLLAMA_MAX_CONCURRENCY", "").strip().lower()
+        auto_mode = concurrency_env in ("", "auto")
+
+        if auto_mode:
+            ollama_concurrency = min(cpu_count, 6)
+        else:
+            try:
+                ollama_concurrency = int(concurrency_env)
+            except ValueError:
+                logger.warning(
+                    f"Invalid OLLAMA_MAX_CONCURRENCY '{concurrency_env}', using auto mode"
+                )
+                ollama_concurrency = min(cpu_count, 6)
+
         max_workers = min(len(chunks), max(1, min(ollama_concurrency, 6)))
 
         logger.info(f"Using {max_workers} parallel workers for chunk analysis")
 
         chunk_analyses: List[Tuple[int, Dict[str, Any]]] = []
+        start_index = 0
+
+        # Auto concurrency: sample first chunk to gauge performance
+        if auto_mode and len(chunks) > 1:
+            sample_start = time.time()
+            sample_success = False
+            try:
+                sample_analysis = self._analyze_single(chunks[0])
+                chunk_analyses.append((0, sample_analysis))
+                sample_success = True
+            except Exception as e:
+                logger.warning(f"Sample chunk analysis failed: {e}")
+            sample_time = time.time() - sample_start
+            if sample_success:
+                if sample_time > self.auto_latency_threshold:
+                    max_workers = max(1, min(2, max_workers))
+                    logger.info(
+                        f"Auto concurrency reduced to {max_workers} "
+                        f"(sample {sample_time:.1f}s > {self.auto_latency_threshold}s)"
+                    )
+                else:
+                    logger.info(
+                        f"Auto concurrency kept at {max_workers} "
+                        f"(sample {sample_time:.1f}s)"
+                    )
+                start_index = 1
+
+        if start_index >= len(chunks):
+            analyses_only = [analysis for _, analysis in chunk_analyses]
+            return self._merge_analyses(analyses_only)
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit all chunks for parallel processing
             future_to_idx = {
                 executor.submit(self._analyze_single, chunk): i
-                for i, chunk in enumerate(chunks)
+                for i, chunk in enumerate(chunks[start_index:], start=start_index)
             }
 
             # Collect results as they complete

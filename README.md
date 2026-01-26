@@ -136,6 +136,14 @@ npm run verify:ollama
 - Health & safety, handover requirements, COBie requirements
 - And many more...
 
+### EIR Analysis Tuning (Optional)
+These environment variables let you speed up EIR analysis without reducing accuracy:
+
+- `EIR_SINGLE_PASS_CHAR_LIMIT` (default `30000`) - Max characters analyzed in one pass before chunking
+- `EIR_CHUNK_TOKENS` (default `7000`) - Chunk size used when the document is split
+- `OLLAMA_MAX_CONCURRENCY` (default `auto`) - Max parallel workers (`auto` adapts to the machine)
+- `EIR_AUTO_CONCURRENCY_LATENCY` (default `60`) - Seconds threshold to reduce workers when Ollama is slow
+
 ## API Endpoints
 
 ### TIDP Routes (`/api/tidp`)

@@ -448,7 +448,7 @@ router.post('/:id/analyze', async (req, res) => {
         text: document.extracted_text,
         filename: document.original_filename
       }, {
-        timeout: 180000 // 3 minutes for AI analysis
+        timeout: 600000 // 10 minutes for AI analysis (match frontend)
       });
 
       const { analysis_json, summary_markdown } = response.data;
