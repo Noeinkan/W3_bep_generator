@@ -5,10 +5,11 @@
  * for analysis before filling out the BEP form.
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Upload, FileText, X, AlertCircle, CheckCircle, Loader2, Sparkles, Trash2, FileSearch, ArrowRight, Info } from 'lucide-react';
-import { uploadDocuments, getDocuments, deleteDocument, extractAndAnalyze } from '../../services/documentService';
+import { uploadDocuments, getDocuments, getDocument, deleteDocument, extractAndAnalyze } from '../../services/documentService';
 import { useAuth } from '../../contexts/AuthContext';
+import AnalysisProgressOverlay from './AnalysisProgressOverlay';
 
 const ACCEPTED_TYPES = {
   'application/pdf': '.pdf',
@@ -24,26 +25,51 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [analyzing, setAnalyzing] = useState(null);
   const [error, setError] = useState(null);
+  const [detailedError, setDetailedError] = useState(null);
+  const [failedDocId, setFailedDocId] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef(null);
+  const dragCounter = useRef(0);
+
+  // Progress overlay state
+  const [showProgressOverlay, setShowProgressOverlay] = useState(false);
+  const [analysisStatus, setAnalysisStatus] = useState('extracting');
+  const [analyzingDocName, setAnalyzingDocName] = useState('');
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const statusPollRef = useRef(null);
+  const elapsedTimerRef = useRef(null);
 
   const userId = user?.id || 'anonymous';
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (statusPollRef.current) clearInterval(statusPollRef.current);
+      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+    };
+  }, []);
 
   // Load existing documents on mount
   const loadDocuments = useCallback(async () => {
     try {
       const result = await getDocuments(userId, draftId);
       if (result.success) {
-        setDocuments(result.documents);
+        setDocuments(result.documents || []);
       }
     } catch (err) {
       console.error('Failed to load documents:', err);
     }
   }, [userId, draftId]);
 
+  // CRITICAL: Load documents when component mounts
+  useEffect(() => {
+    loadDocuments();
+  }, [loadDocuments]);
+
   // Handle file selection
   const handleFiles = async (files) => {
     setError(null);
+    setDetailedError(null);
 
     const validFiles = [];
     for (const file of files) {
@@ -72,31 +98,56 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
       );
 
       if (result.success) {
-        setDocuments(prev => [...result.documents, ...prev]);
+        // Optimistic UI update
+        setDocuments(prev => [...prev, ...(result.documents || [])]);
+
+        // Auto-analyze if only one document was uploaded
+        const newDocs = (result.documents || []).filter(doc =>
+          ['uploaded', 'extracted'].includes(doc.status)
+        );
+        if (newDocs.length === 1) {
+          // Small delay to let user see upload completion
+          setTimeout(() => handleAnalyze(newDocs[0]), 500);
+        }
       } else {
         setError(result.message || 'Upload failed');
+        if (result.status) {
+          setDetailedError(`Error ${result.status}: ${result.message || 'Unknown error'}`);
+        }
       }
     } catch (err) {
-      setError(err.message || 'Error during upload');
+      setError('Failed to upload document. Please try again.');
+      setDetailedError(err.message || 'Network error during upload');
+      console.error('Upload error:', err);
     } finally {
       setUploading(false);
       setUploadProgress(0);
     }
   };
 
-  const handleDrag = (e) => {
+  const handleDragEnter = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
+    dragCounter.current++;
+    if (dragCounter.current > 0) setDragActive(true);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) setDragActive(false);
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    dragCounter.current = 0;
     setDragActive(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
@@ -112,35 +163,208 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
 
   const handleDelete = async (docId) => {
     try {
-      await deleteDocument(docId, userId);
-      setDocuments(prev => prev.filter(d => d.id !== docId));
+      const result = await deleteDocument(docId, userId);
+      if (result.success) {
+        // Optimistic UI update
+        setDocuments(prev => prev.filter(d => d.id !== docId));
+        setError(null);
+        setDetailedError(null);
+        if (failedDocId === docId) {
+          setFailedDocId(null);
+        }
+      } else {
+        setError(result.message || 'Failed to delete document');
+      }
     } catch (err) {
-      setError('Error during deletion');
+      setError('Failed to delete document. Please try again.');
+      console.error('Delete error:', err);
+      // Reload on error to ensure consistency
+      await loadDocuments();
+    }
+  };
+
+  // Start polling for status updates
+  const startStatusPolling = (docId) => {
+    statusPollRef.current = setInterval(async () => {
+      try {
+        const result = await getDocument(docId, userId);
+        if (result.success && result.document) {
+          const status = result.document.status;
+          setAnalysisStatus(status);
+
+          // Update document in list with full data
+          setDocuments(prev => prev.map(d =>
+            d.id === docId ? { ...d, ...result.document, status } : d
+          ));
+
+          // Handle completion
+          if (status === 'analyzed') {
+            stopPolling();
+
+            // Small delay to show completion state
+            setTimeout(() => {
+              setShowProgressOverlay(false);
+              if (onAnalysisComplete && result.document.analysis_json) {
+                onAnalysisComplete({
+                  analysisJson: result.document.analysis_json,
+                  summaryMarkdown: result.document.summary_markdown
+                });
+              }
+            }, 1000);
+          } else if (status === 'error') {
+            stopPolling();
+            setShowProgressOverlay(false);
+            setFailedDocId(docId);
+
+            // Provide detailed error message
+            const errorMsg = result.document.error_message || 'Analysis failed';
+            setError(errorMsg);
+
+            // Provide helpful context based on error type
+            if (errorMsg.includes('Text extraction failed') || errorMsg.includes('No text could be extracted')) {
+              setDetailedError('Could not extract text from the document. Common causes:\n• Scanned/image-based PDF (needs OCR)\n• Password-protected or encrypted file\n• Corrupted document\n• Try converting to DOCX or use a text-based PDF');
+            } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
+              setDetailedError('Processing timed out. The document may be:\n• Too large or complex for analysis\n• Try simplifying the document\n• Split into smaller sections\n• Ensure ML service is responsive');
+            } else if (errorMsg.includes('AI service') || errorMsg.includes('not available') || errorMsg.includes('ECONNREFUSED')) {
+              setDetailedError('AI service is not available. Please:\n• Ensure the ML service is running\n• Check that Ollama is active (ollama serve)\n• Verify the model is loaded\n• Contact support if the issue persists');
+            } else if (errorMsg.includes('AI analysis encountered an error')) {
+              setDetailedError('AI analysis failed. Common causes:\n• Document content doesn\'t match EIR format\n• Unexpected document structure\n• Model processing error\n• Try a different document or contact support');
+            } else {
+              setDetailedError(errorMsg);
+            }
+          }
+        } else if (!result.success) {
+          // API call failed
+          console.error('Failed to get document status:', result.message);
+        }
+      } catch (err) {
+        console.error('Status poll error:', err);
+      }
+    }, 2000); // Poll every 2 seconds
+  };
+
+  // Stop polling and timers
+  const stopPolling = () => {
+    if (statusPollRef.current) {
+      clearInterval(statusPollRef.current);
+      statusPollRef.current = null;
+    }
+    if (elapsedTimerRef.current) {
+      clearInterval(elapsedTimerRef.current);
+      elapsedTimerRef.current = null;
+    }
+  };
+
+  // Start elapsed time counter
+  const startElapsedTimer = () => {
+    setElapsedTime(0);
+    elapsedTimerRef.current = setInterval(() => {
+      setElapsedTime(prev => prev + 1);
+    }, 1000);
+  };
+
+  const handleAnalyzeAll = async () => {
+    const pending = documents.filter(d => ['uploaded', 'extracted'].includes(d.status));
+    for (const doc of pending) {
+      // Only analyze if not already analyzing
+      if (analyzing !== doc.id) {
+        await handleAnalyze(doc);
+      }
     }
   };
 
   const handleAnalyze = async (doc) => {
     setAnalyzing(doc.id);
     setError(null);
+    setDetailedError(null);
+    setFailedDocId(null);
+
+    // Show progress overlay
+    setShowProgressOverlay(true);
+    setAnalysisStatus('extracting');
+    setAnalyzingDocName(doc.original_filename || doc.originalFilename || 'Document');
+    startElapsedTimer();
+    startStatusPolling(doc.id);
 
     try {
       const result = await extractAndAnalyze(doc.id, userId);
 
-      if (result.success) {
-        setDocuments(prev => prev.map(d =>
-          d.id === doc.id
-            ? { ...d, status: 'analyzed', analysisJson: result.data.analysisJson }
-            : d
-        ));
+      stopPolling();
 
-        if (onAnalysisComplete) {
-          onAnalysisComplete(result.data);
+      if (result.success) {
+        setAnalysisStatus('analyzed');
+
+        // Auto-delete previously analyzed documents (keep only the latest)
+        const previouslyAnalyzed = documents.filter(d => d.status === 'analyzed' && d.id !== doc.id);
+        for (const oldDoc of previouslyAnalyzed) {
+          try {
+            await deleteDocument(oldDoc.id, userId);
+          } catch (err) {
+            console.error('Failed to delete old analyzed document:', err);
+          }
         }
+
+        // Update state with optimistic UI
+        setDocuments(prev => prev
+          .filter(d => !(d.status === 'analyzed' && d.id !== doc.id))
+          .map(d =>
+            d.id === doc.id
+              ? { ...d, status: 'analyzed', analysisJson: result.data.analysisJson, analysis_json: result.data.analysisJson, summary_markdown: result.data.summaryMarkdown }
+              : d
+          )
+        );
+
+        // Small delay to show completion state
+        setTimeout(() => {
+          setShowProgressOverlay(false);
+          if (onAnalysisComplete) {
+            onAnalysisComplete(result.data);
+          }
+        }, 1000);
       } else {
-        setError(result.message || 'Analysis failed');
+        setShowProgressOverlay(false);
+        setFailedDocId(doc.id);
+        const errorMessage = result.message || 'Analysis failed';
+        setError(errorMessage);
+
+        // Provide more context based on the error and stage
+        const stage = result.stage;
+
+        if (stage === 'extraction') {
+          setDetailedError('Text extraction failed. Common causes:\n• Scanned/image-based PDF (needs OCR)\n• Password-protected or encrypted file\n• Corrupted document\n• Try converting to DOCX or use a text-based PDF');
+        } else if (stage === 'analysis') {
+          if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
+            setDetailedError('Analysis timed out. The document may be:\n• Too large or complex\n• Try simplifying the document\n• Split into smaller sections');
+          } else if (errorMessage.includes('AI service') || errorMessage.includes('not available')) {
+            setDetailedError('AI service is unavailable. Please:\n• Ensure the ML service is running\n• Check that Ollama is active\n• Contact support if the issue persists');
+          } else {
+            setDetailedError(`AI analysis error: ${errorMessage}\n\nTry:\n• Using a different document format\n• Simplifying the content\n• Ensuring proper EIR structure`);
+          }
+        } else if (result.status === 500) {
+          setDetailedError('Server error occurred. Possible causes:\n• Document too complex or poorly formatted\n• AI service temporarily unavailable\n• Try simplifying the document or waiting a moment');
+        } else if (result.status === 413) {
+          setDetailedError('Document exceeds size limit. Try:\n• Compressing the PDF\n• Removing images if not essential\n• Splitting into smaller sections');
+        } else {
+          setDetailedError(errorMessage);
+        }
       }
     } catch (err) {
-      setError(err.message || 'Error during analysis');
+      // Check if it's a timeout error - the backend might still be processing
+      const isTimeout = err.code === 'ECONNABORTED' || err.message?.includes('timeout');
+
+      if (isTimeout) {
+        // Continue polling - backend may still complete the analysis
+        console.log('Request timed out, continuing to poll for status...');
+        // Don't stop polling, let it continue checking status
+        // The polling will detect when analysis is complete or errors
+      } else {
+        stopPolling();
+        setShowProgressOverlay(false);
+        setFailedDocId(doc.id);
+        setError('Analysis failed unexpectedly');
+        setDetailedError(`Network error: ${err.message || 'Could not connect to the analysis service'}`);
+        console.error('Analysis error:', err);
+      }
     } finally {
       setAnalyzing(null);
     }
@@ -177,10 +401,30 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
     }
   };
 
+  const getFileTypeBadge = (filename) => {
+    if (!filename) return null;
+    const ext = filename.split('.').pop().toLowerCase();
+    if (ext === 'pdf') {
+      return <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded">PDF</span>;
+    } else if (ext === 'docx') {
+      return <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">DOCX</span>;
+    }
+    return null;
+  };
+
   const hasAnalyzedDocument = documents.some(d => d.status === 'analyzed');
+  const pendingDocs = documents.filter(d => ['uploaded', 'extracted'].includes(d.status));
 
   return (
     <div className="max-w-2xl mx-auto">
+      {/* Analysis Progress Overlay */}
+      <AnalysisProgressOverlay
+        isOpen={showProgressOverlay}
+        currentStatus={analysisStatus}
+        documentName={analyzingDocName}
+        elapsedTime={elapsedTime}
+      />
+
       {/* Header */}
       <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-purple-100 to-indigo-100 mb-4">
@@ -196,31 +440,68 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
 
       {/* Error message */}
       {error && (
-        <div className="flex items-center gap-3 p-4 mb-6 bg-red-50 border border-red-200 rounded-xl text-red-700">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
-          <span className="flex-1 text-sm">{error}</span>
-          <button
-            onClick={() => setError(null)}
-            className="p-1 hover:bg-red-100 rounded-lg transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
+        <div role="alert" aria-live="assertive" className="mb-6 bg-red-50 border border-red-200 rounded-xl overflow-hidden">
+          <div className="flex items-center gap-3 p-4 text-red-700">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium">{error}</p>
+              {detailedError && (
+                <p className="text-xs text-red-600 mt-1">{detailedError}</p>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                setError(null);
+                setDetailedError(null);
+              }}
+              className="p-1 hover:bg-red-100 rounded-lg transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          {failedDocId && (
+            <div className="px-4 pb-3 flex items-center gap-2 text-xs">
+              <button
+                onClick={() => {
+                  const failedDoc = documents.find(d => d.id === failedDocId);
+                  if (failedDoc) {
+                    handleAnalyze(failedDoc);
+                  }
+                }}
+                className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Retry Analysis
+              </button>
+              <span className="text-red-600">or delete the document and upload a different version</span>
+            </div>
+          )}
         </div>
       )}
 
       {/* Dropzone */}
       <div
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
+        role="button"
+        aria-label="Upload EIR documents - click to browse or drag and drop PDF or DOCX files"
+        aria-busy={uploading || analyzing !== null}
+        tabIndex={0}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
         onDrop={handleDrop}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            fileInputRef.current?.click();
+          }
+        }}
         className={`
           relative rounded-2xl p-8 transition-all duration-200 cursor-pointer
+          focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2
           ${dragActive
             ? 'bg-purple-50 border-2 border-purple-400 shadow-lg shadow-purple-100'
             : 'bg-gray-50 border-2 border-dashed border-gray-200 hover:border-purple-300 hover:bg-purple-50/50'
           }
-          ${uploading ? 'pointer-events-none opacity-60' : ''}
+          ${uploading || analyzing ? 'pointer-events-none opacity-60' : ''}
         `}
         onClick={() => fileInputRef.current?.click()}
       >
@@ -237,8 +518,8 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
           {uploading ? (
             <>
               <Loader2 className="w-10 h-10 text-purple-500 animate-spin mb-4" />
-              <p className="font-medium text-gray-700">Uploading... {uploadProgress}%</p>
-              <div className="w-48 h-1.5 bg-gray-200 rounded-full mt-3 overflow-hidden">
+              <p className="font-medium text-gray-700" role="status" aria-live="polite">Uploading... {uploadProgress}%</p>
+              <div className="w-48 h-1.5 bg-gray-200 rounded-full mt-3 overflow-hidden" role="progressbar" aria-valuenow={uploadProgress} aria-valuemin="0" aria-valuemax="100">
                 <div
                   className="h-full bg-purple-500 transition-all duration-300 rounded-full"
                   style={{ width: `${uploadProgress}%` }}
@@ -266,22 +547,41 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
         </div>
       </div>
 
+      {/* Analyze All Pending Button */}
+      {pendingDocs.length > 0 && (
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={handleAnalyzeAll}
+            disabled={analyzing !== null}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+          >
+            <Sparkles className="w-4 h-4" />
+            Analyze All Pending ({pendingDocs.length})
+          </button>
+        </div>
+      )}
+
       {/* Document list */}
-      {documents.length > 0 && (
-        <div className="mt-6 space-y-3">
+      {documents.length > 0 ? (
+        <div role="list" className={`${pendingDocs.length > 0 ? 'mt-3' : 'mt-6'} space-y-3`}>
           {documents.map((doc) => (
             <div
               key={doc.id}
               className="flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-xl shadow-sm"
+              role="listitem"
+              aria-label={`${doc.original_filename || doc.originalFilename} - ${getStatusText(doc.status)}`}
             >
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0" aria-hidden="true">
                 {getStatusIcon(doc.status)}
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-900 truncate text-sm">
-                  {doc.original_filename || doc.originalFilename}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-gray-900 truncate text-sm">
+                    {doc.original_filename || doc.originalFilename || 'Unknown file'}
+                  </p>
+                  {getFileTypeBadge(doc.original_filename || doc.originalFilename)}
+                </div>
                 <p className="text-xs text-gray-400">
                   {getStatusText(doc.status)}
                   {doc.file_size && ` \u00b7 ${(doc.file_size / 1024).toFixed(0)} KB`}
@@ -304,6 +604,21 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
                   </button>
                 )}
 
+                {doc.status === 'error' && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleAnalyze(doc); }}
+                    disabled={analyzing === doc.id}
+                    className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {analyzing === doc.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4" />
+                    )}
+                    Retry
+                  </button>
+                )}
+
                 {doc.status === 'analyzed' && (
                   <span className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-sm font-medium">
                     <CheckCircle className="w-4 h-4" />
@@ -322,6 +637,13 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
             </div>
           ))}
         </div>
+      ) : (
+        !uploading && (
+          <div className="mt-6 p-6 bg-gray-50 border border-gray-200 rounded-xl text-center">
+            <FileText className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+            <p className="text-sm text-gray-500">No documents uploaded yet</p>
+          </div>
+        )
       )}
 
       {/* Info box */}
@@ -351,11 +673,18 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
         {hasAnalyzedDocument && onAnalysisComplete && (
           <button
             onClick={() => {
-              const analyzed = documents.find(d => d.status === 'analyzed');
-              if (analyzed && analyzed.analysisJson) {
+              // Get the most recently created analyzed document
+              const analyzedDocs = documents.filter(d => d.status === 'analyzed');
+              const latestAnalyzed = analyzedDocs.length > 0
+                ? analyzedDocs.reduce((latest, doc) =>
+                    new Date(doc.created_at || 0) > new Date(latest.created_at || 0) ? doc : latest
+                  )
+                : null;
+
+              if (latestAnalyzed) {
                 onAnalysisComplete({
-                  analysisJson: analyzed.analysisJson,
-                  summaryMarkdown: analyzed.summary_markdown
+                  analysisJson: latestAnalyzed.analysisJson || latestAnalyzed.analysis_json,
+                  summaryMarkdown: latestAnalyzed.summary_markdown
                 });
               }
             }}

@@ -338,13 +338,15 @@ async def analyze_eir(request: AnalyzeEirRequest):
                 detail="Text too short for meaningful analysis (min 100 chars)"
             )
 
+        logger.info(f"Starting EIR analysis for: {request.filename or 'unknown'}, text length: {len(request.text)} chars")
+
         analyzer = get_analyzer(model=OLLAMA_MODEL)
         analysis_json, summary_markdown = analyzer.analyze(
             text=request.text,
             filename=request.filename
         )
 
-        logger.info(f"Analyzed EIR document: {request.filename or 'unknown'}")
+        logger.info(f"Successfully analyzed EIR document: {request.filename or 'unknown'}")
 
         return AnalyzeEirResponse(
             analysis_json=analysis_json,
@@ -354,11 +356,24 @@ async def analyze_eir(request: AnalyzeEirRequest):
 
     except HTTPException:
         raise
+    except ConnectionError as e:
+        logger.error(f"Ollama connection error during EIR analysis: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail=f"Cannot connect to Ollama. Please ensure Ollama is running (ollama serve). Error: {str(e)}"
+        )
+    except TimeoutError as e:
+        logger.error(f"Timeout during EIR analysis: {e}")
+        raise HTTPException(
+            status_code=504,
+            detail=f"Analysis timed out. The document may be too large or complex. Try simplifying it. Error: {str(e)}"
+        )
     except Exception as e:
-        logger.error(f"EIR analysis error: {e}")
+        logger.error(f"EIR analysis error: {e}", exc_info=True)
+        error_type = type(e).__name__
         raise HTTPException(
             status_code=500,
-            detail=f"EIR analysis failed: {str(e)}"
+            detail=f"EIR analysis failed ({error_type}): {str(e)}"
         )
 
 

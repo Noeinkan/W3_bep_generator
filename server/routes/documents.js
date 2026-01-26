@@ -502,8 +502,9 @@ router.post('/:id/analyze', async (req, res) => {
  * Combined endpoint: extract text and analyze in one call
  */
 router.post('/:id/extract-and-analyze', async (req, res) => {
+  const { id } = req.params;
+
   try {
-    const { id } = req.params;
     const { userId } = req.body;
 
     if (!userId) {
@@ -529,81 +530,152 @@ router.post('/:id/extract-and-analyze', async (req, res) => {
 
     // Step 1: Extract if needed
     if (!extractedText) {
+      console.log(`[${id}] Starting text extraction for: ${document.original_filename}`);
+
       db.prepare(`
         UPDATE client_documents SET status = 'extracting', updated_at = ? WHERE id = ?
       `).run(new Date().toISOString(), id);
 
-      const fileBuffer = fs.readFileSync(document.filepath);
-      const FormData = require('form-data');
-      const formData = new FormData();
-      formData.append('file', fileBuffer, {
-        filename: document.original_filename,
-        contentType: document.mime_type
-      });
+      try {
+        const fileBuffer = fs.readFileSync(document.filepath);
+        const FormData = require('form-data');
+        const formData = new FormData();
+        formData.append('file', fileBuffer, {
+          filename: document.original_filename,
+          contentType: document.mime_type
+        });
 
-      const extractResponse = await axios.post(`${mlServiceUrl}/extract-text`, formData, {
-        headers: formData.getHeaders(),
-        timeout: 120000
-      });
+        const extractResponse = await axios.post(`${mlServiceUrl}/extract-text`, formData, {
+          headers: formData.getHeaders(),
+          timeout: 180000, // Increased to 3 minutes
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity
+        });
 
-      extractedText = extractResponse.data.text;
+        extractedText = extractResponse.data.text;
 
-      db.prepare(`
-        UPDATE client_documents
-        SET extracted_text = ?, status = 'extracted', updated_at = ?
-        WHERE id = ?
-      `).run(extractedText, new Date().toISOString(), id);
+        if (!extractedText || extractedText.trim().length === 0) {
+          throw new Error('No text could be extracted from the document. The file may be scanned/image-based or corrupted.');
+        }
+
+        console.log(`[${id}] Text extracted successfully. Length: ${extractedText.length} chars`);
+
+        db.prepare(`
+          UPDATE client_documents
+          SET extracted_text = ?, status = 'extracted', updated_at = ?
+          WHERE id = ?
+        `).run(extractedText, new Date().toISOString(), id);
+
+      } catch (extractError) {
+        console.error(`[${id}] Text extraction failed:`, extractError.message);
+
+        const errorMsg = extractError.response?.data?.error || extractError.message;
+        const detailedError = `Text extraction failed: ${errorMsg}`;
+
+        db.prepare(`
+          UPDATE client_documents
+          SET status = 'error', error_message = ?, updated_at = ?
+          WHERE id = ?
+        `).run(detailedError, new Date().toISOString(), id);
+
+        return res.status(503).json({
+          success: false,
+          message: detailedError,
+          error: errorMsg,
+          stage: 'extraction'
+        });
+      }
     }
 
     // Step 2: Analyze
+    console.log(`[${id}] Starting AI analysis. Text length: ${extractedText.length} chars`);
+
     db.prepare(`
       UPDATE client_documents SET status = 'analyzing', updated_at = ? WHERE id = ?
     `).run(new Date().toISOString(), id);
 
-    const analyzeResponse = await axios.post(`${mlServiceUrl}/analyze-eir`, {
-      text: extractedText,
-      filename: document.original_filename
-    }, {
-      timeout: 180000
-    });
+    try {
+      const analyzeResponse = await axios.post(`${mlServiceUrl}/analyze-eir`, {
+        text: extractedText,
+        filename: document.original_filename
+      }, {
+        timeout: 600000, // Increased to 10 minutes to match frontend
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity
+      });
 
-    const { analysis_json, summary_markdown } = analyzeResponse.data;
+      const { analysis_json, summary_markdown } = analyzeResponse.data;
 
-    // Update document with analysis
-    db.prepare(`
-      UPDATE client_documents
-      SET analysis_json = ?, summary_markdown = ?, status = 'analyzed', updated_at = ?
-      WHERE id = ?
-    `).run(
-      JSON.stringify(analysis_json),
-      summary_markdown,
-      new Date().toISOString(),
-      id
-    );
+      console.log(`[${id}] Analysis completed successfully`);
 
-    res.json({
-      success: true,
-      message: 'Document extracted and analyzed successfully',
-      data: {
-        analysisJson: analysis_json,
-        summaryMarkdown: summary_markdown
+      // Update document with analysis
+      db.prepare(`
+        UPDATE client_documents
+        SET analysis_json = ?, summary_markdown = ?, status = 'analyzed', updated_at = ?
+        WHERE id = ?
+      `).run(
+        JSON.stringify(analysis_json),
+        summary_markdown,
+        new Date().toISOString(),
+        id
+      );
+
+      res.json({
+        success: true,
+        message: 'Document extracted and analyzed successfully',
+        data: {
+          analysisJson: analysis_json,
+          summaryMarkdown: summary_markdown
+        }
+      });
+
+    } catch (analyzeError) {
+      console.error(`[${id}] AI analysis failed:`, analyzeError.message);
+
+      let errorMsg = analyzeError.response?.data?.error || analyzeError.message;
+      let detailedError;
+
+      // Categorize errors for better user feedback
+      if (analyzeError.code === 'ECONNABORTED' || analyzeError.message.includes('timeout')) {
+        detailedError = 'Analysis timed out. The document may be too large or complex. Try simplifying it or splitting into sections.';
+      } else if (analyzeError.code === 'ECONNREFUSED') {
+        detailedError = 'AI service is not available. Please ensure the ML service is running.';
+      } else if (analyzeError.response?.status === 500) {
+        detailedError = `AI analysis encountered an error: ${errorMsg}. This may be due to document format or content issues.`;
+      } else {
+        detailedError = `Analysis failed: ${errorMsg}`;
       }
-    });
+
+      db.prepare(`
+        UPDATE client_documents
+        SET status = 'error', error_message = ?, updated_at = ?
+        WHERE id = ?
+      `).run(detailedError, new Date().toISOString(), id);
+
+      return res.status(503).json({
+        success: false,
+        message: detailedError,
+        error: errorMsg,
+        stage: 'analysis'
+      });
+    }
 
   } catch (error) {
-    console.error('Extract and analyze error:', error);
+    console.error(`[${id}] Unexpected error in extract-and-analyze:`, error);
 
-    // Update status to error
+    // Update status to error with detailed message
+    const errorMessage = error.message || 'Unknown error occurred';
     db.prepare(`
       UPDATE client_documents
       SET status = 'error', error_message = ?, updated_at = ?
       WHERE id = ?
-    `).run(error.message, new Date().toISOString(), req.params.id);
+    `).run(`Unexpected error: ${errorMessage}`, new Date().toISOString(), id);
 
     res.status(500).json({
       success: false,
-      message: 'Processing failed',
-      error: error.message
+      message: 'Processing failed due to an unexpected error',
+      error: errorMessage,
+      stage: 'unknown'
     });
   }
 });

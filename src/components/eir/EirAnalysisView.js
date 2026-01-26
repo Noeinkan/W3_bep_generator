@@ -29,7 +29,7 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
   if (!analysis) {
     return (
       <div className="p-8 text-center text-gray-500">
-        Nessuna analisi disponibile. Carica e analizza un documento EIR.
+        No analysis available. Upload and analyze an EIR document.
       </div>
     );
   }
@@ -130,10 +130,10 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-gray-900">
-            Analisi EIR Completata
+            EIR Analysis Complete
           </h2>
           <p className="mt-1 text-gray-600">
-            Ecco le informazioni estratte dal documento EIR
+            Here are the extracted information from the EIR document
           </p>
         </div>
 
@@ -141,7 +141,7 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
           <button
             onClick={handleCopyJson}
             className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Copia JSON"
+            title="Copy JSON"
           >
             {copied ? (
               <Check className="w-4 h-4 text-green-500" />
@@ -152,7 +152,7 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
           <button
             onClick={handleDownloadJson}
             className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Scarica JSON"
+            title="Download JSON"
           >
             <Download className="w-4 h-4" />
           </button>
@@ -163,7 +163,7 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
               className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              Rianalizza
+              Reanalyze
             </button>
           )}
         </div>
@@ -174,7 +174,7 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
         <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
           <h3 className="font-semibold text-blue-900 mb-4 flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            Riassunto
+            Summary
           </h3>
           {renderSummary()}
         </div>
@@ -183,16 +183,16 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
       {/* Sections */}
       <div className="space-y-4">
         {/* Project Info */}
-        <Section id="project" title="Informazioni Progetto" icon={FileText}>
+        <Section id="project" title="Project Information" icon={FileText}>
           <div className="space-y-1">
-            <KeyValue label="Nome Progetto" value={analysis.project_info?.name} />
-            <KeyValue label="Cliente" value={analysis.project_info?.client} />
-            <KeyValue label="Tipo Progetto" value={analysis.project_info?.project_type} />
-            <KeyValue label="Ubicazione" value={analysis.project_info?.location} />
-            <KeyValue label="Valore Stimato" value={analysis.project_info?.estimated_value} />
+            <KeyValue label="Project Name" value={analysis.project_info?.name} />
+            <KeyValue label="Client" value={analysis.project_info?.client} />
+            <KeyValue label="Project Type" value={analysis.project_info?.project_type} />
+            <KeyValue label="Location" value={analysis.project_info?.location} />
+            <KeyValue label="Estimated Value" value={analysis.project_info?.estimated_value} />
             {analysis.project_info?.description && (
               <div className="pt-2">
-                <span className="font-medium text-gray-600">Descrizione:</span>
+                <span className="font-medium text-gray-600">Description:</span>
                 <p className="mt-1 text-gray-700">{analysis.project_info.description}</p>
               </div>
             )}
@@ -202,7 +202,7 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
         {/* BIM Objectives */}
         <Section
           id="objectives"
-          title="Obiettivi BIM"
+          title="BIM Objectives"
           icon={Target}
           badge={analysis.bim_objectives?.length || 0}
         >
@@ -213,14 +213,14 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
               ))}
             </ul>
           ) : (
-            <p className="text-gray-500 italic">Nessun obiettivo BIM identificato</p>
+            <p className="text-gray-500 italic">No BIM objectives identified</p>
           )}
         </Section>
 
         {/* Milestones */}
         <Section
           id="milestones"
-          title="Milestone di Consegna"
+          title="Delivery Milestones"
           icon={Calendar}
           badge={analysis.delivery_milestones?.length || 0}
         >
@@ -229,9 +229,9 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50">
-                    <th className="px-4 py-2 text-left font-medium text-gray-600">Fase</th>
-                    <th className="px-4 py-2 text-left font-medium text-gray-600">Descrizione</th>
-                    <th className="px-4 py-2 text-left font-medium text-gray-600">Data</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-600">Phase</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-600">Description</th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-600">Date</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -246,16 +246,16 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
               </table>
             </div>
           ) : (
-            <p className="text-gray-500 italic">Nessuna milestone identificata</p>
+            <p className="text-gray-500 italic">No milestones identified</p>
           )}
         </Section>
 
         {/* Standards & Protocols */}
-        <Section id="standards" title="Standard e Protocolli" icon={Settings}>
+        <Section id="standards" title="Standards & Protocols" icon={Settings}>
           <div className="space-y-4">
             {analysis.standards_protocols?.classification_systems?.length > 0 && (
               <div>
-                <span className="font-medium text-gray-600">Sistemi di Classificazione:</span>
+                <span className="font-medium text-gray-600">Classification Systems:</span>
                 <div className="mt-1 flex flex-wrap gap-2">
                   {analysis.standards_protocols.classification_systems.map((sys, i) => (
                     <span key={i} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm">
@@ -268,7 +268,7 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
 
             {analysis.standards_protocols?.file_formats?.length > 0 && (
               <div>
-                <span className="font-medium text-gray-600">Formati File:</span>
+                <span className="font-medium text-gray-600">File Formats:</span>
                 <div className="mt-1 flex flex-wrap gap-2">
                   {analysis.standards_protocols.file_formats.map((fmt, i) => (
                     <span key={i} className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
@@ -280,24 +280,24 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
             )}
 
             <KeyValue
-              label="Convenzioni di Naming"
+              label="Naming Conventions"
               value={analysis.standards_protocols?.naming_conventions}
             />
             <KeyValue
-              label="Requisiti LOD/LOI"
+              label="LOD/LOI Requirements"
               value={analysis.standards_protocols?.lod_loi_requirements}
             />
           </div>
         </Section>
 
         {/* CDE Requirements */}
-        <Section id="cde" title="Requisiti CDE" icon={Monitor}>
+        <Section id="cde" title="CDE Requirements" icon={Monitor}>
           <div className="space-y-4">
-            <KeyValue label="Piattaforma" value={analysis.cde_requirements?.platform} />
+            <KeyValue label="Platform" value={analysis.cde_requirements?.platform} />
 
             {analysis.cde_requirements?.workflow_states?.length > 0 && (
               <div>
-                <span className="font-medium text-gray-600">Stati Workflow:</span>
+                <span className="font-medium text-gray-600">Workflow States:</span>
                 <div className="mt-1 flex flex-wrap gap-2">
                   {analysis.cde_requirements.workflow_states.map((state, i) => (
                     <span key={i} className="px-2 py-1 bg-green-100 text-green-700 rounded text-sm">
@@ -309,7 +309,7 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
             )}
 
             <KeyValue
-              label="Controllo Accessi"
+              label="Access Control"
               value={analysis.cde_requirements?.access_control}
             />
           </div>
@@ -318,7 +318,7 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
         {/* Roles & Responsibilities */}
         <Section
           id="roles"
-          title="Ruoli e Responsabilita"
+          title="Roles & Responsibilities"
           icon={Users}
           badge={analysis.roles_responsibilities?.length || 0}
         >
@@ -338,7 +338,7 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 italic">Nessun ruolo identificato</p>
+            <p className="text-gray-500 italic">No roles identified</p>
           )}
         </Section>
 
@@ -346,7 +346,7 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
         {analysis.specific_risks?.length > 0 && (
           <Section
             id="risks"
-            title="Rischi e Requisiti Specifici"
+            title="Risks & Specific Requirements"
             icon={AlertTriangle}
             badge={analysis.specific_risks.length}
           >
@@ -364,7 +364,7 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
         {/* Software Requirements */}
         {analysis.software_requirements?.length > 0 && (
           <div className="p-4 bg-gray-50 rounded-lg">
-            <h4 className="font-medium text-gray-900 mb-2">Software Richiesti</h4>
+            <h4 className="font-medium text-gray-900 mb-2">Required Software</h4>
             <div className="flex flex-wrap gap-2">
               {analysis.software_requirements.map((sw, i) => (
                 <span key={i} className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
@@ -384,7 +384,7 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
             className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <CheckCircle className="w-5 h-5" />
-            Usa queste informazioni nel BEP
+            Use this information in BEP
           </button>
         )}
       </div>

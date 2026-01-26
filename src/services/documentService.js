@@ -10,7 +10,19 @@ import axios from 'axios';
 // Create axios instance with base configuration
 const apiClient = axios.create({
   baseURL: '/api/documents',
-  timeout: 180000 // 3 minutes for long operations like analysis
+  timeout: 180000 // 3 minutes default
+});
+
+// Longer timeout for AI analysis operations (10 minutes)
+const ANALYSIS_TIMEOUT = 600000;
+
+// Timeout configurations
+const longTimeoutConfig = { timeout: ANALYSIS_TIMEOUT };
+
+// Create AI client for health checks
+const aiClient = axios.create({
+  baseURL: '/api/ai',
+  timeout: 5000
 });
 
 // Request interceptor for auth
@@ -21,6 +33,46 @@ apiClient.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Response interceptor for global error handling
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('authToken');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Apply auth interceptor to AI client as well
+aiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+/**
+ * Centralized error handling for API calls
+ * @param {Promise} apiCall - The API call promise to execute
+ * @returns {Promise<object>} Response data or error object
+ */
+const handleApiCall = async (apiCall) => {
+  try {
+    const response = await apiCall;
+    return response.data;
+  } catch (error) {
+    console.error('API Error:', error);
+    return {
+      success: false,
+      message: error.response?.data?.message || error.message || 'An unexpected error occurred',
+      status: error.response?.status
+    };
+  }
+};
 
 /**
  * Upload one or more documents
@@ -42,19 +94,19 @@ export const uploadDocuments = async (files, userId, draftId = null, onProgress 
     formData.append('draftId', draftId);
   }
 
-  const response = await apiClient.post('/upload', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    },
-    onUploadProgress: (progressEvent) => {
-      if (onProgress && progressEvent.total) {
-        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-        onProgress(percentCompleted);
+  return handleApiCall(
+    apiClient.post('/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(percentCompleted);
+        }
       }
-    }
-  });
-
-  return response.data;
+    })
+  );
 };
 
 /**
@@ -69,8 +121,7 @@ export const getDocuments = async (userId, draftId = null) => {
     params.draftId = draftId;
   }
 
-  const response = await apiClient.get('/', { params });
-  return response.data;
+  return handleApiCall(apiClient.get('/', { params }));
 };
 
 /**
@@ -80,10 +131,11 @@ export const getDocuments = async (userId, draftId = null) => {
  * @returns {Promise<{success: boolean, document: object}>}
  */
 export const getDocument = async (documentId, userId) => {
-  const response = await apiClient.get(`/${documentId}`, {
-    params: { userId }
-  });
-  return response.data;
+  return handleApiCall(
+    apiClient.get(`/${documentId}`, {
+      params: { userId }
+    })
+  );
 };
 
 /**
@@ -93,10 +145,11 @@ export const getDocument = async (documentId, userId) => {
  * @returns {Promise<{success: boolean, message: string}>}
  */
 export const deleteDocument = async (documentId, userId) => {
-  const response = await apiClient.delete(`/${documentId}`, {
-    params: { userId }
-  });
-  return response.data;
+  return handleApiCall(
+    apiClient.delete(`/${documentId}`, {
+      params: { userId }
+    })
+  );
 };
 
 /**
@@ -106,30 +159,41 @@ export const deleteDocument = async (documentId, userId) => {
  * @returns {Promise<{success: boolean, data: {textLength: number, pages: number, wordCount: number}}>}
  */
 export const extractText = async (documentId, userId) => {
-  const response = await apiClient.post(`/${documentId}/extract`, { userId });
-  return response.data;
+  return handleApiCall(apiClient.post(`/${documentId}/extract`, { userId }));
 };
 
 /**
  * Analyze a document with AI (requires text to be extracted first)
  * @param {string} documentId - Document ID
  * @param {string} userId - User ID
+ * @param {AbortSignal} [signal] - Optional AbortSignal for cancellation
  * @returns {Promise<{success: boolean, data: {analysisJson: object, summaryMarkdown: string}}>}
  */
-export const analyzeDocument = async (documentId, userId) => {
-  const response = await apiClient.post(`/${documentId}/analyze`, { userId });
-  return response.data;
+export const analyzeDocument = async (documentId, userId, signal = null) => {
+  return handleApiCall(
+    apiClient.post(
+      `/${documentId}/analyze`,
+      { userId },
+      { ...longTimeoutConfig, signal }
+    )
+  );
 };
 
 /**
  * Extract text and analyze in one operation
  * @param {string} documentId - Document ID
  * @param {string} userId - User ID
+ * @param {AbortSignal} [signal] - Optional AbortSignal for cancellation
  * @returns {Promise<{success: boolean, data: {analysisJson: object, summaryMarkdown: string}}>}
  */
-export const extractAndAnalyze = async (documentId, userId) => {
-  const response = await apiClient.post(`/${documentId}/extract-and-analyze`, { userId });
-  return response.data;
+export const extractAndAnalyze = async (documentId, userId, signal = null) => {
+  return handleApiCall(
+    apiClient.post(
+      `/${documentId}/extract-and-analyze`,
+      { userId },
+      { ...longTimeoutConfig, signal }
+    )
+  );
 };
 
 /**
@@ -140,11 +204,12 @@ export const extractAndAnalyze = async (documentId, userId) => {
  * @returns {Promise<{success: boolean, message: string}>}
  */
 export const linkDocumentToDraft = async (documentId, userId, draftId) => {
-  const response = await apiClient.put(`/${documentId}/link-draft`, {
-    userId,
-    draftId
-  });
-  return response.data;
+  return handleApiCall(
+    apiClient.put(`/${documentId}/link-draft`, {
+      userId,
+      draftId
+    })
+  );
 };
 
 /**
@@ -173,10 +238,13 @@ export const getDocumentAnalysis = async (documentId, userId) => {
 export const getLatestAnalyzedDocument = async (userId, draftId) => {
   const result = await getDocuments(userId, draftId);
   if (result.success && result.documents) {
-    // Find the most recent analyzed document
-    const analyzedDocs = result.documents.filter(doc => doc.status === 'analyzed');
+    // Find the most recent analyzed document with explicit sorting
+    const analyzedDocs = result.documents
+      .filter(doc => doc.status === 'analyzed')
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
     if (analyzedDocs.length > 0) {
-      return analyzedDocs[0]; // Already sorted by created_at DESC
+      return analyzedDocs[0];
     }
   }
   return null;
@@ -188,24 +256,9 @@ export const getLatestAnalyzedDocument = async (userId, draftId) => {
  */
 export const checkMLServiceHealth = async () => {
   try {
-    const response = await axios.get('/api/ai/health', { timeout: 5000 });
+    const response = await aiClient.get('/health');
     return response.data.status === 'ok';
   } catch {
     return false;
   }
-};
-
-// Export all functions as named exports
-export default {
-  uploadDocuments,
-  getDocuments,
-  getDocument,
-  deleteDocument,
-  extractText,
-  analyzeDocument,
-  extractAndAnalyze,
-  linkDocumentToDraft,
-  getDocumentAnalysis,
-  getLatestAnalyzedDocument,
-  checkMLServiceHealth
 };

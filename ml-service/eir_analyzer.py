@@ -9,140 +9,255 @@ Follows ISO 19650 standards.
 import json
 import re
 import logging
+import os
 from typing import Dict, Any, List, Optional, Tuple
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+from pydantic import BaseModel, Field, ValidationError
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
+# Optional dependencies with graceful fallback
+try:
+    from json_repair import repair_json
+    HAS_JSON_REPAIR = True
+except ImportError:
+    HAS_JSON_REPAIR = False
+    repair_json = None
+
+try:
+    from rapidfuzz import fuzz
+    HAS_RAPIDFUZZ = True
+except ImportError:
+    HAS_RAPIDFUZZ = False
+    fuzz = None
 
 from ollama_generator import get_ollama_generator
 
 logger = logging.getLogger(__name__)
 
 
+# ============================================================================
+# PYDANTIC MODELS FOR VALIDATION
+# ============================================================================
+
+class ProjectInfo(BaseModel):
+    """Project information from EIR."""
+    name: Optional[str] = None
+    description: Optional[str] = None
+    location: Optional[str] = None
+    client: Optional[str] = None
+    project_type: Optional[str] = None
+    estimated_value: Optional[str] = None
+
+
+class InformationRequirements(BaseModel):
+    """Information requirements categories."""
+    OIR: List[str] = Field(default_factory=list)
+    AIR: List[str] = Field(default_factory=list)
+    PIR: List[str] = Field(default_factory=list)
+    EIR_specifics: List[str] = Field(default_factory=list)
+
+
+class DeliveryMilestone(BaseModel):
+    """Single delivery milestone."""
+    phase: str
+    description: str
+    date: Optional[str] = None
+
+
+class StandardsProtocols(BaseModel):
+    """Standards and protocols requirements."""
+    classification_systems: List[str] = Field(default_factory=list)
+    naming_conventions: Optional[str] = None
+    file_formats: List[str] = Field(default_factory=list)
+    lod_loi_requirements: Optional[str] = None
+    cad_standards: Optional[str] = None
+
+
+class CdeRequirements(BaseModel):
+    """Common Data Environment requirements."""
+    platform: Optional[str] = None
+    workflow_states: List[str] = Field(default_factory=list)
+    access_control: Optional[str] = None
+    folder_structure: Optional[str] = None
+
+
+class RoleResponsibility(BaseModel):
+    """Single role and its responsibilities."""
+    role: str
+    responsibilities: List[str] = Field(default_factory=list)
+
+
+class QualityRequirements(BaseModel):
+    """Quality assurance requirements."""
+    model_checking: Optional[str] = None
+    clash_detection: Optional[str] = None
+    validation_procedures: Optional[str] = None
+
+
+class HandoverRequirements(BaseModel):
+    """Asset handover requirements."""
+    cobie_required: bool = False
+    asset_data: Optional[str] = None
+    documentation: List[str] = Field(default_factory=list)
+
+
+class EirAnalysis(BaseModel):
+    """Complete EIR analysis structure with validation."""
+    project_info: ProjectInfo = Field(default_factory=ProjectInfo)
+    bim_objectives: List[str] = Field(default_factory=list)
+    information_requirements: InformationRequirements = Field(default_factory=InformationRequirements)
+    delivery_milestones: List[DeliveryMilestone] = Field(default_factory=list)
+    standards_protocols: StandardsProtocols = Field(default_factory=StandardsProtocols)
+    cde_requirements: CdeRequirements = Field(default_factory=CdeRequirements)
+    roles_responsibilities: List[RoleResponsibility] = Field(default_factory=list)
+    software_requirements: List[str] = Field(default_factory=list)
+    plain_language_questions: List[str] = Field(default_factory=list)
+    quality_requirements: QualityRequirements = Field(default_factory=QualityRequirements)
+    handover_requirements: HandoverRequirements = Field(default_factory=HandoverRequirements)
+    specific_risks: List[str] = Field(default_factory=list)
+    other_requirements: List[str] = Field(default_factory=list)
+
+
+# ============================================================================
+# PROMPTS (Translated to English)
+# ============================================================================
+
 # ISO 19650 compliant EIR analysis prompt
-EIR_ANALYSIS_PROMPT = """Sei un esperto di ISO 19650 e gestione informativa BIM. Analizza il seguente documento EIR (Exchange Information Requirements) ed estrai le informazioni chiave per la redazione di un BIM Execution Plan (BEP).
+EIR_ANALYSIS_PROMPT = """You are an ISO 19650 and BIM information management expert. Analyze the following Exchange Information Requirements (EIR) document and extract the key information needed to draft a BIM Execution Plan (BEP).
 
-IMPORTANTE: Restituisci SOLO un JSON valido senza commenti o testo aggiuntivo.
+IMPORTANT: Return ONLY a valid JSON object with no additional comments or text.
 
-Struttura JSON richiesta:
+Required JSON structure:
 {{
   "project_info": {{
-    "name": "string o null",
-    "description": "string o null",
-    "location": "string o null",
-    "client": "string o null",
-    "project_type": "string o null",
-    "estimated_value": "string o null"
+    "name": "string or null",
+    "description": "string or null",
+    "location": "string or null",
+    "client": "string or null",
+    "project_type": "string or null",
+    "estimated_value": "string or null"
   }},
-  "bim_objectives": ["lista di obiettivi BIM principali"],
+  "bim_objectives": ["list of main BIM objectives"],
   "information_requirements": {{
     "OIR": ["Organizational Information Requirements"],
     "AIR": ["Asset Information Requirements"],
     "PIR": ["Project Information Requirements"],
-    "EIR_specifics": ["requisiti specifici EIR"]
+    "EIR_specifics": ["specific EIR requirements"]
   }},
   "delivery_milestones": [
-    {{"phase": "nome fase", "description": "descrizione", "date": "data o null"}}
+    {{"phase": "phase name", "description": "description", "date": "date or null"}}
   ],
   "standards_protocols": {{
-    "classification_systems": ["Uniclass 2015", "ecc."],
-    "naming_conventions": "descrizione convenzioni o null",
-    "file_formats": ["IFC", "PDF", "ecc."],
-    "lod_loi_requirements": "requisiti LOD/LOI o null",
-    "cad_standards": "standard CAD o null"
+    "classification_systems": ["Uniclass 2015", "etc."],
+    "naming_conventions": "naming convention description or null",
+    "file_formats": ["IFC", "PDF", "etc."],
+    "lod_loi_requirements": "LOD/LOI requirements or null",
+    "cad_standards": "CAD standards or null"
   }},
   "cde_requirements": {{
-    "platform": "nome piattaforma o null",
+    "platform": "platform name or null",
     "workflow_states": ["WIP", "Shared", "Published", "Archived"],
-    "access_control": "descrizione controllo accessi o null",
-    "folder_structure": "struttura cartelle o null"
+    "access_control": "access control description or null",
+    "folder_structure": "folder structure or null"
   }},
   "roles_responsibilities": [
-    {{"role": "nome ruolo", "responsibilities": ["lista responsabilita"]}}
+    {{"role": "role name", "responsibilities": ["list of responsibilities"]}}
   ],
-  "software_requirements": ["lista software richiesti"],
-  "plain_language_questions": ["domande in linguaggio semplice se presenti"],
+  "software_requirements": ["list of required software"],
+  "plain_language_questions": ["plain language questions if present"],
   "quality_requirements": {{
-    "model_checking": "requisiti verifica modelli o null",
-    "clash_detection": "requisiti clash detection o null",
-    "validation_procedures": "procedure validazione o null"
+    "model_checking": "model checking requirements or null",
+    "clash_detection": "clash detection requirements or null",
+    "validation_procedures": "validation procedures or null"
   }},
   "handover_requirements": {{
     "cobie_required": true/false,
-    "asset_data": "requisiti dati asset o null",
-    "documentation": ["lista documentazione richiesta"]
+    "asset_data": "asset data requirements or null",
+    "documentation": ["list of required documentation"]
   }},
-  "specific_risks": ["rischi o requisiti specifici identificati"],
-  "other_requirements": ["altri requisiti non categorizzati"]
+  "specific_risks": ["identified specific risks or requirements"],
+  "other_requirements": ["other uncategorized requirements"]
 }}
 
-Se un campo non e presente nel documento, usa null per stringhe o array vuoto [] per liste.
-Estrai informazioni reali dal documento, non inventare dati.
+If a field is not present in the document, use null for strings or empty array [] for lists.
+Extract real information from the document - do not invent data.
 
-DOCUMENTO EIR DA ANALIZZARE:
+EIR DOCUMENT TO ANALYZE:
 {eir_text}
 
 JSON:"""
 
 
-# Prompt for generating markdown summary
-SUMMARY_PROMPT = """Basandoti sull'analisi JSON del documento EIR, genera un riassunto conciso in italiano in formato Markdown.
+# Prompt for generating markdown summary (output in English for BEP)
+SUMMARY_PROMPT = """Based on the JSON analysis of the EIR document, generate a concise summary in English in Markdown format.
 
-Il riassunto deve:
-1. Essere strutturato con intestazioni chiare (## per sezioni principali)
-2. Evidenziare gli obiettivi BIM principali
-3. Sintetizzare i requisiti informativi chiave (OIR, AIR, PIR)
-4. Elencare le milestone di consegna principali
-5. Notare eventuali requisiti critici o non standard
-6. Essere lungo massimo 500 parole
+The summary must:
+1. Be structured with clear headings (## for main sections)
+2. Highlight the main BIM objectives
+3. Synthesize key information requirements (OIR, AIR, PIR)
+4. List main delivery milestones
+5. Note any critical or non-standard requirements
+6. Be maximum 500 words
 
-Formato richiesto:
-## Panoramica Progetto
-[breve descrizione]
+Required format:
+## Project Overview
+[brief description]
 
-## Obiettivi BIM
-[lista puntata obiettivi principali]
+## BIM Objectives
+[bulleted list of main objectives]
 
-## Requisiti Informativi Chiave
-[sintesi OIR/AIR/PIR]
+## Key Information Requirements
+[summary of OIR/AIR/PIR]
 
-## Milestone di Consegna
-[tabella o lista milestone]
+## Delivery Milestones
+[table or list of milestones]
 
-## Requisiti Tecnici
-[software, formati, standard]
+## Technical Requirements
+[software, formats, standards]
 
-## Note Critiche
-[requisiti particolari o rischi]
+## Critical Notes
+[particular requirements or risks]
 
-ANALISI JSON:
+JSON ANALYSIS:
 {analysis_json}
 
-RIASSUNTO MARKDOWN:"""
+ITALIAN MARKDOWN SUMMARY:"""
 
 
-# Prompt for field-specific suggestions based on EIR analysis
-FIELD_SUGGESTION_PROMPT = """Sei un esperto BIM ISO 19650. Basandoti sull'analisi EIR fornita, genera un suggerimento specifico per il campo "{field_type}" del BEP.
+# Prompt for field-specific suggestions based on EIR analysis (output in Italian for BEP)
+FIELD_SUGGESTION_PROMPT = """You are a BIM ISO 19650 expert. Based on the provided EIR analysis, generate a specific suggestion for the "{field_type}" field of the BEP.
 
-Il suggerimento deve:
-- Essere in italiano
-- Essere direttamente rilevante per il campo richiesto
-- Basarsi sui dati estratti dall'EIR
-- Essere pronto per l'inserimento nel BEP (testo formale e professionale)
-- Essere lungo tra 50 e 200 parole
+The suggestion must:
+- Be in Italian
+- Be directly relevant to the requested field
+- Be based on data extracted from the EIR
+- Be ready for insertion in the BEP (formal and professional text)
+- Be between 50 and 200 words
 
-ANALISI EIR:
+EIR ANALYSIS:
 {analysis_json}
 
-TESTO GIA PRESENTE NEL CAMPO (se vuoto, genera da zero):
+EXISTING TEXT IN FIELD (if empty, generate from scratch):
 {partial_text}
 
-CAMPO BEP: {field_type}
+BEP FIELD: {field_type}
 
-SUGGERIMENTO:"""
+ITALIAN SUGGESTION:"""
 
+
+# ============================================================================
+# MAIN ANALYZER CLASS
+# ============================================================================
 
 class EirAnalyzer:
     """
     Analyzes EIR documents using Ollama LLM to extract structured information.
     """
+
+    # Fuzzy matching thresholds
+    FUZZY_THRESHOLD_GENERAL = 85
+    FUZZY_THRESHOLD_OBJECTIVES = 80  # More lenient for objectives and requirements
 
     # Mapping of BEP field types to EIR analysis sections
     FIELD_MAPPING = {
@@ -173,7 +288,7 @@ class EirAnalyzer:
         'informationRisks': 'specific_risks',
     }
 
-    def __init__(self, model: str = None):
+    def __init__(self, model: Optional[str] = None):
         """
         Initialize the EIR analyzer.
 
@@ -183,7 +298,7 @@ class EirAnalyzer:
         self.generator = get_ollama_generator(model=model)
         self.model = model or self.generator.model
 
-    def analyze(self, text: str, filename: str = None) -> Tuple[Dict[str, Any], str]:
+    def analyze(self, text: str, filename: Optional[str] = None) -> Tuple[Dict[str, Any], str]:
         """
         Analyze EIR document text and return structured data.
 
@@ -197,8 +312,9 @@ class EirAnalyzer:
         logger.info(f"Analyzing EIR document: {filename or 'unknown'}")
         logger.info(f"Text length: {len(text)} chars")
 
-        # Check if text needs chunking
-        if len(text) > 12000:  # Roughly 3000 tokens
+        # Check if text needs chunking (increased threshold with larger context window)
+        # With num_ctx=8192, we can handle ~24000 chars in one pass
+        if len(text) > 24000:
             logger.info("Document is large, using chunked analysis")
             analysis_json = self._analyze_chunked(text)
         else:
@@ -209,77 +325,138 @@ class EirAnalyzer:
 
         return analysis_json, summary_markdown
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((ConnectionError, TimeoutError, Exception)),
+        reraise=True
+    )
     def _analyze_single(self, text: str) -> Dict[str, Any]:
-        """Analyze text in a single pass."""
-        prompt = EIR_ANALYSIS_PROMPT.format(eir_text=text[:15000])  # Limit to ~4k tokens
+        """Analyze text in a single pass with optimized parameters and retry logic."""
+        # Use larger text limit with increased context window
+        prompt = EIR_ANALYSIS_PROMPT.format(eir_text=text[:30000])
 
         try:
             response = self.generator.generate_text(
                 prompt=prompt,
-                max_length=3000,
-                temperature=0.3  # Low temperature for structured output
+                max_length=2000,  # Reduced from 3000 - JSON structure rarely needs more
+                temperature=0.3,  # Low temperature for structured output
+                num_ctx=8192  # Larger context window to handle bigger documents in one pass
             )
 
-            # Parse JSON from response
+            # Parse JSON from response with robust parsing
             return self._parse_json_response(response)
 
+        except (ConnectionError, TimeoutError) as e:
+            logger.warning(f"Connection error during analysis, will retry: {e}")
+            raise  # Re-raise to trigger retry
         except Exception as e:
             logger.error(f"Analysis failed: {e}")
-            return self._empty_analysis()
+            return self._empty_analysis_dict()
 
     def _analyze_chunked(self, text: str) -> Dict[str, Any]:
-        """Analyze long text in chunks and merge results."""
+        """Analyze long text in chunks using parallel processing for speed."""
         from text_extractor import TextExtractor
 
-        extractor = TextExtractor(max_chunk_tokens=3000)
+        # Larger chunks with increased context window (8192 tokens ~= 6000 token chunks)
+        extractor = TextExtractor(max_chunk_tokens=6000)
         chunks = extractor.chunk_text(text)
 
-        logger.info(f"Split into {len(chunks)} chunks")
+        logger.info(f"Split into {len(chunks)} chunks for parallel analysis")
 
-        # Analyze each chunk
-        chunk_analyses = []
-        for i, chunk in enumerate(chunks):
-            logger.info(f"Analyzing chunk {i+1}/{len(chunks)}")
-            try:
-                analysis = self._analyze_single(chunk)
-                chunk_analyses.append(analysis)
-            except Exception as e:
-                logger.warning(f"Chunk {i+1} analysis failed: {e}")
+        # Dynamic worker count: balance between speed and Ollama capacity
+        # Use OLLAMA_MAX_CONCURRENCY env var, or default to min(cpu_count, 6)
+        cpu_count = os.cpu_count() or 4
+        ollama_concurrency = int(os.getenv("OLLAMA_MAX_CONCURRENCY", str(min(cpu_count, 6))))
+        max_workers = min(len(chunks), max(1, min(ollama_concurrency, 6)))
+
+        logger.info(f"Using {max_workers} parallel workers for chunk analysis")
+
+        chunk_analyses: List[Tuple[int, Dict[str, Any]]] = []
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all chunks for parallel processing
+            future_to_idx = {
+                executor.submit(self._analyze_single, chunk): i
+                for i, chunk in enumerate(chunks)
+            }
+
+            # Collect results as they complete
+            for future in as_completed(future_to_idx):
+                idx = future_to_idx[future]
+                try:
+                    analysis = future.result()
+                    chunk_analyses.append((idx, analysis))
+                    logger.info(f"Chunk {idx+1}/{len(chunks)} completed")
+                except Exception as e:
+                    logger.warning(f"Chunk {idx+1} analysis failed: {e}")
+
+        # Sort by original order before merging
+        chunk_analyses.sort(key=lambda x: x[0])
+        analyses_only = [analysis for _, analysis in chunk_analyses]
 
         # Merge chunk analyses
-        return self._merge_analyses(chunk_analyses)
+        return self._merge_analyses(analyses_only)
 
     def _parse_json_response(self, response: str) -> Dict[str, Any]:
-        """Parse JSON from LLM response, handling common issues."""
+        """Parse JSON from LLM response with robust error handling."""
         # Clean response
         text = response.strip()
+
+        # Remove markdown code blocks if present
+        text = re.sub(r'^```(?:json)?\s*', '', text)
+        text = re.sub(r'\s*```$', '', text)
 
         # Try to find JSON block
         json_match = re.search(r'\{[\s\S]*\}', text)
         if json_match:
             text = json_match.group()
 
-        # Fix common JSON issues
+        # Try json_repair first if available
+        if HAS_JSON_REPAIR and repair_json:
+            try:
+                repaired = repair_json(text)
+                data = json.loads(repaired)
+                # Validate with Pydantic
+                validated = EirAnalysis(**data)
+                return validated.model_dump()
+            except Exception as e:
+                logger.debug(f"json_repair failed: {e}, trying manual fixes")
+
+        # Fallback: manual fixes
         text = text.replace("'", '"')  # Single to double quotes
-        text = re.sub(r',\s*}', '}', text)  # Trailing commas
+        text = re.sub(r',\s*}', '}', text)  # Trailing commas in objects
         text = re.sub(r',\s*]', ']', text)  # Trailing commas in arrays
 
         try:
-            return json.loads(text)
+            data = json.loads(text)
+            # Validate with Pydantic - try strict first, then lenient
+            try:
+                validated = EirAnalysis(**data)
+                return validated.model_dump()
+            except ValidationError:
+                # Try more tolerant validation with type coercion
+                try:
+                    validated = EirAnalysis.model_validate(data, strict=False)
+                    return validated.model_dump()
+                except ValidationError as e:
+                    logger.warning(f"Pydantic validation error (lenient mode): {e}")
+                    # Return raw data as last resort
+                    return data
         except json.JSONDecodeError as e:
             logger.warning(f"JSON parse error: {e}")
             logger.debug(f"Raw response: {text[:500]}")
-            return self._empty_analysis()
+            return self._empty_analysis_dict()
 
     def _merge_analyses(self, analyses: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Merge multiple chunk analyses into one."""
+        """Merge multiple chunk analyses into one with fuzzy deduplication."""
         if not analyses:
-            return self._empty_analysis()
+            return self._empty_analysis_dict()
 
         if len(analyses) == 1:
             return analyses[0]
 
-        merged = self._empty_analysis()
+        merged = self._empty_analysis_dict()
 
         for analysis in analyses:
             # Merge project_info (prefer non-null values)
@@ -288,52 +465,117 @@ class EirAnalyzer:
                     if value and not merged['project_info'].get(key):
                         merged['project_info'][key] = value
 
-            # Merge lists (deduplicate)
+            # Merge lists with fuzzy deduplication (adaptive thresholds)
             for list_key in ['bim_objectives', 'software_requirements',
                             'plain_language_questions', 'specific_risks',
                             'other_requirements']:
                 if list_key in analysis and analysis[list_key]:
-                    existing = set(merged.get(list_key, []))
+                    merged.setdefault(list_key, [])
+                    # Use lower threshold for objectives and requirements (more lenient)
+                    threshold = self.FUZZY_THRESHOLD_OBJECTIVES if list_key in ['bim_objectives', 'other_requirements'] else self.FUZZY_THRESHOLD_GENERAL
                     for item in analysis[list_key]:
-                        if item and item not in existing:
-                            merged.setdefault(list_key, []).append(item)
-                            existing.add(item)
+                        if item and not self._is_duplicate_fuzzy(item, merged[list_key], threshold):
+                            merged[list_key].append(item)
 
             # Merge delivery_milestones
             if 'delivery_milestones' in analysis:
-                existing_phases = {m.get('phase') for m in merged.get('delivery_milestones', [])}
+                merged.setdefault('delivery_milestones', [])
                 for milestone in analysis['delivery_milestones']:
-                    if milestone.get('phase') not in existing_phases:
-                        merged.setdefault('delivery_milestones', []).append(milestone)
-                        existing_phases.add(milestone.get('phase'))
+                    phase = milestone.get('phase', '')
+                    if not self._milestone_exists(phase, merged['delivery_milestones']):
+                        merged['delivery_milestones'].append(milestone)
 
             # Merge roles_responsibilities
             if 'roles_responsibilities' in analysis:
-                existing_roles = {r.get('role') for r in merged.get('roles_responsibilities', [])}
+                merged.setdefault('roles_responsibilities', [])
                 for role in analysis['roles_responsibilities']:
-                    if role.get('role') not in existing_roles:
-                        merged.setdefault('roles_responsibilities', []).append(role)
-                        existing_roles.add(role.get('role'))
+                    role_name = role.get('role', '')
+                    if not self._role_exists(role_name, merged['roles_responsibilities']):
+                        merged['roles_responsibilities'].append(role)
 
             # Merge nested dicts
             for dict_key in ['information_requirements', 'standards_protocols',
                             'cde_requirements', 'quality_requirements',
                             'handover_requirements']:
                 if dict_key in analysis and analysis[dict_key]:
+                    merged.setdefault(dict_key, {})
                     for key, value in analysis[dict_key].items():
                         if value:
                             if isinstance(value, list):
-                                existing = set(merged.get(dict_key, {}).get(key, []))
+                                merged[dict_key].setdefault(key, [])
+                                # Use lower threshold for information requirements
+                                threshold = self.FUZZY_THRESHOLD_OBJECTIVES if dict_key == 'information_requirements' else self.FUZZY_THRESHOLD_GENERAL
                                 for item in value:
-                                    if item and item not in existing:
-                                        merged.setdefault(dict_key, {}).setdefault(key, []).append(item)
-                            elif not merged.get(dict_key, {}).get(key):
-                                merged.setdefault(dict_key, {})[key] = value
+                                    if item and not self._is_duplicate_fuzzy(item, merged[dict_key][key], threshold):
+                                        merged[dict_key][key].append(item)
+                            elif not merged[dict_key].get(key):
+                                merged[dict_key][key] = value
 
         return merged
 
+    def _is_duplicate_fuzzy(self, item: str, existing_list: List[str], threshold: Optional[int] = None) -> bool:
+        """Check if item is a fuzzy duplicate of any item in existing_list."""
+        if threshold is None:
+            threshold = self.FUZZY_THRESHOLD_GENERAL
+
+        # Handle None or empty items
+        if not item or not isinstance(item, str):
+            return False
+
+        if not HAS_RAPIDFUZZ or not fuzz:
+            # Fallback to exact match
+            return item in existing_list
+
+        for existing in existing_list:
+            # Skip None or non-string values
+            if not existing or not isinstance(existing, str):
+                continue
+            if fuzz.ratio(item.lower(), existing.lower()) >= threshold:
+                return True
+        return False
+
+    def _milestone_exists(self, phase: str, milestones: List[Dict[str, Any]]) -> bool:
+        """Check if milestone with similar phase already exists."""
+        if not phase or not isinstance(phase, str):
+            return False
+        for m in milestones:
+            existing_phase = m.get('phase', '')
+            # Skip None or empty values
+            if not existing_phase or not isinstance(existing_phase, str):
+                continue
+            if HAS_RAPIDFUZZ and fuzz:
+                if fuzz.ratio(phase.lower(), existing_phase.lower()) >= self.FUZZY_THRESHOLD_GENERAL:
+                    return True
+            else:
+                if phase.lower() == existing_phase.lower():
+                    return True
+        return False
+
+    def _role_exists(self, role: str, roles: List[Dict[str, Any]]) -> bool:
+        """Check if role with similar name already exists."""
+        if not role or not isinstance(role, str):
+            return False
+        for r in roles:
+            existing_role = r.get('role', '')
+            # Skip None or empty values
+            if not existing_role or not isinstance(existing_role, str):
+                continue
+            if HAS_RAPIDFUZZ and fuzz:
+                if fuzz.ratio(role.lower(), existing_role.lower()) >= self.FUZZY_THRESHOLD_GENERAL:
+                    return True
+            else:
+                if role.lower() == existing_role.lower():
+                    return True
+        return False
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((ConnectionError, TimeoutError, Exception)),
+        reraise=True
+    )
     def _generate_summary(self, analysis_json: Dict[str, Any]) -> str:
-        """Generate markdown summary from analysis JSON."""
+        """Generate markdown summary from analysis JSON with optimized parameters and retry logic."""
         prompt = SUMMARY_PROMPT.format(
             analysis_json=json.dumps(analysis_json, indent=2, ensure_ascii=False)
         )
@@ -341,85 +583,50 @@ class EirAnalyzer:
         try:
             summary = self.generator.generate_text(
                 prompt=prompt,
-                max_length=1500,
-                temperature=0.5
+                max_length=800,  # Reduced from 1500 - summaries are concise by nature
+                temperature=0.5,
+                num_ctx=4096  # Sufficient context for summary generation
             )
             return summary.strip()
+        except (ConnectionError, TimeoutError) as e:
+            logger.warning(f"Connection error during summary generation, will retry: {e}")
+            raise  # Re-raise to trigger retry
         except Exception as e:
             logger.error(f"Summary generation failed: {e}")
             return self._fallback_summary(analysis_json)
 
     def _fallback_summary(self, analysis: Dict[str, Any]) -> str:
         """Generate a basic summary if LLM fails."""
-        parts = ["## Analisi EIR\n"]
+        parts = ["## EIR Analysis\n"]
 
         # Project info
         if analysis.get('project_info', {}).get('name'):
-            parts.append(f"**Progetto:** {analysis['project_info']['name']}\n")
+            parts.append(f"**Project:** {analysis['project_info']['name']}\n")
 
         # Objectives
         if analysis.get('bim_objectives'):
-            parts.append("\n### Obiettivi BIM\n")
+            parts.append("\n### BIM Objectives\n")
             for obj in analysis['bim_objectives'][:5]:
                 parts.append(f"- {obj}\n")
 
         # Milestones
         if analysis.get('delivery_milestones'):
-            parts.append("\n### Milestone\n")
+            parts.append("\n### Milestones\n")
             for ms in analysis['delivery_milestones'][:5]:
                 parts.append(f"- {ms.get('phase', 'N/A')}: {ms.get('description', '')}\n")
 
         return ''.join(parts)
 
-    def _empty_analysis(self) -> Dict[str, Any]:
-        """Return empty analysis structure."""
-        return {
-            "project_info": {
-                "name": None,
-                "description": None,
-                "location": None,
-                "client": None,
-                "project_type": None,
-                "estimated_value": None
-            },
-            "bim_objectives": [],
-            "information_requirements": {
-                "OIR": [],
-                "AIR": [],
-                "PIR": [],
-                "EIR_specifics": []
-            },
-            "delivery_milestones": [],
-            "standards_protocols": {
-                "classification_systems": [],
-                "naming_conventions": None,
-                "file_formats": [],
-                "lod_loi_requirements": None,
-                "cad_standards": None
-            },
-            "cde_requirements": {
-                "platform": None,
-                "workflow_states": [],
-                "access_control": None,
-                "folder_structure": None
-            },
-            "roles_responsibilities": [],
-            "software_requirements": [],
-            "plain_language_questions": [],
-            "quality_requirements": {
-                "model_checking": None,
-                "clash_detection": None,
-                "validation_procedures": None
-            },
-            "handover_requirements": {
-                "cobie_required": False,
-                "asset_data": None,
-                "documentation": []
-            },
-            "specific_risks": [],
-            "other_requirements": []
-        }
+    def _empty_analysis_dict(self) -> Dict[str, Any]:
+        """Return empty analysis structure as dict."""
+        return EirAnalysis().model_dump()
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((ConnectionError, TimeoutError, Exception)),
+        reraise=True
+    )
     def suggest_for_field(self, analysis_json: Dict[str, Any],
                           field_type: str, partial_text: str = "") -> str:
         """
@@ -438,7 +645,7 @@ class EirAnalyzer:
         if direct_value and not partial_text:
             return direct_value
 
-        # Generate suggestion using LLM
+        # Generate suggestion using LLM with retry logic
         prompt = FIELD_SUGGESTION_PROMPT.format(
             field_type=field_type,
             analysis_json=json.dumps(analysis_json, indent=2, ensure_ascii=False),
@@ -452,12 +659,15 @@ class EirAnalyzer:
                 temperature=0.5
             )
             return suggestion.strip()
+        except (ConnectionError, TimeoutError) as e:
+            logger.warning(f"Connection error during field suggestion, will retry: {e}")
+            raise  # Re-raise to trigger retry
         except Exception as e:
             logger.error(f"Field suggestion failed: {e}")
             return direct_value or ""
 
     def _extract_field_value(self, analysis: Dict[str, Any], field_type: str) -> Optional[str]:
-        """Extract a value directly from analysis based on field mapping."""
+        """Extract a value directly from analysis based on field mapping with rich composition."""
         mapping_path = self.FIELD_MAPPING.get(field_type)
         if not mapping_path:
             return None
@@ -475,26 +685,118 @@ class EirAnalyzer:
             if value is None:
                 return None
 
-        # Convert to string if needed
+        # Convert to string with rich composition for complex fields
         if isinstance(value, list):
+            # Special handling for delivery_milestones
+            if field_type == 'keyMilestones' and value and isinstance(value[0], dict):
+                lines = []
+                for milestone in value:
+                    phase = milestone.get('phase', 'N/A')
+                    desc = milestone.get('description', '')
+                    date = milestone.get('date', '')
+                    if date:
+                        lines.append(f"- {phase} ({date}): {desc}")
+                    else:
+                        lines.append(f"- {phase}: {desc}")
+                return '\n'.join(lines)
+
+            # Special handling for roles_responsibilities
+            if field_type in ['roles', 'rolesResponsibilities'] and value and isinstance(value[0], dict):
+                lines = []
+                for role in value:
+                    role_name = role.get('role', 'N/A')
+                    responsibilities = role.get('responsibilities', [])
+                    lines.append(f"**{role_name}:**")
+                    for resp in responsibilities:
+                        lines.append(f"  - {resp}")
+                return '\n'.join(lines)
+
+            # Default list handling
             return '\n'.join(f"- {item}" for item in value if item)
+
+        elif isinstance(value, dict):
+            # Special handling for informationPurposes - compose OIR/AIR/PIR/EIR_specifics
+            if field_type == 'informationPurposes':
+                lines = []
+                for category in ['OIR', 'AIR', 'PIR', 'EIR_specifics']:
+                    items = value.get(category, [])
+                    if items:
+                        lines.append(f"**{category}:**")
+                        for item in items:
+                            lines.append(f"  - {item}")
+                return '\n'.join(lines) if lines else None
+
+            # Special handling for cdeStrategy - compose all CDE info
+            if field_type == 'cdeStrategy':
+                lines = []
+                if value.get('platform'):
+                    lines.append(f"**Platform:** {value['platform']}")
+                if value.get('workflow_states'):
+                    lines.append(f"**Workflow States:** {', '.join(value['workflow_states'])}")
+                if value.get('access_control'):
+                    lines.append(f"**Access Control:** {value['access_control']}")
+                if value.get('folder_structure'):
+                    lines.append(f"**Folder Structure:** {value['folder_structure']}")
+                return '\n'.join(lines) if lines else None
+
+            # Special handling for qualityAssurance
+            if field_type == 'qualityAssurance':
+                lines = []
+                if value.get('model_checking'):
+                    lines.append(f"**Model Checking:** {value['model_checking']}")
+                if value.get('clash_detection'):
+                    lines.append(f"**Clash Detection:** {value['clash_detection']}")
+                if value.get('validation_procedures'):
+                    lines.append(f"**Validation Procedures:** {value['validation_procedures']}")
+                return '\n'.join(lines) if lines else None
+
+            # Special handling for handoverRequirements
+            if field_type in ['handoverRequirements', 'cobieRequirements']:
+                lines = []
+                if value.get('cobie_required'):
+                    lines.append("**COBie Required:** Yes")
+                if value.get('asset_data'):
+                    lines.append(f"**Asset Data:** {value['asset_data']}")
+                if value.get('documentation'):
+                    lines.append("**Documentation:**")
+                    for doc in value['documentation']:
+                        lines.append(f"  - {doc}")
+                return '\n'.join(lines) if lines else None
+
+            # Default dict handling - try to format as key-value pairs
+            lines = []
+            for k, v in value.items():
+                if v:
+                    if isinstance(v, list):
+                        lines.append(f"**{k}:** {', '.join(str(i) for i in v)}")
+                    else:
+                        lines.append(f"**{k}:** {v}")
+            return '\n'.join(lines) if lines else None
+
         elif isinstance(value, str):
             return value
 
         return None
 
 
-# Module-level singleton
-_analyzer = None
+# ============================================================================
+# MODULE-LEVEL SINGLETON
+# ============================================================================
+
+_analyzer: Optional[EirAnalyzer] = None
 
 
-def get_analyzer(model: str = None) -> EirAnalyzer:
+def get_analyzer(model: Optional[str] = None) -> EirAnalyzer:
     """Get or create the singleton EirAnalyzer instance."""
     global _analyzer
     if _analyzer is None or (model and _analyzer.model != model):
         _analyzer = EirAnalyzer(model=model)
     return _analyzer
 
+
+# ============================================================================
+# MAIN TEST
+# ============================================================================
 
 if __name__ == "__main__":
     # Test with sample text
@@ -523,6 +825,16 @@ if __name__ == "__main__":
     analysis, summary = analyzer.analyze(sample_eir, "test_eir.pdf")
 
     print("=== ANALYSIS JSON ===")
-    print(json.dumps(analysis, indent=2))
+    print(json.dumps(analysis, indent=2, ensure_ascii=False))
     print("\n=== SUMMARY ===")
     print(summary)
+
+    # Test field suggestions
+    print("\n=== SUGGESTED BIM GOALS ===")
+    print(analyzer.suggest_for_field(analysis, 'bimGoals'))
+
+    print("\n=== SUGGESTED CDE STRATEGY ===")
+    print(analyzer.suggest_for_field(analysis, 'cdeStrategy'))
+
+    print("\n=== SUGGESTED KEY MILESTONES ===")
+    print(analyzer.suggest_for_field(analysis, 'keyMilestones'))

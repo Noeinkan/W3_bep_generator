@@ -209,7 +209,8 @@ class OllamaGenerator:
         prompt: str,
         max_length: int = 200,
         temperature: Optional[float] = None,
-        retries: int = 2
+        retries: int = 2,
+        num_ctx: Optional[int] = None
     ) -> str:
         """
         Generate text based on a prompt.
@@ -220,6 +221,7 @@ class OllamaGenerator:
             temperature: Sampling temperature (0.1-2.0). If None, uses
                         default_temperature from config.
             retries: Number of retry attempts for transient errors.
+            num_ctx: Context window size (default: 2048, can increase for larger docs).
 
         Returns:
             Generated text, or error message if generation fails.
@@ -232,16 +234,22 @@ class OllamaGenerator:
 
         for attempt in range(retries + 1):
             try:
+                options = {
+                    "temperature": temperature,
+                    "num_predict": max_length,
+                    "top_p": 0.9,
+                    "top_k": 40
+                }
+
+                # Add num_ctx if specified for larger context windows
+                if num_ctx is not None:
+                    options["num_ctx"] = num_ctx
+
                 payload = {
                     "model": self.model,
                     "prompt": prompt,
                     "stream": False,
-                    "options": {
-                        "temperature": temperature,
-                        "num_predict": max_length,
-                        "top_p": 0.9,
-                        "top_k": 40
-                    }
+                    "options": options
                 }
 
                 logger.debug(
