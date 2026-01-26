@@ -15,8 +15,8 @@ const BepSelectTypeView = () => {
     // Load empty form data for the selected type
     loadFormData(getEmptyBepData(), selectedType, null);
     setCurrentDraft(null);
-    // Navigate to first step with new-document slug
-    navigate('/bep-generator/new-document/step/0');
+    // Navigate to info requirements step before the editor
+    navigate('/bep-generator/info-requirements');
   }, [navigate, loadFormData, setCurrentDraft]);
 
   return (

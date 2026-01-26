@@ -127,6 +127,8 @@ class EirAnalysis(BaseModel):
 EIR_ANALYSIS_PROMPT = """You are an ISO 19650 and BIM information management expert. Analyze the following Exchange Information Requirements (EIR) document and extract the key information needed to draft a BIM Execution Plan (BEP).
 
 IMPORTANT: Return ONLY a valid JSON object with no additional comments or text.
+Do NOT include placeholders (e.g., "role name", "phase name", "date or null", "platform name or null"). If information is missing, return null for strings or [] for lists.
+Do NOT invent data. Extract only what is explicitly present in the document.
 
 Required JSON structure:
 {{
@@ -320,6 +322,9 @@ class EirAnalyzer:
         else:
             analysis_json = self._analyze_single(text)
 
+        # Clean low-quality placeholder/gibberish entries
+        analysis_json = self._sanitize_analysis(analysis_json)
+
         # Generate summary
         summary_markdown = self._generate_summary(analysis_json)
 
@@ -511,7 +516,213 @@ class EirAnalyzer:
                             elif not merged[dict_key].get(key):
                                 merged[dict_key][key] = value
 
-        return merged
+        return self._sanitize_analysis(merged)
+
+    def _sanitize_analysis(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
+        """Remove placeholders, gibberish, and empty entries from analysis."""
+        try:
+            validated = EirAnalysis.model_validate(analysis, strict=False).model_dump()
+        except ValidationError:
+            validated = EirAnalysis().model_dump()
+            for key, value in analysis.items():
+                if key in validated:
+                    validated[key] = value
+
+        # Project info
+        project_info = validated.get('project_info', {})
+        for key in list(project_info.keys()):
+            project_info[key] = self._clean_string(project_info.get(key))
+        validated['project_info'] = project_info
+
+        # List fields
+        validated['bim_objectives'] = self._clean_list(validated.get('bim_objectives', []))
+        validated['software_requirements'] = self._clean_list(validated.get('software_requirements', []))
+        validated['plain_language_questions'] = self._clean_list(validated.get('plain_language_questions', []))
+        validated['specific_risks'] = self._clean_list(validated.get('specific_risks', []))
+        validated['other_requirements'] = self._clean_list(validated.get('other_requirements', []))
+
+        # Information requirements
+        info_req = validated.get('information_requirements', {})
+        for key in ['OIR', 'AIR', 'PIR', 'EIR_specifics']:
+            info_req[key] = self._clean_list(info_req.get(key, []))
+        validated['information_requirements'] = info_req
+
+        # Standards & protocols
+        standards = validated.get('standards_protocols', {})
+        standards['classification_systems'] = self._clean_list(standards.get('classification_systems', []))
+        standards['file_formats'] = self._clean_list(standards.get('file_formats', []))
+        standards['naming_conventions'] = self._clean_string(standards.get('naming_conventions'))
+        standards['lod_loi_requirements'] = self._clean_string(standards.get('lod_loi_requirements'))
+        standards['cad_standards'] = self._clean_string(standards.get('cad_standards'))
+        validated['standards_protocols'] = standards
+
+        # CDE requirements
+        cde = validated.get('cde_requirements', {})
+        cde['platform'] = self._clean_string(cde.get('platform'))
+        cde['workflow_states'] = self._clean_list(cde.get('workflow_states', []))
+        cde['access_control'] = self._clean_string(cde.get('access_control'))
+        cde['folder_structure'] = self._clean_string(cde.get('folder_structure'))
+        validated['cde_requirements'] = cde
+
+        # Quality requirements
+        quality = validated.get('quality_requirements', {})
+        quality['model_checking'] = self._clean_string(quality.get('model_checking'))
+        quality['clash_detection'] = self._clean_string(quality.get('clash_detection'))
+        quality['validation_procedures'] = self._clean_string(quality.get('validation_procedures'))
+        validated['quality_requirements'] = quality
+
+        # Handover requirements
+        handover = validated.get('handover_requirements', {})
+        handover['asset_data'] = self._clean_string(handover.get('asset_data'))
+        handover['documentation'] = self._clean_list(handover.get('documentation', []))
+        validated['handover_requirements'] = handover
+
+        # Delivery milestones
+        validated['delivery_milestones'] = self._clean_milestones(validated.get('delivery_milestones', []))
+
+        # Roles & responsibilities
+        validated['roles_responsibilities'] = self._clean_roles(validated.get('roles_responsibilities', []))
+
+        return validated
+
+    def _clean_string(self, value: Optional[str]) -> Optional[str]:
+        """Normalize and validate a string value."""
+        if value is None:
+            return None
+        if not isinstance(value, str):
+            value = str(value)
+        cleaned = value.strip()
+        if not cleaned:
+            return None
+        if self._is_placeholder_value(cleaned) or self._looks_like_gibberish(cleaned):
+            return None
+        return cleaned
+
+    def _clean_list(self, items: Any) -> List[str]:
+        """Clean list items and deduplicate."""
+        if not isinstance(items, list):
+            return []
+        cleaned_items = []
+        seen = set()
+        for item in items:
+            if not isinstance(item, str):
+                item = str(item) if item is not None else ''
+            cleaned = self._clean_string(item)
+            if not cleaned:
+                continue
+            key = self._normalize_text(cleaned)
+            if key in seen:
+                continue
+            seen.add(key)
+            cleaned_items.append(cleaned)
+        return cleaned_items
+
+    def _clean_milestones(self, milestones: Any) -> List[Dict[str, Any]]:
+        """Clean milestone entries and drop placeholders."""
+        if not isinstance(milestones, list):
+            return []
+        cleaned = []
+        for milestone in milestones:
+            if not isinstance(milestone, dict):
+                continue
+            phase = self._clean_string(milestone.get('phase'))
+            description = self._clean_string(milestone.get('description'))
+            date = self._clean_string(milestone.get('date'))
+            if not phase and not description:
+                continue
+            cleaned.append({
+                'phase': phase or 'N/A',
+                'description': description or '',
+                'date': date
+            })
+        return cleaned
+
+    def _clean_roles(self, roles: Any) -> List[Dict[str, Any]]:
+        """Clean role entries and remove placeholders."""
+        if not isinstance(roles, list):
+            return []
+        cleaned = []
+        for role in roles:
+            if not isinstance(role, dict):
+                continue
+            role_name = self._clean_string(role.get('role'))
+            responsibilities = self._clean_list(role.get('responsibilities', []))
+            if not role_name:
+                continue
+            cleaned.append({
+                'role': role_name,
+                'responsibilities': responsibilities
+            })
+        return cleaned
+
+    def _normalize_text(self, text: str) -> str:
+        """Normalize text for comparisons."""
+        return re.sub(r'[\s\-_]+', ' ', text.strip().lower())
+
+    def _is_placeholder_value(self, text: str) -> bool:
+        """Detect placeholder or template-like values."""
+        normalized = self._normalize_text(text)
+        placeholder_values = {
+            'role name',
+            'list of responsibilities',
+            'phase name',
+            'description',
+            'date or null',
+            'platform name or null',
+            'naming convention description or null',
+            'lod/loi requirements or null',
+            'cad standards or null',
+            'access control description or null',
+            'folder structure or null',
+            'list of required software',
+            'plain language questions if present',
+            'identified specific risks or requirements',
+            'other uncategorized requirements',
+            'string or null',
+            'null',
+            'n/a',
+            'na',
+            '-',
+            'not specified',
+            'not provided',
+            'unknown',
+            'tbd'
+        }
+
+        if normalized in placeholder_values:
+            return True
+
+        if re.search(r'\bor null\b', normalized):
+            return True
+
+        if re.fullmatch(r'[-–—]+', text.strip()):
+            return True
+
+        if text.strip().isdigit() and len(text.strip()) <= 2:
+            return True
+
+        return False
+
+    def _looks_like_gibberish(self, text: str) -> bool:
+        """Heuristic detection of low-quality gibberish."""
+        stripped = text.strip()
+        if len(stripped) < 3:
+            return True
+
+        if re.search(r'(.)\1{5,}', stripped):
+            return True
+
+        letters = sum(ch.isalpha() for ch in stripped)
+        digits = sum(ch.isdigit() for ch in stripped)
+        total = max(1, len(stripped))
+
+        if letters == 0 and digits == 0:
+            return True
+
+        if letters / total < 0.25 and digits / total < 0.2:
+            return True
+
+        return False
 
     def _is_duplicate_fuzzy(self, item: str, existing_list: List[str], threshold: Optional[int] = None) -> bool:
         """Check if item is a fuzzy duplicate of any item in existing_list."""
@@ -789,8 +1000,15 @@ _analyzer: Optional[EirAnalyzer] = None
 def get_analyzer(model: Optional[str] = None) -> EirAnalyzer:
     """Get or create the singleton EirAnalyzer instance."""
     global _analyzer
-    if _analyzer is None or (model and _analyzer.model != model):
-        _analyzer = EirAnalyzer(model=model)
+    normalized_model = model.strip() if isinstance(model, str) else model
+
+    if _analyzer is None:
+        _analyzer = EirAnalyzer(model=normalized_model)
+        return _analyzer
+
+    if normalized_model is not None and _analyzer.model != normalized_model:
+        _analyzer = EirAnalyzer(model=normalized_model)
+
     return _analyzer
 
 

@@ -35,7 +35,7 @@ const EirSuggestButton = ({ fieldName, onSuggestion, partialText = '', className
       }
     } catch (err) {
       console.error('EIR suggestion error:', err);
-      setError(err.message || 'Errore nel suggerimento');
+      setError(err.message || 'Suggestion failed');
     } finally {
       setLocalLoading(false);
     }
@@ -61,20 +61,20 @@ const EirSuggestButton = ({ fieldName, onSuggestion, partialText = '', className
           border border-purple-200 hover:border-purple-300
           focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-1
         `}
-        title="Suggerisci da EIR"
+        title="Suggest from EIR"
       >
         {loading ? (
           <Loader2 className="w-4 h-4 animate-spin" />
         ) : (
           <Sparkles className="w-4 h-4" />
         )}
-        <span className="hidden sm:inline">Suggerisci da EIR</span>
+        <span className="hidden sm:inline">Suggest from EIR</span>
       </button>
 
       {/* Tooltip */}
       {showTooltip && !loading && (
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap z-50">
-          Genera suggerimento basato sull'analisi EIR
+          Generate a suggestion based on EIR analysis
           <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
             <div className="border-4 border-transparent border-t-gray-900" />
           </div>
@@ -140,7 +140,7 @@ export const EirSuggestIcon = ({ fieldName, onSuggestion, partialText = '' }) =>
           : 'text-purple-500 hover:text-purple-700 hover:bg-purple-50'
         }
       `}
-      title="Suggerisci da EIR"
+      title="Suggest from EIR"
     >
       {loading ? (
         <Loader2 className="w-4 h-4 animate-spin" />
@@ -172,10 +172,10 @@ export const EirDataBanner = ({ stepFields = [], onFieldClick }) => {
         </div>
         <div className="flex-1">
           <h4 className="font-medium text-purple-900">
-            Dati EIR disponibili per questa sezione
+            EIR data available for this section
           </h4>
           <p className="text-sm text-purple-700 mt-1">
-            {fieldsWithData.length} campo/i possono essere pre-compilati con i dati estratti dall'EIR:
+            {fieldsWithData.length} field(s) can be pre-filled with data extracted from the EIR:
           </p>
           <div className="flex flex-wrap gap-2 mt-2">
             {fieldsWithData.map(field => (

@@ -280,8 +280,8 @@ const EirStepWrapper = ({ children }) => {
       <div className="h-screen bg-gray-50 flex">
         <div className="flex-1 flex flex-col">
           <div className="flex-1 overflow-y-auto">
-            <div className="max-w-4xl mx-auto px-6 py-8">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+            <div className="max-w-4xl mx-auto px-4 py-4 lg:py-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 {showAnalysisView && hasAnalysis ? (
                   <EirAnalysisView
                     analysis={analysis}

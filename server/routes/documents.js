@@ -83,20 +83,58 @@ const upload = multer({
   }
 });
 
+// Auth helper: enforce userId matches authenticated user
+function getAuthenticatedUserId(req) {
+  if (req.user?.id || req.user?.userId) {
+    return req.user.id || req.user.userId;
+  }
+  if (req.auth?.id || req.auth?.userId) {
+    return req.auth.id || req.auth.userId;
+  }
+
+  const authHeader = req.headers.authorization || '';
+  if (authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice('Bearer '.length).trim();
+    if (token) {
+      return token;
+    }
+  }
+
+  return null;
+}
+
+function requireAuthenticatedUser(req, res, next) {
+  const authUserId = getAuthenticatedUserId(req);
+  if (!authUserId) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required'
+    });
+  }
+
+  const requestUserId = req.body?.userId || req.query?.userId;
+  if (requestUserId && requestUserId !== authUserId) {
+    return res.status(403).json({
+      success: false,
+      message: 'userId does not match authenticated user'
+    });
+  }
+
+  req.authUserId = authUserId;
+  next();
+}
+
+// Require authentication for all document routes
+router.use(requireAuthenticatedUser);
+
 /**
  * POST /api/documents/upload
  * Upload one or more documents
  */
 router.post('/upload', upload.array('files', 5), async (req, res) => {
   try {
-    const { userId, draftId } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'userId is required'
-      });
-    }
+    const { draftId } = req.body;
+    const userId = req.authUserId;
 
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({
@@ -164,14 +202,8 @@ router.post('/upload', upload.array('files', 5), async (req, res) => {
  */
 router.get('/', async (req, res) => {
   try {
-    const { userId, draftId } = req.query;
-
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'userId is required'
-      });
-    }
+    const { draftId } = req.query;
+    const userId = req.authUserId;
 
     let query = 'SELECT * FROM client_documents WHERE user_id = ?';
     const params = [userId];
@@ -213,14 +245,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId } = req.query;
-
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'userId is required'
-      });
-    }
+    const userId = req.authUserId;
 
     const document = db.prepare(`
       SELECT * FROM client_documents WHERE id = ? AND user_id = ?
@@ -258,14 +283,7 @@ router.get('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId } = req.query;
-
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'userId is required'
-      });
-    }
+    const userId = req.authUserId;
 
     const document = db.prepare(`
       SELECT * FROM client_documents WHERE id = ? AND user_id = ?
@@ -308,14 +326,7 @@ router.delete('/:id', async (req, res) => {
 router.post('/:id/extract', async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'userId is required'
-      });
-    }
+    const userId = req.authUserId;
 
     const document = db.prepare(`
       SELECT * FROM client_documents WHERE id = ? AND user_id = ?
@@ -405,14 +416,7 @@ router.post('/:id/extract', async (req, res) => {
 router.post('/:id/analyze', async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'userId is required'
-      });
-    }
+    const userId = req.authUserId;
 
     const document = db.prepare(`
       SELECT * FROM client_documents WHERE id = ? AND user_id = ?
@@ -505,14 +509,7 @@ router.post('/:id/extract-and-analyze', async (req, res) => {
   const { id } = req.params;
 
   try {
-    const { userId } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'userId is required'
-      });
-    }
+    const userId = req.authUserId;
 
     const document = db.prepare(`
       SELECT * FROM client_documents WHERE id = ? AND user_id = ?
@@ -687,14 +684,8 @@ router.post('/:id/extract-and-analyze', async (req, res) => {
 router.put('/:id/link-draft', async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId, draftId } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'userId is required'
-      });
-    }
+    const { draftId } = req.body;
+    const userId = req.authUserId;
 
     const document = db.prepare(`
       SELECT * FROM client_documents WHERE id = ? AND user_id = ?

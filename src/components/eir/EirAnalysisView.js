@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
+import { exportEirAnalysisPdf } from '../../services/eirExportService';
 
 const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }) => {
   const [expandedSections, setExpandedSections] = useState({
@@ -25,6 +26,8 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
     risks: false
   });
   const [copied, setCopied] = useState(false);
+  const [pdfExporting, setPdfExporting] = useState(false);
+  const [pdfError, setPdfError] = useState(null);
 
   if (!analysis) {
     return (
@@ -59,6 +62,22 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
     a.download = 'eir-analysis.json';
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!analysis) return;
+    setPdfExporting(true);
+    setPdfError(null);
+    try {
+      const projectName = analysis.project_info?.name || 'EIR_Analysis';
+      const safeName = projectName.replace(/[^\w\-]+/g, '_');
+      await exportEirAnalysisPdf(analysis, summary, `EIR_Analysis_${safeName}.pdf`);
+    } catch (err) {
+      console.error('PDF export failed:', err);
+      setPdfError(err.message || 'Failed to export PDF');
+    } finally {
+      setPdfExporting(false);
+    }
   };
 
   // Render markdown summary
@@ -139,6 +158,15 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
 
         <div className="flex items-center gap-2">
           <button
+            onClick={handleDownloadPdf}
+            disabled={pdfExporting}
+            className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+            title="Download PDF"
+          >
+            <Download className="w-4 h-4" />
+            <span className="text-sm">{pdfExporting ? 'Exporting...' : 'PDF'}</span>
+          </button>
+          <button
             onClick={handleCopyJson}
             className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
             title="Copy JSON"
@@ -168,6 +196,9 @@ const EirAnalysisView = ({ analysis, summary, onUseInBep, onReanalyze, loading }
           )}
         </div>
       </div>
+      {pdfError && (
+        <p className="text-sm text-red-600 mt-2">{pdfError}</p>
+      )}
 
       {/* Summary */}
       {summary && (

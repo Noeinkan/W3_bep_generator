@@ -4,22 +4,22 @@ import CONFIG from '../../../config/bepConfig';
 
 const BepTypeSelector = ({ bepType, setBepType, onProceed }) => (
   <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen flex items-center justify-center p-4">
-    <div className="w-full max-w-7xl">
+    <div className="w-full max-w-7xl pb-20">
       {/* Header Section */}
-      <div className="text-center mb-6">
-        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-          <Zap className="w-8 h-8 text-white" />
+      <div className="text-center mb-5">
+        <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+          <Zap className="w-7 h-7 text-white" />
         </div>
-        <h1 className="text-4xl font-bold text-slate-900 mb-3 tracking-tight">
+        <h1 className="text-3xl font-bold text-slate-900 mb-2 tracking-tight">
           Choose Your BEP Type
         </h1>
-        <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+        <p className="text-base text-slate-600 max-w-2xl mx-auto">
           Select the BIM Execution Plan that best fits your project needs
         </p>
       </div>
 
       {/* Cards Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {Object.entries(CONFIG.bepTypeDefinitions).map(([key, definition]) => {
           const IconComponent = definition.icon;
           const isSelected = bepType === key;
@@ -45,21 +45,21 @@ const BepTypeSelector = ({ bepType, setBepType, onProceed }) => (
             >
               {/* Selection Indicator */}
               {isSelected && (
-                <div className="absolute top-4 right-4 z-10">
-                  <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
-                    <CheckCircle className="w-6 h-6 text-white" strokeWidth={3} />
+                <div className="absolute top-3 right-3 z-10">
+                  <div className="w-9 h-9 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
+                    <CheckCircle className="w-5 h-5 text-white" strokeWidth={3} />
                   </div>
                 </div>
               )}
 
               {/* Card Header with Icon */}
-              <div className={`p-5 ${isSelected ? 'bg-gradient-to-r from-blue-500 to-indigo-600' : 'bg-gradient-to-r from-slate-100 to-slate-200'}`}>
+              <div className={`p-4 ${isSelected ? 'bg-gradient-to-r from-blue-500 to-indigo-600' : 'bg-gradient-to-r from-slate-100 to-slate-200'}`}>
                 <div className="flex items-start gap-4">
                   <div className={`p-3 rounded-xl ${isSelected ? 'bg-white/20' : 'bg-white'} shadow-lg`}>
-                    <IconComponent className={`w-8 h-8 ${isSelected ? 'text-white' : 'text-slate-700'}`} />
+                    <IconComponent className={`w-7 h-7 ${isSelected ? 'text-white' : 'text-slate-700'}`} />
                   </div>
                   <div className="flex-1">
-                    <h3 className={`text-2xl font-bold mb-1 ${isSelected ? 'text-white' : 'text-slate-900'}`}>
+                    <h3 className={`text-xl font-bold mb-1 ${isSelected ? 'text-white' : 'text-slate-900'}`}>
                       {definition.title}
                     </h3>
                     <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
@@ -72,9 +72,9 @@ const BepTypeSelector = ({ bepType, setBepType, onProceed }) => (
               </div>
 
               {/* Card Body */}
-              <div className="p-5 space-y-4">
+              <div className="p-4 space-y-3">
                 {/* Description */}
-                <p className="text-base text-slate-700 leading-relaxed">
+                <p className="text-sm text-slate-700 leading-relaxed">
                   {definition.description}
                 </p>
 
@@ -117,13 +117,13 @@ const BepTypeSelector = ({ bepType, setBepType, onProceed }) => (
 
               {/* Selection CTA */}
               {isSelected && (
-                <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-t-2 border-blue-100">
+                <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-t-2 border-blue-100">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onProceed(key);
                     }}
-                    className="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-bold text-base hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl"
+                    className="w-full py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-bold text-base hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl"
                   >
                     Select this BEP Type →
                   </button>
@@ -133,6 +133,23 @@ const BepTypeSelector = ({ bepType, setBepType, onProceed }) => (
           );
         })}
       </div>
+
+      {/* Sticky Action Bar */}
+      {bepType && (
+        <div className="sticky bottom-0 mt-6">
+          <div className="mx-auto max-w-3xl bg-white/90 backdrop-blur border border-blue-200 rounded-xl shadow-lg px-4 py-3 flex items-center justify-between">
+            <div className="text-sm text-slate-700">
+              Selected: <span className="font-semibold text-slate-900">{CONFIG.bepTypeDefinitions[bepType]?.title}</span>
+            </div>
+            <button
+              onClick={() => onProceed(bepType)}
+              className="px-5 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg font-semibold text-sm hover:from-blue-600 hover:to-indigo-700 transition-all shadow"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   </div>
 );

@@ -4,8 +4,8 @@ const CONFIG = {
   // Optional EIR upload step (shown before regular wizard steps)
   eirStep: {
     enabled: true,
-    title: 'Carica EIR',
-    description: 'Carica documenti EIR del cliente per analisi automatica',
+    title: 'Upload EIR',
+    description: 'Upload client EIR documents for automatic analysis',
     icon: Upload,
     isOptional: true
   },

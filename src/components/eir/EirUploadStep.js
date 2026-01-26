@@ -101,14 +101,7 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
         // Optimistic UI update
         setDocuments(prev => [...prev, ...(result.documents || [])]);
 
-        // Auto-analyze if only one document was uploaded
-        const newDocs = (result.documents || []).filter(doc =>
-          ['uploaded', 'extracted'].includes(doc.status)
-        );
-        if (newDocs.length === 1) {
-          // Small delay to let user see upload completion
-          setTimeout(() => handleAnalyze(newDocs[0]), 500);
-        }
+        // Do not auto-analyze; let the user choose when to analyze
       } else {
         setError(result.message || 'Upload failed');
         if (result.status) {
@@ -425,275 +418,279 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
         elapsedTime={elapsedTime}
       />
 
-      {/* Header */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-purple-100 to-indigo-100 mb-4">
-          <FileSearch className="w-8 h-8 text-purple-600" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-900">
-          Upload EIR Document
-        </h2>
-        <p className="mt-2 text-gray-500 max-w-md mx-auto">
-          Upload your Exchange Information Requirements to get AI-powered suggestions while filling out the BEP.
-        </p>
-      </div>
-
-      {/* Error message */}
-      {error && (
-        <div role="alert" aria-live="assertive" className="mb-6 bg-red-50 border border-red-200 rounded-xl overflow-hidden">
-          <div className="flex items-center gap-3 p-4 text-red-700">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-medium">{error}</p>
-              {detailedError && (
-                <p className="text-xs text-red-600 mt-1">{detailedError}</p>
-              )}
-            </div>
-            <button
-              onClick={() => {
-                setError(null);
-                setDetailedError(null);
-              }}
-              className="p-1 hover:bg-red-100 rounded-lg transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
+      <div className="pb-24">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-purple-100 to-indigo-100 mb-3">
+            <FileSearch className="w-6 h-6 text-purple-600" />
           </div>
-          {failedDocId && (
-            <div className="px-4 pb-3 flex items-center gap-2 text-xs">
+          <h2 className="text-2xl font-bold text-gray-900">
+            Upload Information Requirements (EIR/AIR/PIR/OIR)
+          </h2>
+          <p className="mt-2 text-gray-500 max-w-md mx-auto">
+            Upload your ISO 19650 information requirements to get AI-powered suggestions while filling out the BEP.
+          </p>
+        </div>
+
+        {/* Error message */}
+        {error && (
+          <div role="alert" aria-live="assertive" className="mb-5 bg-red-50 border border-red-200 rounded-xl overflow-hidden">
+            <div className="flex items-center gap-3 p-4 text-red-700">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">{error}</p>
+                {detailedError && (
+                  <p className="text-xs text-red-600 mt-1">{detailedError}</p>
+                )}
+              </div>
               <button
                 onClick={() => {
-                  const failedDoc = documents.find(d => d.id === failedDocId);
-                  if (failedDoc) {
-                    handleAnalyze(failedDoc);
-                  }
+                  setError(null);
+                  setDetailedError(null);
                 }}
-                className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                className="p-1 hover:bg-red-100 rounded-lg transition-colors"
               >
-                Retry Analysis
+                <X className="w-4 h-4" />
               </button>
-              <span className="text-red-600">or delete the document and upload a different version</span>
             </div>
-          )}
-        </div>
-      )}
-
-      {/* Dropzone */}
-      <div
-        role="button"
-        aria-label="Upload EIR documents - click to browse or drag and drop PDF or DOCX files"
-        aria-busy={uploading || analyzing !== null}
-        tabIndex={0}
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            fileInputRef.current?.click();
-          }
-        }}
-        className={`
-          relative rounded-2xl p-8 transition-all duration-200 cursor-pointer
-          focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2
-          ${dragActive
-            ? 'bg-purple-50 border-2 border-purple-400 shadow-lg shadow-purple-100'
-            : 'bg-gray-50 border-2 border-dashed border-gray-200 hover:border-purple-300 hover:bg-purple-50/50'
-          }
-          ${uploading || analyzing ? 'pointer-events-none opacity-60' : ''}
-        `}
-        onClick={() => fileInputRef.current?.click()}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept=".pdf,.docx"
-          onChange={handleFileInput}
-          className="hidden"
-        />
-
-        <div className="flex flex-col items-center text-center">
-          {uploading ? (
-            <>
-              <Loader2 className="w-10 h-10 text-purple-500 animate-spin mb-4" />
-              <p className="font-medium text-gray-700" role="status" aria-live="polite">Uploading... {uploadProgress}%</p>
-              <div className="w-48 h-1.5 bg-gray-200 rounded-full mt-3 overflow-hidden" role="progressbar" aria-valuenow={uploadProgress} aria-valuemin="0" aria-valuemax="100">
-                <div
-                  className="h-full bg-purple-500 transition-all duration-300 rounded-full"
-                  style={{ width: `${uploadProgress}%` }}
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="w-14 h-14 rounded-xl bg-white shadow-sm border border-gray-100 flex items-center justify-center mb-4">
-                <Upload className="w-6 h-6 text-purple-500" />
-              </div>
-              <p className="font-medium text-gray-700">
-                Drop your EIR document here
-              </p>
-              <p className="text-sm text-gray-400 mt-1">
-                or click to browse
-              </p>
-              <div className="flex items-center gap-2 mt-4">
-                <span className="px-2 py-1 bg-white rounded text-xs font-medium text-gray-500 border border-gray-100">PDF</span>
-                <span className="px-2 py-1 bg-white rounded text-xs font-medium text-gray-500 border border-gray-100">DOCX</span>
-                <span className="text-xs text-gray-400">up to 20MB</span>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Analyze All Pending Button */}
-      {pendingDocs.length > 0 && (
-        <div className="mt-6 flex justify-end">
-          <button
-            onClick={handleAnalyzeAll}
-            disabled={analyzing !== null}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-          >
-            <Sparkles className="w-4 h-4" />
-            Analyze All Pending ({pendingDocs.length})
-          </button>
-        </div>
-      )}
-
-      {/* Document list */}
-      {documents.length > 0 ? (
-        <div role="list" className={`${pendingDocs.length > 0 ? 'mt-3' : 'mt-6'} space-y-3`}>
-          {documents.map((doc) => (
-            <div
-              key={doc.id}
-              className="flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-xl shadow-sm"
-              role="listitem"
-              aria-label={`${doc.original_filename || doc.originalFilename} - ${getStatusText(doc.status)}`}
-            >
-              <div className="flex-shrink-0" aria-hidden="true">
-                {getStatusIcon(doc.status)}
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-gray-900 truncate text-sm">
-                    {doc.original_filename || doc.originalFilename || 'Unknown file'}
-                  </p>
-                  {getFileTypeBadge(doc.original_filename || doc.originalFilename)}
-                </div>
-                <p className="text-xs text-gray-400">
-                  {getStatusText(doc.status)}
-                  {doc.file_size && ` \u00b7 ${(doc.file_size / 1024).toFixed(0)} KB`}
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {(doc.status === 'uploaded' || doc.status === 'extracted') && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleAnalyze(doc); }}
-                    disabled={analyzing === doc.id}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {analyzing === doc.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="w-4 h-4" />
-                    )}
-                    Analyze
-                  </button>
-                )}
-
-                {doc.status === 'error' && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleAnalyze(doc); }}
-                    disabled={analyzing === doc.id}
-                    className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {analyzing === doc.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4" />
-                    )}
-                    Retry
-                  </button>
-                )}
-
-                {doc.status === 'analyzed' && (
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-sm font-medium">
-                    <CheckCircle className="w-4 h-4" />
-                    Ready
-                  </span>
-                )}
-
+            {failedDocId && (
+              <div className="px-4 pb-3 flex items-center gap-2 text-xs">
                 <button
-                  onClick={(e) => { e.stopPropagation(); handleDelete(doc.id); }}
-                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                  title="Delete"
+                  onClick={() => {
+                    const failedDoc = documents.find(d => d.id === failedDocId);
+                    if (failedDoc) {
+                      handleAnalyze(failedDoc);
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  Retry Analysis
                 </button>
+                <span className="text-red-600">or delete the document and upload a different version</span>
               </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        !uploading && (
-          <div className="mt-6 p-6 bg-gray-50 border border-gray-200 rounded-xl text-center">
-            <FileText className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm text-gray-500">No documents uploaded yet</p>
+            )}
           </div>
-        )
-      )}
+        )}
 
-      {/* Info box */}
-      <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-100">
-        <div className="flex items-start gap-3">
-          <Info className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <h4 className="font-medium text-purple-900 text-sm">
-              How it works
-            </h4>
-            <p className="text-sm text-purple-700/80 mt-1">
-              Your document will be analyzed using AI to extract BIM objectives, requirements, milestones, and standards according to ISO 19650. These will appear as suggestions while filling out the BEP.
-            </p>
+        {/* Dropzone */}
+        <div
+          role="button"
+          aria-label="Upload EIR documents - click to browse or drag and drop PDF or DOCX files"
+          aria-busy={uploading || analyzing !== null}
+          tabIndex={0}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              fileInputRef.current?.click();
+            }
+          }}
+          className={`
+            relative rounded-2xl p-6 transition-all duration-200 cursor-pointer
+            focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2
+            ${dragActive
+              ? 'bg-purple-50 border-2 border-purple-400 shadow-lg shadow-purple-100'
+              : 'bg-gray-50 border-2 border-dashed border-gray-200 hover:border-purple-300 hover:bg-purple-50/50'
+            }
+            ${uploading || analyzing ? 'pointer-events-none opacity-60' : ''}
+          `}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".pdf,.docx"
+            onChange={handleFileInput}
+            className="hidden"
+          />
+
+          <div className="flex flex-col items-center text-center">
+            {uploading ? (
+              <>
+                <Loader2 className="w-10 h-10 text-purple-500 animate-spin mb-4" />
+                <p className="font-medium text-gray-700" role="status" aria-live="polite">Uploading... {uploadProgress}%</p>
+                <div className="w-48 h-1.5 bg-gray-200 rounded-full mt-3 overflow-hidden" role="progressbar" aria-valuenow={uploadProgress} aria-valuemin="0" aria-valuemax="100">
+                  <div
+                    className="h-full bg-purple-500 transition-all duration-300 rounded-full"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-12 h-12 rounded-xl bg-white shadow-sm border border-gray-100 flex items-center justify-center mb-3">
+                  <Upload className="w-6 h-6 text-purple-500" />
+                </div>
+                <p className="font-medium text-gray-700">
+                  Drop your information requirements document here
+                </p>
+                <p className="text-sm text-gray-400 mt-1">
+                  or click to browse
+                </p>
+                <div className="flex items-center gap-2 mt-3">
+                  <span className="px-2 py-1 bg-white rounded text-xs font-medium text-gray-500 border border-gray-100">PDF</span>
+                  <span className="px-2 py-1 bg-white rounded text-xs font-medium text-gray-500 border border-gray-100">DOCX</span>
+                  <span className="text-xs text-gray-400">up to 20MB</span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Analyze All Pending Button */}
+        {pendingDocs.length > 0 && (
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={handleAnalyzeAll}
+              disabled={analyzing !== null}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+            >
+              <Sparkles className="w-4 h-4" />
+              Analyze All Pending ({pendingDocs.length})
+            </button>
+          </div>
+        )}
+
+        {/* Document list */}
+        {documents.length > 0 ? (
+          <div role="list" className={`${pendingDocs.length > 0 ? 'mt-3' : 'mt-5'} space-y-3`}>
+            {documents.map((doc) => (
+              <div
+                key={doc.id}
+                className="flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-xl shadow-sm"
+                role="listitem"
+                aria-label={`${doc.original_filename || doc.originalFilename} - ${getStatusText(doc.status)}`}
+              >
+                <div className="flex-shrink-0" aria-hidden="true">
+                  {getStatusIcon(doc.status)}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-gray-900 truncate text-sm">
+                      {doc.original_filename || doc.originalFilename || 'Unknown file'}
+                    </p>
+                    {getFileTypeBadge(doc.original_filename || doc.originalFilename)}
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    {getStatusText(doc.status)}
+                    {doc.file_size && ` \u00b7 ${(doc.file_size / 1024).toFixed(0)} KB`}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {(doc.status === 'uploaded' || doc.status === 'extracted') && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleAnalyze(doc); }}
+                      disabled={analyzing === doc.id}
+                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {analyzing === doc.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-4 h-4" />
+                      )}
+                      Analyze
+                    </button>
+                  )}
+
+                  {doc.status === 'error' && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleAnalyze(doc); }}
+                      disabled={analyzing === doc.id}
+                      className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {analyzing === doc.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4" />
+                      )}
+                      Retry
+                    </button>
+                  )}
+
+                  {doc.status === 'analyzed' && (
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-sm font-medium">
+                      <CheckCircle className="w-4 h-4" />
+                      Ready
+                    </span>
+                  )}
+
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDelete(doc.id); }}
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          !uploading && (
+            <div className="mt-5 p-6 bg-gray-50 border border-gray-200 rounded-xl text-center">
+              <FileText className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">No documents uploaded yet</p>
+            </div>
+          )
+        )}
+
+        {/* Info box */}
+        <div className="mt-5 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-100">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-purple-900 text-sm">
+                How it works
+              </h4>
+              <p className="text-sm text-purple-700/80 mt-1">
+                Your document will be analyzed using AI to extract objectives, requirements, milestones, and standards from EIR/AIR/PIR/OIR according to ISO 19650. These will appear as suggestions while filling out the BEP.
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Action buttons */}
-      <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-100">
-        <button
-          onClick={onSkip}
-          className="px-5 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-        >
-          Skip this step
-        </button>
-
-        {hasAnalyzedDocument && onAnalysisComplete && (
+      <div className="sticky bottom-0 -mx-2 px-2 pt-4 pb-2 bg-white/95 backdrop-blur border-t border-gray-100">
+        <div className="flex items-center justify-between">
           <button
-            onClick={() => {
-              // Get the most recently created analyzed document
-              const analyzedDocs = documents.filter(d => d.status === 'analyzed');
-              const latestAnalyzed = analyzedDocs.length > 0
-                ? analyzedDocs.reduce((latest, doc) =>
-                    new Date(doc.created_at || 0) > new Date(latest.created_at || 0) ? doc : latest
-                  )
-                : null;
-
-              if (latestAnalyzed) {
-                onAnalysisComplete({
-                  analysisJson: latestAnalyzed.analysisJson || latestAnalyzed.analysis_json,
-                  summaryMarkdown: latestAnalyzed.summary_markdown
-                });
-              }
-            }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+            onClick={onSkip}
+            className="px-5 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
           >
-            Continue with suggestions
-            <ArrowRight className="w-4 h-4" />
+            Skip this step
           </button>
-        )}
+
+          {hasAnalyzedDocument && onAnalysisComplete && (
+            <button
+              onClick={() => {
+                // Get the most recently created analyzed document
+                const analyzedDocs = documents.filter(d => d.status === 'analyzed');
+                const latestAnalyzed = analyzedDocs.length > 0
+                  ? analyzedDocs.reduce((latest, doc) =>
+                      new Date(doc.created_at || 0) > new Date(latest.created_at || 0) ? doc : latest
+                    )
+                  : null;
+
+                if (latestAnalyzed) {
+                  onAnalysisComplete({
+                    analysisJson: latestAnalyzed.analysisJson || latestAnalyzed.analysis_json,
+                    summaryMarkdown: latestAnalyzed.summary_markdown
+                  });
+                }
+              }}
+              className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+            >
+              Continue with suggestions
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

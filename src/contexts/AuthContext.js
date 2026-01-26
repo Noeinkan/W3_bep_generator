@@ -22,6 +22,7 @@ export const AuthProvider = ({ children }) => {
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser);
           setUser(parsedUser);
+          localStorage.setItem('authToken', parsedUser.id);
           setLoading(false);
           return;
         }
@@ -55,6 +56,7 @@ export const AuthProvider = ({ children }) => {
 
           setUser(userForStorage);
           localStorage.setItem('currentUser', JSON.stringify(userForStorage));
+          localStorage.setItem('authToken', userForStorage.id);
         }
       } catch (error) {
         console.error('Auto-login failed:', error);
@@ -93,6 +95,7 @@ export const AuthProvider = ({ children }) => {
 
       setUser(userForStorage);
       localStorage.setItem('currentUser', JSON.stringify(userForStorage));
+      localStorage.setItem('authToken', userForStorage.id);
 
       return { success: true, user: userForStorage };
     } catch (error) {
@@ -116,6 +119,7 @@ export const AuthProvider = ({ children }) => {
 
       setUser(userForStorage);
       localStorage.setItem('currentUser', JSON.stringify(userForStorage));
+      localStorage.setItem('authToken', userForStorage.id);
 
       return { success: true, user: userForStorage };
     } catch (error) {
@@ -126,6 +130,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('currentUser');
+    localStorage.removeItem('authToken');
   };
 
   const updateUserProjects = (projects) => {

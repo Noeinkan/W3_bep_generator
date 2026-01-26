@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Star, Building2, Award, TrendingUp } from 'lucide-react';
+import { Building2, Award, TrendingUp, FlaskConical, MessageSquare, Wrench } from 'lucide-react';
 
 const SocialProofSection = () => {
   const [visibleStats, setVisibleStats] = useState([]);
@@ -29,8 +29,8 @@ const SocialProofSection = () => {
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            // Stagger testimonials animation
-            testimonials.forEach((_, index) => {
+            // Stagger highlights animation
+            highlights.forEach((_, index) => {
               setTimeout(() => {
                 setVisibleTestimonials(prev => [...prev, index]);
               }, index * 200);
@@ -51,34 +51,28 @@ const SocialProofSection = () => {
     };
   }, []);
 
-  const testimonials = [
+  const highlights = [
     {
-      quote: "BEP Suite reduced our BEP preparation time by 60%. The AI assistance and TIDP integration are game-changers for our workflow.",
-      author: "Marco Rossi",
-      role: "BIM Manager",
-      company: "Autostrade per l'Italia",
-      rating: 5
+      title: "Private beta",
+      description: "This tool is currently in development with a small group of pilot users.",
+      icon: FlaskConical
     },
     {
-      quote: "Finally, a tool that understands ISO 19650 requirements. No more manual coordination between documents—everything syncs automatically.",
-      author: "Sarah Johnson",
-      role: "Information Manager",
-      company: "Mace Group UK",
-      rating: 5
+      title: "Feedback-driven",
+      description: "Features and workflows are evolving based on real project input.",
+      icon: MessageSquare
     },
     {
-      quote: "We've delivered 15+ projects with zero non-conformities since adopting BEP Suite. The responsibility matrix feature alone is worth it.",
-      author: "Andreas Schmidt",
-      role: "Project Lead",
-      company: "Hochtief Germany",
-      rating: 5
+      title: "Focused scope",
+      description: "Built to streamline BEP creation, EIR analysis, and TIDP coordination.",
+      icon: Wrench
     }
   ];
 
   const stats = [
-    { number: "500+", label: "Projects Delivered", icon: Building2 },
-    { number: "98%", label: "Compliance Rate", icon: Award },
-    { number: "60%", label: "Time Saved", icon: TrendingUp }
+    { number: "Beta", label: "Early access stage", icon: Building2 },
+    { number: "ISO 19650", label: "Standards-aligned focus", icon: Award },
+    { number: "In progress", label: "Rapid feature iteration", icon: TrendingUp }
   ];
 
   return (
@@ -87,10 +81,10 @@ const SocialProofSection = () => {
         {/* Section Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Trusted by BIM Professionals Worldwide
+            Built with BIM Professionals
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Join hundreds of BIM Managers and Information Managers delivering ISO 19650-compliant projects with confidence
+            This tool is not commercially available yet. We are currently iterating with early users and partners.
           </p>
         </div>
 
@@ -118,10 +112,11 @@ const SocialProofSection = () => {
           })}
         </div>
 
-        {/* Testimonials Grid */}
+        {/* Highlights Grid */}
         <div ref={testimonialsRef} className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-          {testimonials.map((testimonial, index) => {
+          {highlights.map((highlight, index) => {
             const isVisible = visibleTestimonials.includes(index);
+            const IconComponent = highlight.icon;
             return (
               <div
                 key={index}
@@ -129,46 +124,30 @@ const SocialProofSection = () => {
                   isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
                 }`}
               >
-                {/* Rating Stars */}
-                <div className="flex items-center mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`w-5 h-5 text-yellow-400 fill-current transition-all duration-300 ${
-                        isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-0'
-                      }`}
-                      style={{ transitionDelay: isVisible ? `${i * 100}ms` : '0ms' }}
-                      aria-hidden="true"
-                    />
-                  ))}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="inline-flex items-center justify-center w-10 h-10 bg-purple-100 rounded-lg">
+                    <IconComponent className="w-5 h-5 text-purple-600" aria-hidden="true" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">{highlight.title}</h3>
                 </div>
-
-                {/* Quote */}
-                <blockquote className="text-gray-700 mb-6 leading-relaxed">
-                  "{testimonial.quote}"
-                </blockquote>
-
-                {/* Author Info */}
-                <div className="border-t border-gray-100 pt-4">
-                  <div className="font-semibold text-gray-900">{testimonial.author}</div>
-                  <div className="text-sm text-gray-600">{testimonial.role}</div>
-                  <div className="text-sm text-blue-600 font-medium">{testimonial.company}</div>
-                </div>
+                <p className="text-gray-700 leading-relaxed">
+                  {highlight.description}
+                </p>
               </div>
             );
           })}
         </div>
 
-        {/* Trust Badges */}
+        {/* Focus Areas */}
         <div className="mt-12 pt-12 border-t border-gray-200">
           <div className="text-center mb-6">
-            <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">As Featured In</p>
+            <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Current focus areas</p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-8">
-            <div className="text-gray-400 font-semibold text-lg hover:text-gray-600 transition-colors duration-300 cursor-default">buildingSMART International</div>
-            <div className="text-gray-400 font-semibold text-lg hover:text-gray-600 transition-colors duration-300 cursor-default">BIM4You</div>
-            <div className="text-gray-400 font-semibold text-lg hover:text-gray-600 transition-colors duration-300 cursor-default">AEC Magazine</div>
-            <div className="text-gray-400 font-semibold text-lg hover:text-gray-600 transition-colors duration-300 cursor-default">Digital Construction</div>
+            <div className="text-gray-400 font-semibold text-lg hover:text-gray-600 transition-colors duration-300 cursor-default">BEP creation workflows</div>
+            <div className="text-gray-400 font-semibold text-lg hover:text-gray-600 transition-colors duration-300 cursor-default">EIR analysis support</div>
+            <div className="text-gray-400 font-semibold text-lg hover:text-gray-600 transition-colors duration-300 cursor-default">TIDP coordination</div>
+            <div className="text-gray-400 font-semibold text-lg hover:text-gray-600 transition-colors duration-300 cursor-default">ISO 19650 alignment</div>
           </div>
         </div>
       </div>

@@ -9,6 +9,7 @@ const responsibilityMatrixService = require('../services/responsibilityMatrixSer
 const tidpSyncService = require('../services/tidpSyncService');
 const puppeteerPdfService = require('../services/puppeteerPdfService');
 const htmlTemplateService = require('../services/htmlTemplateService');
+const eirExportService = require('../services/eirExportService');
 
 /**
  * POST /api/export/tidp/:id/excel
@@ -648,6 +649,71 @@ router.post('/bep/pdf', async (req, res, next) => {
     res.status(statusCode).json({
       success: false,
       error: error.message || 'PDF generation failed'
+    });
+  }
+});
+
+/**
+ * POST /api/export/eir/pdf
+ * Export EIR analysis to PDF
+ *
+ * Request body:
+ * {
+ *   analysis: {...},
+ *   summary: "markdown summary",
+ *   filename: "optional filename"
+ * }
+ */
+router.post('/eir/pdf', async (req, res, next) => {
+  try {
+    const { analysis, summary, filename } = req.body;
+
+    if (!analysis) {
+      return res.status(400).json({
+        success: false,
+        error: 'analysis is required'
+      });
+    }
+
+    const html = eirExportService.generateEirAnalysisHTML(analysis, summary);
+    const pdfOptions = {
+      format: 'A4',
+      orientation: 'portrait',
+      margins: {
+        top: '22mm',
+        right: '18mm',
+        bottom: '22mm',
+        left: '18mm'
+      },
+      timeout: 60000
+    };
+
+    const filepath = await puppeteerPdfService.generatePDFFromHTML(html, pdfOptions);
+
+    const safeFilename = filename || `EIR_Analysis_${new Date().toISOString().split('T')[0]}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
+
+    const fileStream = fs.createReadStream(filepath);
+    fileStream.pipe(res);
+
+    fileStream.on('end', () => {
+      setTimeout(() => {
+        fs.unlink(filepath, (err) => {
+          if (err) console.error('⚠️  Error cleaning up temp file:', err);
+        });
+      }, 5000);
+    });
+
+    fileStream.on('error', (error) => {
+      next(error);
+    });
+  } catch (error) {
+    console.error('❌ EIR PDF export failed:', error);
+    const statusCode = error.message.includes('timeout') ? 504 : 500;
+    res.status(statusCode).json({
+      success: false,
+      error: error.message || 'EIR PDF export failed'
     });
   }
 });
