@@ -1,6 +1,19 @@
 const { v4: uuidv4 } = require('uuid');
 const db = require('../db/database');
 
+const parseConfigSafe = (configValue, context = {}) => {
+  if (!configValue) return null;
+  try {
+    return JSON.parse(configValue);
+  } catch (error) {
+    console.warn('Invalid field config JSON, using null.', {
+      error: error.message,
+      ...context
+    });
+    return null;
+  }
+};
+
 class BepStructureService {
   constructor() {
     // SQLite database for persistent storage
@@ -57,7 +70,7 @@ class BepStructureService {
     // Parse JSON config for each field
     step.fields = fields.map(f => ({
       ...f,
-      config: f.config ? JSON.parse(f.config) : null
+      config: parseConfigSafe(f.config, { fieldId: f.id, stepId })
     }));
 
     return step;
@@ -232,7 +245,7 @@ class BepStructureService {
     // Parse JSON config for each field
     return fields.map(f => ({
       ...f,
-      config: f.config ? JSON.parse(f.config) : null
+      config: parseConfigSafe(f.config, { fieldId: f.id, stepId })
     }));
   }
 
@@ -264,7 +277,7 @@ class BepStructureService {
 
     return fields.map(f => ({
       ...f,
-      config: f.config ? JSON.parse(f.config) : null
+      config: parseConfigSafe(f.config, { fieldId: f.id, projectId })
     }));
   }
 
@@ -283,7 +296,7 @@ class BepStructureService {
 
     return {
       ...field,
-      config: field.config ? JSON.parse(field.config) : null
+      config: parseConfigSafe(field.config, { fieldId })
     };
   }
 

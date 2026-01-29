@@ -44,7 +44,6 @@ const BepSidebar = ({
   const { hasAnalysis } = useEir();
 
   const goToTidpManager = () => navigate(ROUTES.TIDP_MIDP);
-  const goHome = () => navigate(ROUTES.HOME);
 
   // Navigate to EIR step
   const goToEirStep = () => {
@@ -82,13 +81,6 @@ const BepSidebar = ({
               title="TIDP/MIDP Manager"
             >
               <ExternalLink className="w-4 h-4" />
-            </button>
-            <button
-              onClick={goHome}
-              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
-              title="Home"
-            >
-              <Zap className="w-4 h-4" />
             </button>
           </div>
         </div>

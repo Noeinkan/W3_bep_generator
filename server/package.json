@@ -11,6 +11,7 @@
   "dependencies": {
     "@paralleldrive/cuid2": "^2.2.2",
     "axios": "^1.6.0",
+    "bep-generator": "file:..",
     "better-sqlite3": "^11.0.0",
     "cors": "^2.8.5",
     "date-fns": "^2.30.0",

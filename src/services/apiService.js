@@ -939,7 +939,8 @@ class ApiService {
 
   async healthCheck() {
     try {
-      const response = await apiClient.get('/health', { timeout: 5000 });
+      // Health endpoint is at root (not /api)
+      const response = await axios.get('/health', { timeout: 5000 });
       return response.data;
     } catch (error) {
       throw this.handleError(error, 'Health check failed');

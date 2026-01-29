@@ -80,9 +80,10 @@ const handleApiCall = async (apiCall) => {
  * @param {string} userId - User ID
  * @param {string} [draftId] - Optional draft ID to link documents to
  * @param {function} [onProgress] - Optional progress callback (0-100)
+ * @param {AbortSignal} [signal] - Optional AbortSignal to cancel upload
  * @returns {Promise<{success: boolean, documents: object[]}>}
  */
-export const uploadDocuments = async (files, userId, draftId = null, onProgress = null) => {
+export const uploadDocuments = async (files, userId, draftId = null, onProgress = null, signal = null) => {
   const formData = new FormData();
 
   files.forEach(file => {
@@ -99,6 +100,7 @@ export const uploadDocuments = async (files, userId, draftId = null, onProgress 
       headers: {
         'Content-Type': 'multipart/form-data'
       },
+      signal,
       onUploadProgress: (progressEvent) => {
         if (onProgress && progressEvent.total) {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);

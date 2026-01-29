@@ -13,12 +13,17 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, navigation }) => {
       <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
         {!isCollapsed ? (
           <>
-            <div className="flex items-center space-x-2">
+            <NavLink
+              to="/home"
+              className="flex items-center space-x-2 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              aria-label="Go to Home"
+              title="Home"
+            >
               <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center flex-shrink-0">
                 <FileText className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold text-gray-900 whitespace-nowrap">BEP Suite</span>
-            </div>
+            </NavLink>
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
               className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-200"

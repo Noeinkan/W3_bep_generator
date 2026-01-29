@@ -16,10 +16,6 @@ const BepLayout = () => {
     navigate('/tidp-midp');
   };
 
-  const goHome = () => {
-    navigate('/home');
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50" data-page-uri={location.pathname}>
       {/* Header with navigation */}
@@ -41,13 +37,6 @@ const BepLayout = () => {
             >
               <ExternalLink className="w-3.5 h-3.5 lg:w-4 lg:h-4 mr-1.5 lg:mr-2" />
               TIDP/MIDP Manager
-            </button>
-            <button
-              onClick={goHome}
-              className="inline-flex items-center px-2.5 lg:px-3 py-1.5 lg:py-2 text-sm lg:text-base text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
-            >
-              <Zap className="w-3.5 h-3.5 lg:w-4 lg:h-4 mr-1.5 lg:mr-2" />
-              Home
             </button>
           </div>
         </div>

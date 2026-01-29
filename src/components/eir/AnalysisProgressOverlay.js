@@ -226,9 +226,9 @@ const AnalysisProgressOverlay = ({
         {currentStage.label}: {currentMessage}. Progress {Math.round(progress)} percent.
       </div>
 
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden max-h-[85vh] flex flex-col">
         {/* Header with gradient */}
-        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-5 text-white">
+        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-5 py-4 text-white flex-shrink-0">
           <div className="flex items-center gap-3 justify-between">
             <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
@@ -253,9 +253,9 @@ const AnalysisProgressOverlay = ({
         </div>
 
         {/* Progress content */}
-        <div className="p-6">
+        <div className="p-5 overflow-y-auto">
           {/* Premium Progress Bar with Animations */}
-          <div className="mb-6">
+          <div className="mb-5">
             <div className="flex justify-between text-sm mb-3">
               <span className="text-gray-600 font-medium">Analysis Progress</span>
               <span className="text-purple-600 font-bold text-lg">{Math.round(progress)}%</span>
@@ -303,7 +303,7 @@ const AnalysisProgressOverlay = ({
           </div>
 
           {/* Insight + ETA */}
-          <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="rounded-xl border border-purple-100 bg-purple-50/60 p-3">
               <div className="flex items-center gap-2 text-xs font-semibold text-purple-700">
                 <Sparkles className="w-3.5 h-3.5" />
@@ -331,7 +331,7 @@ const AnalysisProgressOverlay = ({
           </div>
 
           {/* What we're checking */}
-          <div className="mb-6 rounded-xl border border-gray-200 bg-gray-50 p-3">
+          <div className="mb-5 rounded-xl border border-gray-200 bg-gray-50 p-3">
             <div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
               <Info className="w-3.5 h-3.5" />
               What we’re checking now
@@ -352,7 +352,7 @@ const AnalysisProgressOverlay = ({
           </div>
 
           {/* Stepper */}
-          <div className="mb-6">
+          <div className="mb-5">
             {STAGES.map((stage, index) => {
               const Icon = stage.icon;
               const isCompleted = index < currentStageIndex;

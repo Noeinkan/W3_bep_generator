@@ -8,6 +8,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Upload, FileText, X, AlertCircle, CheckCircle, Loader2, Sparkles, Trash2, FileSearch, ArrowRight, Info } from 'lucide-react';
 import { uploadDocuments, getDocuments, getDocument, deleteDocument, extractAndAnalyze } from '../../services/documentService';
+import ApiService from '../../services/apiService';
 import { useAuth } from '../../contexts/AuthContext';
 import AnalysisProgressOverlay from './AnalysisProgressOverlay';
 
@@ -23,6 +24,7 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
   const [documents, setDocuments] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStalled, setUploadStalled] = useState(false);
   const [analyzing, setAnalyzing] = useState(null);
   const [error, setError] = useState(null);
   const [detailedError, setDetailedError] = useState(null);
@@ -30,6 +32,10 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef(null);
   const dragCounter = useRef(0);
+  const uploadAbortRef = useRef(null);
+  const uploadWatchdogRef = useRef(null);
+  const lastProgressRef = useRef({ value: 0, ts: 0 });
+  const uploadAbortedRef = useRef(false);
 
   // Progress overlay state
   const [showProgressOverlay, setShowProgressOverlay] = useState(false);
@@ -44,11 +50,44 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
 
   const userId = user?.id || 'anonymous';
 
+  const getUploadErrorDetails = (message, status, errorCode = null) => {
+    const normalizedMessage = message || 'Upload failed';
+    const lowerMessage = (message || '').toLowerCase();
+
+    if (errorCode === 'ERR_NETWORK' || lowerMessage.includes('network error')) {
+      return {
+        error: 'Network error during upload',
+        detailed: 'Cannot reach the server. Check that the backend is running and the /api endpoint is reachable.'
+      };
+    }
+
+    if (status === 413) {
+      return {
+        error: 'Upload failed',
+        detailed: 'File too large for upload. Try compressing the PDF or splitting it into smaller sections.'
+      };
+    }
+
+    if (status === 415) {
+      return {
+        error: 'Upload failed',
+        detailed: 'Unsupported file type. Please upload a PDF or DOCX document.'
+      };
+    }
+
+    return {
+      error: normalizedMessage,
+      detailed: status ? `Error ${status}: ${normalizedMessage}` : null
+    };
+  };
+
   // Cleanup timers on unmount
   useEffect(() => {
     return () => {
       if (statusPollRef.current) clearTimeout(statusPollRef.current);
       if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+      if (uploadWatchdogRef.current) clearInterval(uploadWatchdogRef.current);
+      if (uploadAbortRef.current) uploadAbortRef.current.abort();
     };
   }, []);
 
@@ -89,15 +128,65 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
 
     if (validFiles.length === 0) return;
 
+    try {
+      await ApiService.healthCheck();
+    } catch (healthErr) {
+      const message = healthErr?.message || 'Unable to reach backend server';
+      setError('Network error during upload');
+      setDetailedError(`Cannot reach the server. ${message}`);
+      return;
+    }
+
+    if (uploadAbortRef.current) {
+      uploadAbortRef.current.abort();
+      uploadAbortRef.current = null;
+    }
+    if (uploadWatchdogRef.current) {
+      clearInterval(uploadWatchdogRef.current);
+      uploadWatchdogRef.current = null;
+    }
+
     setUploading(true);
     setUploadProgress(0);
+    setUploadStalled(false);
+    uploadAbortedRef.current = false;
+
+    const controller = new AbortController();
+    uploadAbortRef.current = controller;
+    lastProgressRef.current = { value: 0, ts: Date.now() };
+
+    uploadWatchdogRef.current = setInterval(() => {
+      if (!uploadAbortRef.current) {
+        clearInterval(uploadWatchdogRef.current);
+        uploadWatchdogRef.current = null;
+        return;
+      }
+
+      const secondsSinceProgress = (Date.now() - lastProgressRef.current.ts) / 1000;
+      if (secondsSinceProgress > 15) {
+        setUploadStalled(true);
+      }
+      if (secondsSinceProgress > 60 && !uploadAbortedRef.current) {
+        uploadAbortedRef.current = true;
+        uploadAbortRef.current.abort();
+        setError('Upload stalled. Please try again.');
+        setDetailedError('No upload progress detected for over 60 seconds. Check your connection and retry.');
+      }
+    }, 2000);
 
     try {
       const result = await uploadDocuments(
         validFiles,
         userId,
         draftId,
-        (progress) => setUploadProgress(progress)
+        (progress) => {
+          if (progress > lastProgressRef.current.value) {
+            lastProgressRef.current = { value: progress, ts: Date.now() };
+            setUploadStalled(false);
+          }
+          setUploadProgress(progress);
+        },
+        controller.signal
       );
 
       if (result.success) {
@@ -106,18 +195,37 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
 
         // Do not auto-analyze; let the user choose when to analyze
       } else {
-        setError(result.message || 'Upload failed');
-        if (result.status) {
-          setDetailedError(`Error ${result.status}: ${result.message || 'Unknown error'}`);
+        if (!uploadAbortedRef.current) {
+          const { error: uploadError, detailed } = getUploadErrorDetails(result.message, result.status);
+          setError(uploadError);
+          if (detailed) {
+            setDetailedError(detailed);
+          }
         }
       }
     } catch (err) {
-      setError('Failed to upload document. Please try again.');
-      setDetailedError(err.message || 'Network error during upload');
-      console.error('Upload error:', err);
+      if (!uploadAbortedRef.current) {
+        if (err?.code === 'ERR_CANCELED') {
+          return;
+        }
+        const { error: uploadError, detailed } = getUploadErrorDetails(
+          err?.message,
+          err?.response?.status,
+          err?.code
+        );
+        setError(uploadError);
+        setDetailedError(detailed || err?.message || 'Network error during upload');
+        console.error('Upload error:', err);
+      }
     } finally {
       setUploading(false);
       setUploadProgress(0);
+      setUploadStalled(false);
+      if (uploadWatchdogRef.current) {
+        clearInterval(uploadWatchdogRef.current);
+        uploadWatchdogRef.current = null;
+      }
+      uploadAbortRef.current = null;
     }
   };
 
@@ -572,6 +680,11 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
                     style={{ width: `${uploadProgress}%` }}
                   />
                 </div>
+                {uploadStalled && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Upload is taking longer than expected. We are still trying...
+                  </p>
+                )}
               </>
             ) : (
               <>

@@ -3,8 +3,8 @@ import { CheckCircle, Zap, FileText } from 'lucide-react';
 import CONFIG from '../../../config/bepConfig';
 
 const BepTypeSelector = ({ bepType, setBepType, onProceed }) => (
-  <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen flex items-center justify-center p-4">
-    <div className="w-full max-w-7xl pb-20">
+  <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen flex items-start justify-center px-4 pt-6 pb-8">
+    <div className="w-full max-w-7xl">
       {/* Header Section */}
       <div className="text-center mb-5">
         <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
@@ -134,22 +134,6 @@ const BepTypeSelector = ({ bepType, setBepType, onProceed }) => (
         })}
       </div>
 
-      {/* Sticky Action Bar */}
-      {bepType && (
-        <div className="sticky bottom-0 mt-6">
-          <div className="mx-auto max-w-3xl bg-white/90 backdrop-blur border border-blue-200 rounded-xl shadow-lg px-4 py-3 flex items-center justify-between">
-            <div className="text-sm text-slate-700">
-              Selected: <span className="font-semibold text-slate-900">{CONFIG.bepTypeDefinitions[bepType]?.title}</span>
-            </div>
-            <button
-              onClick={() => onProceed(bepType)}
-              className="px-5 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg font-semibold text-sm hover:from-blue-600 hover:to-indigo-700 transition-all shadow"
-            >
-              Continue
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   </div>
 );

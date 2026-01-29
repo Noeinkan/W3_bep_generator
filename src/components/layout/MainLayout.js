@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { FileText, BarChart3, Home, Grid3x3 } from 'lucide-react';
+import { FileText, BarChart3, Grid3x3 } from 'lucide-react';
 import Sidebar from './Sidebar';
 import UserDropdown from './UserDropdown';
 
@@ -12,11 +12,6 @@ const MainLayout = () => {
   const isHomePage = location.pathname === '/home';
 
   const navigation = [
-    {
-      name: 'Home',
-      href: '/home',
-      icon: Home
-    },
     {
       name: 'BEP Generator',
       href: '/bep-generator',
