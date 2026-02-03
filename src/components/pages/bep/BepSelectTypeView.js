@@ -15,8 +15,8 @@ const BepSelectTypeView = () => {
     // Load empty form data for the selected type
     loadFormData(getEmptyBepData(), selectedType, null);
     setCurrentDraft(null);
-    // Navigate to info requirements step before the editor
-    navigate('/bep-generator/info-requirements');
+    // Navigate to structure map before info requirements
+    navigate('/bep-generator/structure-map');
   }, [navigate, loadFormData, setCurrentDraft]);
 
   return (

@@ -4,6 +4,7 @@ import BepLayout from './bep/BepLayout';
 import BepStartMenuView from './bep/BepStartMenuView';
 import BepSelectTypeView from './bep/BepSelectTypeView';
 import BepInfoRequirementsView from './bep/BepInfoRequirementsView';
+import BepStructureMapView from './bep/BepStructureMapView';
 import BepTemplatesView from './bep/BepTemplatesView';
 import BepDraftsView from './bep/BepDraftsView';
 import BepImportView from './bep/BepImportView';
@@ -17,6 +18,7 @@ import { useAuth } from '../../contexts/AuthContext';
  * Route structure:
  * - /bep-generator                           -> Start menu
  * - /bep-generator/select-type               -> Type selector
+ * - /bep-generator/structure-map             -> Structure map preview
  * - /bep-generator/info-requirements         -> EIR/AIR/PIR/OIR choice
  * - /bep-generator/templates                 -> Template gallery
  * - /bep-generator/drafts                    -> Draft manager
@@ -48,7 +50,8 @@ const BEPGeneratorWrapper = () => {
 
           {/* Type selection */}
           <Route path="select-type" element={<BepSelectTypeView />} />
-        <Route path="info-requirements" element={<BepInfoRequirementsView />} />
+          <Route path="structure-map" element={<BepStructureMapView />} />
+          <Route path="info-requirements" element={<BepInfoRequirementsView />} />
 
           {/* Template gallery */}
           <Route path="templates" element={<BepTemplatesView />} />

@@ -15,6 +15,7 @@ export { useBepStructure } from './useBepStructure';
 export { default as DynamicFieldRenderer } from './DynamicFieldRenderer';
 export { default as DynamicFormStepRHF } from './DynamicFormStepRHF';
 export { default as DynamicProgressSidebar } from './DynamicProgressSidebar';
+export { default as BepStructureMap } from './BepStructureMap';
 
 // Step Editor Components
 export {

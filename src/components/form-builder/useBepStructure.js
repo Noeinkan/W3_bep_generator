@@ -78,13 +78,16 @@ export function useBepStructure(projectId = null, bepType = null) {
         structureData = response.data;
         setHasCustomStructure(response.hasCustomStructure);
       } else {
+        console.log('[DEBUG] Fetching template, params:', params.toString(), 'bepType:', bepType);
         const response = await apiCall(`/template?${params}`);
+        console.log('[DEBUG] Template response:', JSON.stringify({ success: response.success, dataLength: response.data?.length, count: response.count }));
         structureData = response.data;
         setHasCustomStructure(false);
       }
 
       // Extract steps and flatten fields
       const allFields = [];
+      console.log('[DEBUG] structureData length:', structureData?.length, 'type:', typeof structureData, 'isArray:', Array.isArray(structureData));
       const stepsData = structureData.map(step => {
         if (step.fields) {
           allFields.push(...step.fields.map(f => ({
