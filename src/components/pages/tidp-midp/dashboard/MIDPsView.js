@@ -13,6 +13,30 @@ import {
   Layers
 } from 'lucide-react';
 
+// Safe date formatting helper
+const safeFormatDate = (dateValue, fallback = 'N/A') => {
+  if (!dateValue) return fallback;
+  try {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return fallback;
+    return date.toLocaleDateString();
+  } catch {
+    return fallback;
+  }
+};
+
+// Safe date parsing for sorting
+const safeParseDateForSort = (dateValue) => {
+  if (!dateValue) return new Date('9999-12-31');
+  try {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return new Date('9999-12-31');
+    return date;
+  } catch {
+    return new Date('9999-12-31');
+  }
+};
+
 const MIDPsView = ({
   midps,
   loading,
@@ -89,8 +113,8 @@ const MIDPsView = ({
     // Sort containers within each milestone by due date
     Object.keys(grouped).forEach(milestone => {
       grouped[milestone].sort((a, b) => {
-        const dateA = a.dueDate ? new Date(a.dueDate) : new Date('9999-12-31');
-        const dateB = b.dueDate ? new Date(b.dueDate) : new Date('9999-12-31');
+        const dateA = safeParseDateForSort(a.dueDate);
+        const dateB = safeParseDateForSort(b.dueDate);
         return dateA - dateB;
       });
     });
@@ -178,7 +202,7 @@ const MIDPsView = ({
     if (statusLower.includes('progress')) return 'bg-blue-100 text-blue-800';
     if (statusLower.includes('delay')) return 'bg-red-100 text-red-800';
     if (statusLower.includes('review')) return 'bg-yellow-100 text-yellow-800';
-    return 'bg-gray-100 text-gray-800';
+    return 'bg-slate-100 text-gray-800';
   };
 
   // STATE A: No MIDP exists
@@ -188,18 +212,18 @@ const MIDPsView = ({
         <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-200 shadow-lg p-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-3">Master Information Delivery Plan</h2>
-              <p className="text-gray-700 text-lg font-medium">ISO 19650 compliant project-wide deliverables report</p>
+              <h2 className="text-3xl font-bold text-slate-900 mb-3">Master Information Delivery Plan</h2>
+              <p className="text-slate-700 text-lg font-medium">ISO 19650 compliant project-wide deliverables report</p>
             </div>
           </div>
         </div>
 
         <div className="text-center py-16">
-          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-8">
-            <Calendar className="w-10 h-10 text-gray-400" />
+          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-8">
+            <Calendar className="w-10 h-10 text-slate-400" />
           </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-4">No MIDP Generated Yet</h3>
-          <p className="text-gray-600 text-lg mb-8 max-w-md mx-auto">
+          <h3 className="text-2xl font-bold text-slate-900 mb-4">No MIDP Generated Yet</h3>
+          <p className="text-slate-600 text-lg mb-8 max-w-md mx-auto">
             Generate your Master Information Delivery Plan by compiling all TIDPs into a unified project view.
           </p>
           <button
@@ -218,13 +242,13 @@ const MIDPsView = ({
   if (loading) {
     return (
       <div className="space-y-8">
-        <div className="bg-white rounded-xl border-2 border-gray-200 p-8 animate-pulse">
+        <div className="bg-white rounded-xl border-2 border-slate-200 p-8 animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
           <div className="h-4 bg-gray-200 rounded w-1/4"></div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border-2 border-gray-200 p-6 animate-pulse">
+            <div key={i} className="bg-white rounded-xl border-2 border-slate-200 p-6 animate-pulse">
               <div className="h-12 bg-gray-200 rounded mb-3"></div>
               <div className="h-6 bg-gray-200 rounded w-1/2"></div>
             </div>
@@ -238,18 +262,18 @@ const MIDPsView = ({
   return (
     <div className="space-y-8">
       {/* Header Bar */}
-      <div className="bg-white rounded-xl border-2 border-gray-200 shadow-lg p-6">
+      <div className="bg-white rounded-xl border-2 border-slate-200 shadow-lg p-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">{activeMidp.projectName || 'Master Information Delivery Plan'}</h2>
-            <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+            <h2 className="text-2xl font-bold text-slate-900">{activeMidp.projectName || 'Master Information Delivery Plan'}</h2>
+            <div className="flex items-center gap-4 mt-2 text-sm text-slate-600">
               <span className="flex items-center gap-1">
                 <span className="font-medium">Version:</span> {activeMidp.version || '1.0'}
               </span>
               <span className="flex items-center gap-1">
-                <span className="font-medium">Updated:</span> {new Date(activeMidp.updatedAt).toLocaleDateString()}
+                <span className="font-medium">Updated:</span> {safeFormatDate(activeMidp.updatedAt)}
               </span>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${activeMidp.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${activeMidp.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-gray-800'}`}>
                 {activeMidp.status || 'Active'}
               </span>
             </div>
@@ -257,7 +281,7 @@ const MIDPsView = ({
           <div className="flex items-center gap-3">
             <button
               onClick={onAutoGenerate}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+              className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh MIDP
@@ -281,8 +305,8 @@ const MIDPsView = ({
               <Users className="w-8 h-8 text-blue-600" />
             </div>
             <div className="ml-5">
-              <p className="text-3xl font-bold text-gray-900">{summaryStats.totalTidps}</p>
-              <p className="text-base text-gray-600 font-semibold mt-1">TIDPs Included</p>
+              <p className="text-3xl font-bold text-slate-900">{summaryStats.totalTidps}</p>
+              <p className="text-base text-slate-600 font-semibold mt-1">TIDPs Included</p>
             </div>
           </div>
         </div>
@@ -293,8 +317,8 @@ const MIDPsView = ({
               <FileText className="w-8 h-8 text-purple-600" />
             </div>
             <div className="ml-5">
-              <p className="text-3xl font-bold text-gray-900">{summaryStats.totalDeliverables}</p>
-              <p className="text-base text-gray-600 font-semibold mt-1">Total Deliverables</p>
+              <p className="text-3xl font-bold text-slate-900">{summaryStats.totalDeliverables}</p>
+              <p className="text-base text-slate-600 font-semibold mt-1">Total Deliverables</p>
             </div>
           </div>
         </div>
@@ -305,8 +329,8 @@ const MIDPsView = ({
               <Calendar className="w-8 h-8 text-orange-600" />
             </div>
             <div className="ml-5">
-              <p className="text-3xl font-bold text-gray-900">{summaryStats.distinctMilestones}</p>
-              <p className="text-base text-gray-600 font-semibold mt-1">Milestones</p>
+              <p className="text-3xl font-bold text-slate-900">{summaryStats.distinctMilestones}</p>
+              <p className="text-base text-slate-600 font-semibold mt-1">Milestones</p>
             </div>
           </div>
         </div>
@@ -317,39 +341,39 @@ const MIDPsView = ({
               <Clock className="w-8 h-8 text-green-600" />
             </div>
             <div className="ml-5">
-              <p className="text-3xl font-bold text-gray-900">{summaryStats.totalHours.toLocaleString()}</p>
-              <p className="text-base text-gray-600 font-semibold mt-1">Estimated Hours</p>
+              <p className="text-3xl font-bold text-slate-900">{summaryStats.totalHours.toLocaleString()}</p>
+              <p className="text-base text-slate-600 font-semibold mt-1">Estimated Hours</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Master Deliverables Table */}
-      <div className="bg-white rounded-xl border-2 border-gray-200 shadow-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-lg font-bold text-gray-900">Master Deliverables Schedule</h3>
-          <p className="text-sm text-gray-600 mt-1">All information containers from all TIDPs, grouped by milestone</p>
+      <div className="bg-white rounded-xl border-2 border-slate-200 shadow-lg overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
+          <h3 className="text-lg font-bold text-slate-900">Master Deliverables Schedule</h3>
+          <p className="text-sm text-slate-600 mt-1">All information containers from all TIDPs, grouped by milestone</p>
         </div>
 
         <div className="overflow-x-auto">
           {Object.keys(groupedContainers).length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
+            <div className="p-8 text-center text-slate-500">
               No deliverables found in this MIDP.
             </div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-gray-100 border-b border-gray-200">
+              <thead className="bg-slate-100 border-b border-slate-200">
                 <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Container ID</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Name</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Task Team</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Discipline</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Responsible</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700">LOIN</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Format</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Due Date</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Est. Time</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Status</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-700">Container ID</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-700">Name</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-700">Task Team</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-700">Discipline</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-700">Responsible</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-700">LOIN</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-700">Format</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-700">Due Date</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-700">Est. Time</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-700">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -361,23 +385,23 @@ const MIDPsView = ({
                     <React.Fragment key={milestone}>
                       {/* Milestone Header Row */}
                       <tr
-                        className="bg-gradient-to-r from-gray-50 to-gray-100 border-t border-b border-gray-300 cursor-pointer hover:bg-gray-100"
+                        className="bg-gradient-to-r from-gray-50 to-gray-100 border-t border-b border-slate-300 cursor-pointer hover:bg-slate-100"
                         onClick={() => toggleMilestone(milestone)}
                       >
                         <td colSpan={10} className="px-4 py-3">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               {isExpanded ? (
-                                <ChevronDown className="w-5 h-5 text-gray-500" />
+                                <ChevronDown className="w-5 h-5 text-slate-500" />
                               ) : (
-                                <ChevronRight className="w-5 h-5 text-gray-500" />
+                                <ChevronRight className="w-5 h-5 text-slate-500" />
                               )}
-                              <span className="font-bold text-gray-900">{milestone}</span>
+                              <span className="font-bold text-slate-900">{milestone}</span>
                               <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
                                 {stats.count} deliverable{stats.count !== 1 ? 's' : ''}
                               </span>
                             </div>
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-slate-600">
                               {stats.hours.toLocaleString()} hrs estimated
                             </span>
                           </div>
@@ -388,19 +412,19 @@ const MIDPsView = ({
                       {isExpanded && containers.map((container, idx) => (
                         <tr
                           key={container.id || idx}
-                          className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                          className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
                         >
-                          <td className="px-4 py-3 font-mono text-xs text-gray-600">{container.id?.slice(0, 8) || '-'}</td>
-                          <td className="px-4 py-3 font-medium text-gray-900 max-w-xs truncate">{container.name || '-'}</td>
-                          <td className="px-4 py-3 text-gray-700">{container.tidpSource?.teamName || '-'}</td>
-                          <td className="px-4 py-3 text-gray-700 capitalize">{container.tidpSource?.discipline || '-'}</td>
-                          <td className="px-4 py-3 text-gray-700">{container.author || '-'}</td>
-                          <td className="px-4 py-3 text-gray-700">{container.loiLevel || '-'}</td>
-                          <td className="px-4 py-3 text-gray-700">{container.format || '-'}</td>
-                          <td className="px-4 py-3 text-gray-700">
-                            {container.dueDate ? new Date(container.dueDate).toLocaleDateString() : '-'}
+                          <td className="px-4 py-3 font-mono text-xs text-slate-600">{container.id?.slice(0, 8) || '-'}</td>
+                          <td className="px-4 py-3 font-medium text-slate-900 max-w-xs truncate">{container.name || '-'}</td>
+                          <td className="px-4 py-3 text-slate-700">{container.tidpSource?.teamName || '-'}</td>
+                          <td className="px-4 py-3 text-slate-700 capitalize">{container.tidpSource?.discipline || '-'}</td>
+                          <td className="px-4 py-3 text-slate-700">{container.author || '-'}</td>
+                          <td className="px-4 py-3 text-slate-700">{container.loiLevel || '-'}</td>
+                          <td className="px-4 py-3 text-slate-700">{container.format || '-'}</td>
+                          <td className="px-4 py-3 text-slate-700">
+                            {safeFormatDate(container.dueDate, '-')}
                           </td>
-                          <td className="px-4 py-3 text-gray-700">{container.estimatedTime || '-'}</td>
+                          <td className="px-4 py-3 text-slate-700">{container.estimatedTime || '-'}</td>
                           <td className="px-4 py-3">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(container.status)}`}>
                               {container.status || 'Planned'}
@@ -420,27 +444,27 @@ const MIDPsView = ({
       {/* Breakdown Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* By Discipline */}
-        <div className="bg-white rounded-xl border-2 border-gray-200 shadow-lg overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center gap-2">
+        <div className="bg-white rounded-xl border-2 border-slate-200 shadow-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
             <Layers className="w-5 h-5 text-purple-600" />
-            <h3 className="text-lg font-bold text-gray-900">By Discipline</h3>
+            <h3 className="text-lg font-bold text-slate-900">By Discipline</h3>
           </div>
           <div className="p-4">
             {Object.keys(disciplineBreakdown).length === 0 ? (
-              <p className="text-gray-500 text-center py-4">No discipline data available</p>
+              <p className="text-slate-500 text-center py-4">No discipline data available</p>
             ) : (
               <div className="space-y-3">
                 {Object.entries(disciplineBreakdown)
                   .sort((a, b) => b[1].count - a[1].count)
                   .map(([discipline, stats]) => (
-                    <div key={discipline} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                    <div key={discipline} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
                       <div className="flex items-center gap-3">
                         <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-                        <span className="font-medium text-gray-900 capitalize">{discipline}</span>
+                        <span className="font-medium text-slate-900 capitalize">{discipline}</span>
                       </div>
                       <div className="flex items-center gap-4 text-sm">
-                        <span className="text-gray-600">{stats.count} deliverable{stats.count !== 1 ? 's' : ''}</span>
-                        <span className="font-semibold text-gray-900">{stats.hours.toLocaleString()} hrs</span>
+                        <span className="text-slate-600">{stats.count} deliverable{stats.count !== 1 ? 's' : ''}</span>
+                        <span className="font-semibold text-slate-900">{stats.hours.toLocaleString()} hrs</span>
                       </div>
                     </div>
                   ))}
@@ -450,27 +474,27 @@ const MIDPsView = ({
         </div>
 
         {/* By Team */}
-        <div className="bg-white rounded-xl border-2 border-gray-200 shadow-lg overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center gap-2">
+        <div className="bg-white rounded-xl border-2 border-slate-200 shadow-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center gap-2">
             <Building2 className="w-5 h-5 text-blue-600" />
-            <h3 className="text-lg font-bold text-gray-900">By Team</h3>
+            <h3 className="text-lg font-bold text-slate-900">By Team</h3>
           </div>
           <div className="p-4">
             {Object.keys(teamBreakdown).length === 0 ? (
-              <p className="text-gray-500 text-center py-4">No team data available</p>
+              <p className="text-slate-500 text-center py-4">No team data available</p>
             ) : (
               <div className="space-y-3">
                 {Object.entries(teamBreakdown)
                   .sort((a, b) => b[1].count - a[1].count)
                   .map(([team, stats]) => (
-                    <div key={team} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                    <div key={team} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
                       <div className="flex items-center gap-3">
                         <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                        <span className="font-medium text-gray-900">{team}</span>
+                        <span className="font-medium text-slate-900">{team}</span>
                       </div>
                       <div className="flex items-center gap-4 text-sm">
-                        <span className="text-gray-600">{stats.count} deliverable{stats.count !== 1 ? 's' : ''}</span>
-                        <span className="font-semibold text-gray-900">{stats.hours.toLocaleString()} hrs</span>
+                        <span className="text-slate-600">{stats.count} deliverable{stats.count !== 1 ? 's' : ''}</span>
+                        <span className="font-semibold text-slate-900">{stats.hours.toLocaleString()} hrs</span>
                       </div>
                     </div>
                   ))}

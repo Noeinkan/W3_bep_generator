@@ -4,6 +4,29 @@ const _ = require('lodash');
 const tidpService = require('./tidpService');
 const db = require('../db/database');
 
+// Safe date parsing helper - returns null for invalid dates
+function safeParseDateForSort(dateValue) {
+  if (!dateValue) return new Date('9999-12-31');
+  try {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return new Date('9999-12-31');
+    return date;
+  } catch {
+    return new Date('9999-12-31');
+  }
+}
+
+// Safe date validation helper - returns true if date is valid
+function isValidDate(dateValue) {
+  if (!dateValue) return false;
+  try {
+    const date = new Date(dateValue);
+    return !isNaN(date.getTime());
+  } catch {
+    return false;
+  }
+}
+
 class MIDPService {
   constructor() {
     // SQLite database for persistent storage
@@ -357,11 +380,12 @@ class MIDPService {
       }
     });
 
-    // Sort by due date
-    allContainers.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+    // Sort by due date (safely)
+    allContainers.sort((a, b) => safeParseDateForSort(a.dueDate) - safeParseDateForSort(b.dueDate));
 
-    // Group into phases (monthly)
-    const phases = _.groupBy(allContainers, container => {
+    // Group into phases (monthly) - only include containers with valid dates
+    const containersWithValidDates = allContainers.filter(c => isValidDate(c.dueDate));
+    const phases = _.groupBy(containersWithValidDates, container => {
       const date = new Date(container.dueDate);
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     });
@@ -507,7 +531,7 @@ class MIDPService {
 
           // Track by time period
           const dueDate = container['Due Date'] || container.dueDate;
-          if (dueDate) {
+          if (dueDate && isValidDate(dueDate)) {
             const period = format(new Date(dueDate), 'yyyy-MM');
 
             if (!plan.byTimePeriod[period]) {
@@ -948,10 +972,10 @@ class MIDPService {
       }
     });
 
-    // Sort by due date
+    // Sort by due date (safely)
     deliverables.sort((a, b) => {
-      const dateA = new Date(a.dueDate || '9999-12-31');
-      const dateB = new Date(b.dueDate || '9999-12-31');
+      const dateA = safeParseDateForSort(a.dueDate);
+      const dateB = safeParseDateForSort(b.dueDate);
       return dateA - dateB;
     });
 
@@ -987,6 +1011,7 @@ class MIDPService {
     // Check if any TIDP due dates exceed the milestone's latest date
     return milestone.containers.some(container => {
       if (!container.dueDate || !milestone.latestDate) return false;
+      if (!isValidDate(container.dueDate) || !isValidDate(milestone.latestDate)) return false;
       return new Date(container.dueDate) > new Date(milestone.latestDate);
     });
   }

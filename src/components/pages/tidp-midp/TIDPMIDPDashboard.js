@@ -9,7 +9,8 @@ import {
   Download,
   BarChart3,
   Users,
-  Calendar
+  Calendar,
+  Layers
 } from 'lucide-react';
 import ApiService from '../../../services/apiService';
 import Toast from '../../common/Toast';
@@ -235,95 +236,101 @@ const TIDPMIDPDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50" data-page-uri="/tidp-midp">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-6">
-              <button
-                onClick={() => {
-                  const returnUrl = sessionStorage.getItem('bep-return-url');
-                  if (returnUrl) {
-                    sessionStorage.removeItem('bep-return-url');
-                    window.location.href = returnUrl;
-                  } else {
-                    navigate(-1);
-                  }
-                }}
-                className="inline-flex items-center text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 rounded-md p-2 transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div className="h-8 border-l border-gray-300"></div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">TIDP/MIDP Manager</h1>
-                <p className="text-gray-600 text-lg mt-1">Information Delivery Planning & Management</p>
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50" data-page-uri="/tidp-midp">
+      {/* Header - BEP-aligned styling */}
+      <div className="sticky top-0 z-30 bg-white shadow-lg border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => {
+                const returnUrl = sessionStorage.getItem('bep-return-url');
+                if (returnUrl) {
+                  sessionStorage.removeItem('bep-return-url');
+                  window.location.href = returnUrl;
+                } else {
+                  navigate('/');
+                }
+              }}
+              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+              title="Back"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-md">
+              <Layers className="w-5 h-5 text-white" />
             </div>
-
-            <div className="flex items-center space-x-4">
-              {activeView === 'tidps' && (
-                <button
-                  onClick={() => setShowImportDialog(true)}
-                  className="inline-flex items-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-base font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200"
-                >
-                  <Upload className="w-5 h-5 mr-3" />
-                  Import
-                </button>
-              )}
-
-              <button
-                onClick={autoGenerateMIDP}
-                className="inline-flex items-center px-6 py-3 border border-transparent rounded-lg shadow-sm text-base font-semibold text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 hover:shadow-md"
-              >
-                <TrendingUp className="w-5 h-5 mr-3" />
-                Auto-Generate MIDP
-              </button>
-
-              <button
-                onClick={() => setShowHelp(true)}
-                className="inline-flex items-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-base font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200"
-              >
-                <FileText className="w-5 h-5 mr-3" />
-                Help
-              </button>
-
-              <button
-                onClick={handleComplianceCheck}
-                className="inline-flex items-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-base font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200"
-              >
-                <CheckCircle className="w-5 h-5 mr-3" />
-                Compliance Check
-              </button>
-
-              <button
-                onClick={handleGenerateReport}
-                className="inline-flex items-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-base font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-200"
-              >
-                <Download className="w-5 h-5 mr-3" />
-                Generate Report
-              </button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">TIDP/MIDP Manager</h1>
+              <p className="text-sm text-gray-600">Information Delivery Planning</p>
             </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            {activeView === 'tidps' && (
+              <button
+                onClick={() => setShowImportDialog(true)}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 transition-all duration-200"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Import
+              </button>
+            )}
+
+            <button
+              onClick={autoGenerateMIDP}
+              className="inline-flex items-center px-3 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 hover:shadow-md transition-all duration-200"
+            >
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Generate MIDP
+            </button>
+
+            <div className="w-px h-8 bg-gray-300 mx-1 hidden lg:block" />
+
+            <button
+              onClick={() => setShowHelp(true)}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 transition-all duration-200"
+              title="Help"
+            >
+              <FileText className="w-4 h-4" />
+              <span className="hidden xl:inline ml-2">Help</span>
+            </button>
+
+            <button
+              onClick={handleComplianceCheck}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 transition-all duration-200"
+              title="Compliance Check"
+            >
+              <CheckCircle className="w-4 h-4" />
+              <span className="hidden xl:inline ml-2">Compliance</span>
+            </button>
+
+            <button
+              onClick={handleGenerateReport}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-purple-50 hover:border-purple-300 transition-all duration-200"
+              title="Generate Report"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden xl:inline ml-2">Report</span>
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Navigation Tabs */}
-        <div className="mb-10">
-          <nav className="flex space-x-1 bg-gray-100 p-2 rounded-lg">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Navigation Tabs - BEP card style */}
+        <div className="mb-8">
+          <nav className="flex space-x-2 bg-white/60 backdrop-blur-sm p-1.5 rounded-xl border border-slate-200/50 shadow-sm">
             {navigationItems.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => setActiveView(id)}
-                className={`flex-1 py-3 px-4 rounded-md font-semibold text-base flex items-center justify-center space-x-3 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                className={`flex-1 py-2.5 px-4 rounded-lg font-medium text-sm flex items-center justify-center space-x-2 transition-all duration-200 ${
                   activeView === id
-                    ? 'bg-white text-blue-700 shadow-sm border border-gray-200'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    ? 'bg-white text-blue-600 shadow-md border border-slate-200'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                 }`}
               >
-                <Icon className="w-5 h-5" />
+                <Icon className="w-4 h-4" />
                 <span>{label}</span>
               </button>
             ))}

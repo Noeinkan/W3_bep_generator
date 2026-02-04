@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, Calendar, Upload } from 'lucide-react';
+import { Users, Calendar, Upload, ChevronRight } from 'lucide-react';
 
 const QuickActions = ({ onViewTIDPs, onViewMIDPs, onImport, showImport = true }) => {
   const actions = [
@@ -19,7 +19,7 @@ const QuickActions = ({ onViewTIDPs, onViewMIDPs, onImport, showImport = true })
     }
   ];
 
-  // Only include the Import action when allowed (e.g., not on the main dashboard)
+  // Only include the Import action when allowed
   if (showImport) {
     actions.push({
       icon: Upload,
@@ -32,56 +32,48 @@ const QuickActions = ({ onViewTIDPs, onViewMIDPs, onImport, showImport = true })
 
   const colorStyles = {
     blue: {
-      border: 'border-blue-200',
-      hoverBorder: 'hover:border-blue-500',
-      hoverBg: 'hover:bg-blue-50',
+      border: 'border-slate-200',
+      hoverBorder: 'hover:border-blue-400',
       iconBg: 'bg-blue-100',
-      iconHoverBg: 'group-hover:bg-blue-500',
       iconText: 'text-blue-600',
-      iconHoverText: 'group-hover:text-white',
-      ring: 'focus:ring-blue-500'
+      text: 'text-blue-600'
     },
     green: {
-      border: 'border-green-200',
-      hoverBorder: 'hover:border-green-500',
-      hoverBg: 'hover:bg-green-50',
+      border: 'border-slate-200',
+      hoverBorder: 'hover:border-green-400',
       iconBg: 'bg-green-100',
-      iconHoverBg: 'group-hover:bg-green-500',
       iconText: 'text-green-600',
-      iconHoverText: 'group-hover:text-white',
-      ring: 'focus:ring-green-500'
+      text: 'text-green-600'
     },
     purple: {
-      border: 'border-purple-200',
-      hoverBorder: 'hover:border-purple-500',
-      hoverBg: 'hover:bg-purple-50',
+      border: 'border-slate-200',
+      hoverBorder: 'hover:border-purple-400',
       iconBg: 'bg-purple-100',
-      iconHoverBg: 'group-hover:bg-purple-500',
       iconText: 'text-purple-600',
-      iconHoverText: 'group-hover:text-white',
-      ring: 'focus:ring-purple-500'
+      text: 'text-purple-600'
     }
   };
 
   return (
-    <div className="bg-white rounded-xl border-2 border-gray-200 shadow-lg p-8">
-      <h2 className="text-3xl font-bold text-gray-900 mb-8">Quick Actions</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+      <h2 className="text-lg font-bold text-slate-900 mb-5">Quick Actions</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {actions.map(({ icon: Icon, title, description, onClick, colorClass }) => {
           const styles = colorStyles[colorClass];
           return (
             <button
               key={title}
               onClick={onClick}
-              className={`group flex items-center p-6 border-2 ${styles.border} ${styles.hoverBorder} ${styles.hoverBg} rounded-xl shadow-md hover:shadow-xl transition-all duration-300 focus:outline-none ${styles.ring} focus:ring-2 focus:ring-offset-2 transform hover:-translate-y-1`}
+              className={`group flex items-center p-4 border-2 ${styles.border} ${styles.hoverBorder} rounded-xl hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 hover:scale-[1.02] text-left`}
             >
-              <div className={`p-4 ${styles.iconBg} ${styles.iconHoverBg} rounded-xl transition-all duration-300 shadow-sm`}>
-                <Icon className={`w-7 h-7 ${styles.iconText} ${styles.iconHoverText} transition-colors duration-300`} />
+              <div className={`p-3 ${styles.iconBg} rounded-lg transition-all duration-200`}>
+                <Icon className={`w-5 h-5 ${styles.iconText}`} />
               </div>
-              <div className="ml-5 text-left">
-                <p className="font-bold text-gray-900 text-lg mb-1">{title}</p>
-                <p className="text-gray-600 text-base leading-relaxed">{description}</p>
+              <div className="ml-4 flex-1">
+                <p className="font-semibold text-slate-900 text-sm mb-0.5">{title}</p>
+                <p className="text-slate-500 text-xs">{description}</p>
               </div>
+              <ChevronRight className={`w-4 h-4 ${styles.text} opacity-0 group-hover:opacity-100 transition-opacity`} />
             </button>
           );
         })}
