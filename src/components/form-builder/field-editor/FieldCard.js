@@ -30,6 +30,7 @@ import { getFieldType } from '../FieldTypeRegistry';
  * @param {Function} props.onDelete - Called when delete button is clicked
  * @param {Function} props.onToggleVisibility - Called when visibility is toggled
  * @param {Function} props.onToggleRequired - Called when required is toggled
+ * @param {boolean} props.isDragOverlay - Whether this is rendered in the drag overlay
  */
 export default function FieldCard({
   field,
@@ -37,7 +38,8 @@ export default function FieldCard({
   onEdit,
   onDelete,
   onToggleVisibility,
-  onToggleRequired
+  onToggleRequired,
+  isDragOverlay = false
 }) {
   const [showMenu, setShowMenu] = useState(false);
 
@@ -51,10 +53,12 @@ export default function FieldCard({
     isDragging
   } = useSortable({ id: field.id, disabled: !isEditMode });
 
+  // Use Translate instead of Transform for smoother movement (avoids scale jitter)
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1
+    transform: CSS.Translate.toString(transform),
+    transition: transition || 'transform 200ms cubic-bezier(0.25, 1, 0.5, 1)',
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 0 : 'auto'
   };
 
   // Get field type info from registry

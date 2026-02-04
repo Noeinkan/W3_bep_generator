@@ -13,7 +13,8 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragOverlay
+  DragOverlay,
+  defaultDropAnimationSideEffects
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -47,6 +48,20 @@ export default function StepListDraggable({
   onReorderSteps
 }) {
   const [activeId, setActiveId] = useState(null);
+  const [overlayOffset, setOverlayOffset] = useState({ x: 0, y: 0 });
+
+  // Custom drop animation for smooth transitions
+  const dropAnimation = {
+    sideEffects: defaultDropAnimationSideEffects({
+      styles: {
+        active: {
+          opacity: '0.5'
+        }
+      }
+    }),
+    duration: 250,
+    easing: 'cubic-bezier(0.25, 1, 0.5, 1)'
+  };
 
   // Configure sensors for drag and drop
   const sensors = useSensors(
@@ -63,9 +78,22 @@ export default function StepListDraggable({
   // Find active step for drag overlay
   const activeStep = activeId ? steps.find(s => s.id === activeId) : null;
 
-  // Handle drag start
+  // Handle drag start - capture pointer offset from element top-left
   const handleDragStart = useCallback((event) => {
-    setActiveId(event.active.id);
+    const { active } = event;
+    setActiveId(active.id);
+
+    // Calculate offset between pointer and element's top-left corner
+    if (active.rect.current.initial && event.activatorEvent) {
+      const rect = active.rect.current.initial;
+      const pointerX = event.activatorEvent.clientX;
+      const pointerY = event.activatorEvent.clientY;
+
+      setOverlayOffset({
+        x: pointerX - rect.left,
+        y: pointerY - rect.top
+      });
+    }
   }, []);
 
   // Handle drag end
@@ -129,14 +157,21 @@ export default function StepListDraggable({
         </div>
       </SortableContext>
 
-      {/* Drag Overlay */}
-      <DragOverlay>
+      {/* Drag Overlay - follows cursor smoothly */}
+      <DragOverlay dropAnimation={dropAnimation}>
         {activeStep && (
-          <div className="opacity-90">
+          <div
+            className="shadow-2xl rounded-lg ring-2 ring-blue-400 ring-opacity-50"
+            style={{
+              marginLeft: -overlayOffset.x,
+              marginTop: -overlayOffset.y
+            }}
+          >
             <StepCard
               step={activeStep}
               isSelected={false}
               isEditMode={true}
+              isDragOverlay={true}
             />
           </div>
         )}

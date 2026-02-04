@@ -124,7 +124,7 @@ const BepStartMenu = ({
     return (
       <div
         key={option.id}
-        className={`relative bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl cursor-pointer transition-all duration-300 transform hover:scale-[1.01] shadow-2xl hover:shadow-blue-500/50 overflow-hidden ${
+        className={`relative bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl cursor-pointer transition-all duration-300 transform hover:scale-[1.01] shadow-2xl hover:shadow-blue-500/50 overflow-hidden ${
           isLoading_ ? 'opacity-75 cursor-wait' : ''
         }`}
         onClick={() => handleAction(option)}
@@ -150,34 +150,34 @@ const BepStartMenu = ({
           }} />
         </div>
 
-        <div className="relative p-5 lg:p-7">
-          <div className="flex flex-col lg:flex-row items-center lg:items-center justify-between gap-5 lg:gap-8">
+        <div className="relative p-4 lg:p-5">
+          <div className="flex flex-col lg:flex-row items-center lg:items-center justify-between gap-3 lg:gap-6">
             {/* Left Content */}
             <div className="flex-1 text-center lg:text-left">
-              <div className="inline-flex items-center justify-center w-12 h-12 lg:w-14 lg:h-14 bg-white/20 backdrop-blur-sm rounded-xl mb-3 shadow-lg">
-                <option.icon className="w-7 h-7 lg:w-8 lg:h-8 text-white" />
+              <div className="inline-flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 bg-white/20 backdrop-blur-sm rounded-xl mb-2 shadow-lg">
+                <option.icon className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
               </div>
 
-              <h2 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-white mb-1.5 tracking-tight">
+              <h2 className="text-xl lg:text-2xl xl:text-3xl font-bold text-white mb-1 tracking-tight">
                 {option.title}
               </h2>
 
-              <p className="text-blue-100 text-sm lg:text-base font-medium mb-2">
+              <p className="text-blue-100 text-xs lg:text-sm font-medium mb-1">
                 {option.subtitle}
               </p>
 
-              <p className="text-blue-50/90 text-xs lg:text-sm mb-4 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+              <p className="text-blue-50/90 text-xs mb-3 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
                 {option.description}
               </p>
 
               {/* Primary CTA Button */}
               <button
-                className={`inline-flex items-center gap-2 px-5 py-2.5 bg-white text-blue-600 font-bold rounded-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 ${
+                className={`inline-flex items-center gap-2 px-4 py-2 bg-white text-blue-600 font-bold rounded-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 ${
                   isHovered ? 'translate-x-2' : ''
                 } ${isLoading_ ? 'cursor-wait' : ''}`}
                 disabled={isLoading_}
               >
-                <span className="text-sm lg:text-base">Start Now</span>
+                <span className="text-xs lg:text-sm">Start Now</span>
                 {isLoading_ ? (
                   <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
                 ) : (
@@ -188,8 +188,8 @@ const BepStartMenu = ({
 
             {/* Right Decorative Element */}
             <div className="hidden xl:flex relative">
-              <div className="w-28 h-28 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                <Layers className="w-14 h-14 text-white/30" strokeWidth={1} />
+              <div className="w-20 h-20 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                <Layers className="w-10 h-10 text-white/30" strokeWidth={1} />
               </div>
             </div>
           </div>
@@ -197,7 +197,7 @@ const BepStartMenu = ({
 
         {/* Animated Border on Hover */}
         {isHovered && (
-          <div className="absolute inset-0 border-4 border-white/30 rounded-3xl pointer-events-none" />
+          <div className="absolute inset-0 border-4 border-white/30 rounded-2xl pointer-events-none" />
         )}
       </div>
     );
@@ -230,13 +230,13 @@ const BepStartMenu = ({
           }
         }}
       >
-        <div className="p-4 lg:p-5">
+        <div className="p-3 lg:p-4">
           {/* Icon and Badge Row */}
-          <div className="flex items-start justify-between mb-3">
-            <div className={`p-2 lg:p-2.5 rounded-lg transition-all duration-300 ${
+          <div className="flex items-start justify-between mb-2">
+            <div className={`p-1.5 lg:p-2 rounded-lg transition-all duration-300 ${
               isDisabled ? 'bg-slate-100' : colors.iconBg
             }`}>
-              <option.icon className={`w-6 h-6 lg:w-7 lg:h-7 ${
+              <option.icon className={`w-5 h-5 lg:w-6 lg:h-6 ${
                 isDisabled ? 'text-slate-400' : colors.iconText
               }`} />
             </div>
@@ -248,21 +248,21 @@ const BepStartMenu = ({
           </div>
 
           {/* Title */}
-          <h3 className={`text-lg lg:text-xl font-bold mb-1 ${
+          <h3 className={`text-base lg:text-lg font-bold mb-0.5 ${
             isDisabled ? 'text-slate-600' : 'text-slate-900'
           }`}>
             {option.title}
           </h3>
 
           {/* Subtitle */}
-          <p className={`text-xs font-semibold mb-2 uppercase tracking-wider ${
+          <p className={`text-xs font-semibold mb-1 uppercase tracking-wider ${
             isDisabled ? 'text-slate-400' : colors.text
           }`}>
             {option.subtitle}
           </p>
 
           {/* Description */}
-          <p className={`text-xs lg:text-sm leading-relaxed mb-3 min-h-[32px] ${
+          <p className={`text-xs leading-relaxed mb-2 ${
             isDisabled ? 'text-slate-500' : 'text-slate-600'
           }`}>
             {option.description}
@@ -270,7 +270,7 @@ const BepStartMenu = ({
 
           {/* Auth Warning */}
           {option.requiresAuth && !user && (
-            <div className="mb-3 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="mb-2 p-1.5 bg-amber-50 border border-amber-200 rounded-lg">
               <p className="text-xs text-amber-800 font-medium">
                 Login required
               </p>
@@ -307,7 +307,7 @@ const BepStartMenu = ({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden flex items-center justify-center p-3 sm:p-4 lg:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden flex items-center justify-center p-2 sm:p-3 lg:p-4">
       {/* Architectural Background Pattern */}
       <div className="absolute inset-0 opacity-[0.03]">
         <div className="absolute inset-0" style={{
@@ -326,32 +326,32 @@ const BepStartMenu = ({
         }} />
       </div>
 
-      <div className="relative bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl w-full max-w-7xl p-5 sm:p-6 lg:p-8 border border-slate-200/50">
+      <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-7xl p-4 sm:p-5 lg:p-6 border border-slate-200/50">
         {/* Header Section */}
-        <div className="text-center mb-5 lg:mb-7">
-          <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-3 lg:mb-4 shadow-lg">
-            <Zap className="w-7 h-7 lg:w-8 lg:h-8 text-white" />
+        <div className="text-center mb-3 lg:mb-4">
+          <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-2 lg:mb-3 shadow-lg">
+            <Zap className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
           </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-1.5 lg:mb-2 tracking-tight">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 mb-1 tracking-tight">
             BEP Generator
           </h1>
-          <p className="text-sm lg:text-base text-slate-600 max-w-2xl mx-auto">
+          <p className="text-xs lg:text-sm text-slate-600 max-w-2xl mx-auto">
             Professional BIM Execution Plans in minutes
           </p>
         </div>
 
         {/* Hero Card - New BEP */}
-        <div className="mb-5 lg:mb-6">
+        <div className="mb-3 lg:mb-4">
           {renderHeroCard(heroOption)}
         </div>
 
         {/* Secondary Options Grid - 3 columns on large screens */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5 mb-5 lg:mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4 mb-3 lg:mb-4">
           {secondaryOptions.map(renderSecondaryCard)}
         </div>
 
         {/* Info Footer */}
-        <div className="relative bg-gradient-to-r from-slate-50/80 to-slate-100/80 backdrop-blur-sm border-2 border-slate-200/50 rounded-xl p-3 lg:p-4 text-center overflow-hidden">
+        <div className="relative bg-gradient-to-r from-slate-50/80 to-slate-100/80 backdrop-blur-sm border-2 border-slate-200/50 rounded-xl p-2 lg:p-3 text-center overflow-hidden">
           {/* Subtle pattern */}
           <div className="absolute inset-0 opacity-[0.02]" style={{
             backgroundImage: `
@@ -365,11 +365,11 @@ const BepStartMenu = ({
           }} />
 
           <div className="relative">
-            <h4 className="text-sm lg:text-base font-bold text-slate-900 mb-1.5 flex items-center justify-center gap-2">
-              <Sparkles className="w-4 h-4 text-blue-500" />
+            <h4 className="text-xs lg:text-sm font-bold text-slate-900 mb-1 flex items-center justify-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-blue-500" />
               What is a BEP?
             </h4>
-            <p className="text-xs lg:text-sm text-slate-600 leading-relaxed max-w-3xl mx-auto">
+            <p className="text-xs text-slate-600 leading-relaxed max-w-3xl mx-auto">
               BIM Execution Plans define information management throughout your project lifecycle.
               Choose <span className="font-semibold">Pre-Appointment</span> for early planning or <span className="font-semibold">Post-Appointment</span> for detailed delivery.
             </p>

@@ -28,6 +28,7 @@ const DynamicFormStepRHF = ({ stepIndex }) => {
     visibleSteps,
     getVisibleFieldsForStep,
     isEditMode,
+    exitEditMode,
     isLoading,
     error
   } = useFormBuilder();
@@ -99,9 +100,13 @@ const DynamicFormStepRHF = ({ stepIndex }) => {
           <h3 className="text-xl font-semibold">
             {currentStep.step_number}. {currentStep.title}
           </h3>
-          <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
-            Edit Mode
-          </span>
+          <button
+            onClick={exitEditMode}
+            className="px-3 py-1 bg-amber-100 text-amber-800 hover:bg-amber-200 rounded-full text-sm font-medium cursor-pointer transition-colors flex items-center gap-1"
+            title="Click to exit edit mode"
+          >
+            Edit Mode ✕
+          </button>
         </div>
         {currentStep.description && (
           <p className="text-gray-600">{currentStep.description}</p>

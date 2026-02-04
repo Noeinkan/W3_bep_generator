@@ -1,5 +1,8 @@
 # CLAUDE.md — BEP Generator
 
+## Project Overview
+BEP Generator — React 19 + Express + SQLite tool for building/exporting BEP documents.
+
 ## Workflow rules
 
 - **Describe approach first.** Before writing any code, outline the plan and wait for approval. If requirements are ambiguous, ask clarifying questions before touching a file.
@@ -7,6 +10,8 @@
 - **After writing code, flag risks.** List what could break and suggest tests to cover it.
 - **Bug workflow: test first.** When fixing a bug, start by writing (or identifying) a test that reproduces it, then fix until it passes.
 - **Learn from corrections.** Whenever a correction is made, add a new rule here so the same mistake doesn't repeat.
+- **Never add dependencies** without checking `package.json` first.
+- **After code changes,** run `npm test` before considering done.
 
 ## Project layout
 

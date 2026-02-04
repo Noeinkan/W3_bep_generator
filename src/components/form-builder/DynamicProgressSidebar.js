@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { CheckCircle, AlertCircle, Settings2 } from 'lucide-react';
+import { CheckCircle, AlertCircle, Settings2, Check } from 'lucide-react';
 import { useFormBuilder } from './FormBuilderContext';
 import * as LucideIcons from 'lucide-react';
 
@@ -60,13 +60,24 @@ const DynamicProgressSidebar = React.memo(({
     <div className="bg-white rounded-lg shadow-sm p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Progress Overview</h2>
-        <button
-          onClick={toggleEditMode}
-          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-          title="Edit form structure"
-        >
-          <Settings2 className="w-5 h-5" />
-        </button>
+{isEditMode ? (
+          <button
+            onClick={toggleEditMode}
+            className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-1.5 text-sm font-medium"
+            title="Exit edit mode"
+          >
+            <Check className="w-4 h-4" />
+            Done
+          </button>
+        ) : (
+          <button
+            onClick={toggleEditMode}
+            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            title="Edit form structure"
+          >
+            <Settings2 className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {isLoading ? (
