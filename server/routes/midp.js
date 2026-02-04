@@ -390,6 +390,25 @@ router.get('/:id/dashboard', async (req, res, next) => {
 });
 
 /**
+ * POST /api/midp/auto-generate
+ * Auto-generate MIDP from ALL TIDPs (no projectId filter)
+ */
+router.post('/auto-generate', async (req, res, next) => {
+  try {
+    const midpData = req.body;
+    const createdMidp = midpService.autoGenerateMIDPFromAll(midpData);
+
+    res.status(201).json({
+      success: true,
+      data: createdMidp,
+      message: `MIDP auto-generated from ${createdMidp.includedTIDPs.length} TIDPs`
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * POST /api/midp/auto-generate/:projectId
  * Auto-generate MIDP from all TIDPs in a project
  */

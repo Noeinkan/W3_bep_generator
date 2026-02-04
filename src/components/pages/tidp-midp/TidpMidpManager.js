@@ -169,12 +169,21 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
 
   const handleUpdateTidp = async (id, update) => {
     try {
+      setCreateLoading(true);
       await updateTidp(id, update);
       setToast({ open: true, message: 'TIDP updated', type: 'success' });
       setDetailsItem(null);
+      setShowTidpForm(false);
+      resetTidpForm();
+      // Reload TIDPs to reflect the update
+      await loadTidps();
+      // Navigate back to the TIDP list
+      try { navigate('/tidp-midp'); } catch (e) { /* noop */ }
     } catch (err) {
       console.error('Update TIDP failed', err);
       setToast({ open: true, message: err.message || 'Failed to update TIDP', type: 'error' });
+    } finally {
+      setCreateLoading(false);
     }
   };
 
@@ -337,18 +346,32 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
 
     if (path.startsWith('/tidp-editor')) {
       try { navigate('/tidp-midp'); } catch (e) { /* noop */ }
-      try { navigate('/tidp-midp'); } catch (e) { /* noop */ }
     }
   };
 
+  const isEditing = !!detailsItem?.data?.id;
+  const tidpId = detailsItem?.data?.id || null;
+
   if (showTidpForm) {
+    const handleSubmit = isEditing
+      ? () => handleUpdateTidp(tidpId, {
+          teamName: tidpForm.taskTeam,
+          discipline: tidpForm.discipline,
+          leader: tidpForm.teamLeader,
+          responsibilities: tidpForm.description,
+          containers: tidpForm.containers
+        })
+      : handleCreateTidp;
+
     return (
       <TIDPForm
         tidpForm={tidpForm}
         onTidpFormChange={setTidpForm}
-        onSubmit={handleCreateTidp}
+        onSubmit={handleSubmit}
         createLoading={createLoading}
         onCancel={handleCloseTidpForm}
+        isEditing={isEditing}
+        tidpId={tidpId}
       />
     );
   }

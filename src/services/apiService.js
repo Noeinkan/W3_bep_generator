@@ -230,6 +230,15 @@ class ApiService {
     }
   }
 
+  async autoGenerateMIDPAll(midpData = {}) {
+    try {
+      const response = await apiClient.post('/midp/auto-generate', midpData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to auto-generate MIDP from all TIDPs');
+    }
+  }
+
   async getMIDPEvolution(id) {
     try {
       const response = await apiClient.get(`/midp/${id}/evolution`);

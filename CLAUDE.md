@@ -33,3 +33,43 @@
 - Security middleware (Helmet, rate-limit) exists but some is commented out in dev — don't remove it.
 - CRA (react-scripts) constrains webpack config; don't try to eject or override without good reason.
 - The ML service is a separate Python process — changes there need a separate restart.
+
+## Token optimization
+
+- **Concise responses.** Skip verbose explanations unless requested. Get to the code.
+- **Target searches.** Use Grep/Glob with specific paths (`src/components/`, `server/routes/`) rather than scanning the whole repo.
+- **Known locations first.** Before exploring:
+  - Forms/schemas → `src/schemas/`
+  - API calls → `src/services/`
+  - Routes → `server/routes/`
+  - DB logic → `server/services/`
+- **Limit file reads.** Read only files directly relevant to the task. Don't read entire directories "for context."
+- **Reference, don't quote.** Point to `file:line` instead of pasting large code blocks back.
+- **Compact when needed.** Use /compact if session gets long; summarize key decisions and code changes only.
+
+## Quick reference
+
+| Task | Command |
+|------|---------|
+| Start all | `npm start` |
+| Tests | `npm test` |
+| Frontend only | `npm run start:client` |
+| Backend only | `npm run start:server` |
+
+## Common patterns
+
+- **New API endpoint:** Route in `server/routes/` → Service in `server/services/` → Frontend call in `src/services/apiService.js`
+- **New form:** Schema in `src/schemas/` → Component uses `useForm` with `zodResolver`
+- **New page:** Add to `src/components/pages/` → Register route in `App.js`
+
+## Large files (avoid reading)
+
+- `package-lock.json` — never read
+- `server/db/*.db` — binary, don't read
+- PDF/image assets — skip
+
+## Known gotchas
+
+- "Cannot read context" → Component is outside provider (see FormBuilderProvider scope)
+- CORS errors in dev → Check proxy config in `package.json`
+- ML service 500 → Restart Python process separately

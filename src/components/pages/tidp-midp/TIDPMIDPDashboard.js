@@ -193,21 +193,9 @@ const TIDPMIDPDashboard = () => {
   const autoGenerateMIDP = async () => {
     setLoading(true);
     try {
-      // Always fetch the latest TIDPs from the API before generating so we don't rely on stale/local state
-      const tidpResp = await ApiService.getAllTIDPs();
-      const currentTidps = tidpResp.data || [];
-
-      if (currentTidps.length === 0) {
-        setToast({ open: true, message: 'No TIDPs available to generate MIDP', type: 'info' });
-        return;
-      }
-
-      // Derive projectId from the fetched TIDPs
-      const projectId = currentTidps[0]?.projectId || 'imported-project';
-
-      await ApiService.autoGenerateMIDP(projectId, {
+      await ApiService.autoGenerateMIDPAll({
         projectName: `Auto-generated MIDP ${new Date().toLocaleDateString()}`,
-        description: `MIDP generated from ${currentTidps.length} TIDPs`
+        description: 'Master Information Delivery Plan compiled from all TIDPs'
       });
 
       setToast({ open: true, message: 'MIDP auto-generated successfully', type: 'success' });

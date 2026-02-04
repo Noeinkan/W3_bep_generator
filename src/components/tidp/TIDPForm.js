@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
 
-const TIDPForm = ({ tidpForm, onTidpFormChange, onSubmit, onCancel, createLoading = false }) => {
+const TIDPForm = ({ tidpForm, onTidpFormChange, onSubmit, onCancel, createLoading = false, isEditing = false, tidpId = null }) => {
   const addContainer = () => {
     const newContainer = {
       id: `IC-${Date.now()}`,
@@ -47,7 +47,7 @@ const TIDPForm = ({ tidpForm, onTidpFormChange, onSubmit, onCancel, createLoadin
     <div className="space-y-4">
       <div className="bg-white rounded-lg shadow px-4 py-3">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-900">Create New TIDP</h2>
+          <h2 className="text-xl font-bold text-gray-900">{isEditing ? 'Edit TIDP' : 'Create New TIDP'}</h2>
           <button
             type="button"
             onClick={onCancel}
@@ -368,11 +368,11 @@ const TIDPForm = ({ tidpForm, onTidpFormChange, onSubmit, onCancel, createLoadin
               type="submit"
               id="create-tidp-form"
               data-testid="create-tidp-form"
-              aria-label="Create TIDP (form submit)"
+              aria-label={isEditing ? "Update TIDP (form submit)" : "Create TIDP (form submit)"}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded text-sm disabled:opacity-60"
               disabled={createLoading}
             >
-              {createLoading ? 'Creating...' : 'Create TIDP'}
+              {createLoading ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? 'Update TIDP' : 'Create TIDP')}
             </button>
             <button
               type="button"
