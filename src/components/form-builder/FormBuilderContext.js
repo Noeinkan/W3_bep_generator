@@ -16,11 +16,12 @@ const FormBuilderContext = createContext(null);
  * FormBuilderProvider
  *
  * @param {Object} props
- * @param {string} props.projectId - Project ID (null for default template)
+ * @param {string} props.projectId - Project ID (null for default template, deprecated - use draftId)
+ * @param {string} props.draftId - Draft ID for draft-specific structure
  * @param {string} props.bepType - BEP type ('pre-appointment' or 'post-appointment')
  * @param {React.ReactNode} props.children
  */
-export function FormBuilderProvider({ projectId, bepType, children }) {
+export function FormBuilderProvider({ projectId, draftId, bepType, children }) {
   // Edit mode state
   const [isEditMode, setIsEditMode] = useState(false);
 
@@ -49,17 +50,34 @@ export function FormBuilderProvider({ projectId, bepType, children }) {
     // Template operations
     cloneTemplate,
     resetToDefault
-  } = useBepStructure(projectId, bepType);
+  } = useBepStructure({ projectId, draftId, bepType });
 
-  // Toggle edit mode
-  const toggleEditMode = useCallback(() => {
+  // Toggle edit mode - clone template first if needed
+  const toggleEditMode = useCallback(async () => {
+    const enteringEditMode = !isEditMode;
+    if (enteringEditMode && !hasCustomStructure && (draftId || projectId)) {
+      try {
+        await cloneTemplate();
+      } catch (err) {
+        console.error('Failed to clone template for editing:', err);
+        return; // Don't enter edit mode if clone fails
+      }
+    }
     setIsEditMode(prev => !prev);
-  }, []);
+  }, [isEditMode, hasCustomStructure, draftId, projectId, cloneTemplate]);
 
-  // Enter edit mode
-  const enterEditMode = useCallback(() => {
+  // Enter edit mode - clone template first if needed
+  const enterEditMode = useCallback(async () => {
+    if (!hasCustomStructure && (draftId || projectId)) {
+      try {
+        await cloneTemplate();
+      } catch (err) {
+        console.error('Failed to clone template for editing:', err);
+        return;
+      }
+    }
     setIsEditMode(true);
-  }, []);
+  }, [hasCustomStructure, draftId, projectId, cloneTemplate]);
 
   // Exit edit mode
   const exitEditMode = useCallback(() => {
@@ -99,6 +117,7 @@ export function FormBuilderProvider({ projectId, bepType, children }) {
     error,
     hasCustomStructure,
     projectId,
+    draftId,
     bepType,
 
     // Data
@@ -145,6 +164,7 @@ export function FormBuilderProvider({ projectId, bepType, children }) {
     error,
     hasCustomStructure,
     projectId,
+    draftId,
     bepType,
     steps,
     visibleSteps,

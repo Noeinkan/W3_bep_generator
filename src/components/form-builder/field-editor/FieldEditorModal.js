@@ -32,7 +32,6 @@ export default function FieldEditorModal({
     field_id: '',
     label: '',
     type: 'text',
-    number: '',
     placeholder: '',
     is_required: false,
     config: {}
@@ -54,7 +53,6 @@ export default function FieldEditorModal({
           field_id: field.field_id || '',
           label: field.label || '',
           type: field.type || 'text',
-          number: field.number || '',
           placeholder: field.placeholder || '',
           is_required: field.is_required || false,
           config: field.config || {}
@@ -64,7 +62,6 @@ export default function FieldEditorModal({
           field_id: '',
           label: '',
           type: 'text',
-          number: '',
           placeholder: '',
           is_required: false,
           config: {}
@@ -223,21 +220,6 @@ export default function FieldEditorModal({
             {errors.label && (
               <p className="text-red-500 text-sm mt-1">{errors.label}</p>
             )}
-          </div>
-
-          {/* Field Number */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Field Number
-            </label>
-            <input
-              type="text"
-              name="number"
-              value={formData.number}
-              onChange={handleChange}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="e.g., 1.1, 2.3"
-            />
           </div>
 
           {/* Required Toggle */}

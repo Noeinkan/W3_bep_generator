@@ -29,6 +29,7 @@ import FieldCard from './FieldCard';
  *
  * @param {Object} props
  * @param {Array} props.fields - Array of field objects
+ * @param {string|number} props.stepNumber - Step number for dynamic field numbering
  * @param {boolean} props.isEditMode - Whether edit mode is active
  * @param {Function} props.onEditField - Called when edit is clicked
  * @param {Function} props.onDeleteField - Called when delete is clicked
@@ -38,6 +39,7 @@ import FieldCard from './FieldCard';
  */
 export default function FieldListDraggable({
   fields,
+  stepNumber,
   isEditMode = false,
   onEditField,
   onDeleteField,
@@ -151,10 +153,12 @@ export default function FieldListDraggable({
         strategy={verticalListSortingStrategy}
       >
         <div className="space-y-2">
-          {fields.map((field) => (
+          {fields.map((field, index) => (
             <FieldCard
               key={field.id}
               field={field}
+              stepNumber={stepNumber}
+              fieldIndex={index}
               isEditMode={isEditMode}
               onEdit={onEditField}
               onDelete={onDeleteField}
@@ -177,6 +181,8 @@ export default function FieldListDraggable({
           >
             <FieldCard
               field={activeField}
+              stepNumber={stepNumber}
+              fieldIndex={fields.findIndex(f => f.id === activeId)}
               isEditMode={true}
               isDragOverlay={true}
             />

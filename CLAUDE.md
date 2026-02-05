@@ -13,7 +13,6 @@ This is a Windows development environment. For bash commands, use PowerShell-com
 - **After writing code, flag risks.** List what could break and suggest tests to cover it.
 - **Bug workflow: test first.** When fixing a bug, start by writing (or identifying) a test that reproduces it, then fix until it passes.
 - **Learn from corrections.** Whenever a correction is made, add a new rule here so the same mistake doesn't repeat.
-- **Never add dependencies** without checking `package.json` first.
 - **After code changes,** run `npm test` before considering done.
 - **Stay focused.** Do not perform additional unrequested work like installing packages, creating extra documentation, or expanding scope without explicit user approval.
 
@@ -48,16 +47,12 @@ This is a Windows development environment. For bash commands, use PowerShell-com
 
 ## Token optimization
 
-- **Concise responses.** Skip verbose explanations unless requested. Get to the code.
 - **Target searches.** Use Grep/Glob with specific paths (`src/components/`, `server/routes/`) rather than scanning the whole repo.
 - **Known locations first.** Before exploring:
   - Forms/schemas → `src/schemas/`
   - API calls → `src/services/`
   - Routes → `server/routes/`
   - DB logic → `server/services/`
-- **Limit file reads.** Read only files directly relevant to the task. Don't read entire directories "for context."
-- **Reference, don't quote.** Point to `file:line` instead of pasting large code blocks back.
-- **Compact when needed.** Use /compact if session gets long; summarize key decisions and code changes only.
 
 ## Quick reference
 
@@ -73,12 +68,6 @@ This is a Windows development environment. For bash commands, use PowerShell-com
 - **New API endpoint:** Route in `server/routes/` → Service in `server/services/` → Frontend call in `src/services/apiService.js`
 - **New form:** Schema in `src/schemas/` → Component uses `useForm` with `zodResolver`
 - **New page:** Add to `src/components/pages/` → Register route in `App.js`
-
-## Large files (avoid reading)
-
-- `package-lock.json` — never read
-- `server/db/*.db` — binary, don't read
-- PDF/image assets — skip
 
 ## Known gotchas
 

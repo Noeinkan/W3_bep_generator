@@ -10,6 +10,7 @@ import { Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { useFormBuilder } from '../FormBuilderContext';
 import FieldListDraggable from './FieldListDraggable';
 import FieldEditorModal from './FieldEditorModal';
+import { getFieldNumber } from '../utils/fieldNumberUtils';
 
 /**
  * FieldStructureEditor
@@ -17,10 +18,12 @@ import FieldEditorModal from './FieldEditorModal';
  * @param {Object} props
  * @param {string} props.stepId - Current step ID
  * @param {string} props.stepTitle - Current step title
+ * @param {string|number} props.stepNumber - Step number for dynamic field numbering
  */
 export default function FieldStructureEditor({
   stepId,
-  stepTitle
+  stepTitle,
+  stepNumber
 }) {
   const {
     isEditMode,
@@ -30,8 +33,17 @@ export default function FieldStructureEditor({
     updateField,
     deleteField,
     reorderFields,
-    toggleFieldVisibility
+    toggleFieldVisibility,
+    hasCustomStructure,
+    cloneTemplate
   } = useFormBuilder();
+
+  // Clone template to draft before any structure modification
+  const ensureCustomStructure = useCallback(async () => {
+    if (!hasCustomStructure) {
+      await cloneTemplate();
+    }
+  }, [hasCustomStructure, cloneTemplate]);
 
   // Get fields for current step
   const visibleFields = useMemo(
@@ -112,6 +124,7 @@ export default function FieldStructureEditor({
       {/* Field List */}
       <FieldListDraggable
         fields={visibleFields}
+        stepNumber={stepNumber}
         isEditMode={isEditMode}
         onEditField={handleEditField}
         onDeleteField={handleDeleteField}
@@ -137,14 +150,16 @@ export default function FieldStructureEditor({
 
           {showHiddenFields && (
             <div className="mt-2 space-y-2">
-              {hiddenFields.map((field) => (
+              {hiddenFields.map((field, index) => (
                 <div
                   key={field.id}
                   className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-200"
                 >
                   <div className="flex items-center space-x-2">
-                    {field.number && (
-                      <span className="text-xs font-medium text-gray-400">{field.number}</span>
+                    {stepNumber && (
+                      <span className="text-xs font-medium text-gray-400">
+                        {getFieldNumber(stepNumber, visibleFields.length + index)}
+                      </span>
                     )}
                     <span className="text-sm text-gray-500">{field.label}</span>
                     <span className="text-xs text-gray-400">({field.type})</span>

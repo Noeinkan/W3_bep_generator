@@ -507,6 +507,91 @@ router.get('/field-types', async (req, res, next) => {
   }
 });
 
+// ============================================
+// DRAFT-LEVEL ENDPOINTS
+// ============================================
+
+/**
+ * GET /api/bep-structure/draft/:draftId
+ * Get structure for a draft (custom if exists, otherwise default)
+ */
+router.get('/draft/:draftId', async (req, res, next) => {
+  try {
+    const { draftId } = req.params;
+    const { bepType } = req.query;
+
+    const structure = bepStructureService.getStructureForDraft(draftId, bepType || null);
+    const hasCustom = bepStructureService.hasCustomStructureForDraft(draftId);
+
+    res.json({
+      success: true,
+      data: structure,
+      hasCustomStructure: hasCustom,
+      count: structure.length
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/bep-structure/clone-to-draft
+ * Clone the default template to a draft
+ */
+router.post('/clone-to-draft', async (req, res, next) => {
+  try {
+    const { draftId } = req.body;
+
+    if (!draftId) {
+      return res.status(400).json({
+        success: false,
+        error: 'draftId is required'
+      });
+    }
+
+    // Check if draft already has custom structure
+    if (bepStructureService.hasCustomStructureForDraft(draftId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Draft already has custom structure. Use reset endpoint to start fresh.'
+      });
+    }
+
+    const structure = bepStructureService.cloneTemplateToDraft(draftId);
+
+    res.status(201).json({
+      success: true,
+      data: structure,
+      message: 'Template cloned to draft successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/bep-structure/reset-draft/:draftId
+ * Reset a draft to the default template
+ */
+router.post('/reset-draft/:draftId', async (req, res, next) => {
+  try {
+    const { draftId } = req.params;
+    const structure = bepStructureService.resetDraftToDefault(draftId);
+
+    res.json({
+      success: true,
+      data: structure,
+      message: 'Draft reset to default template'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ============================================
+// ADMIN ENDPOINTS
+// ============================================
+
 /**
  * POST /api/bep-structure/seed-defaults
  * Seed the default template from bepConfig.js (admin endpoint)

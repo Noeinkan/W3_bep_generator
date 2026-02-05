@@ -10,6 +10,7 @@ import React, { Suspense, useMemo } from 'react';
 import { getFieldType } from './FieldTypeRegistry';
 import FieldHeader from '../forms/base/FieldHeader';
 import CONFIG from '../../config/bepConfig';
+import { getFieldNumber } from './utils/fieldNumberUtils';
 
 // Loading spinner for lazy-loaded components
 const LoadingSpinner = () => (
@@ -28,24 +29,32 @@ const LoadingSpinner = () => (
  * @param {Function} props.onChange - Change handler (fieldName, newValue)
  * @param {string} props.error - Error message
  * @param {Object} props.formData - Complete form data (for dependent fields)
+ * @param {number} props.stepNumber - Current step number (for dynamic field numbering)
+ * @param {number} props.fieldIndex - Field index within the step (for dynamic field numbering)
  */
 const DynamicFieldRenderer = React.memo(({
   fieldConfig,
   value,
   onChange,
   error,
-  formData = {}
+  formData = {},
+  stepNumber,
+  fieldIndex
 }) => {
   // Extract field configuration
   const {
     field_id: name,
     label,
-    number,
     type,
     is_required: required,
     placeholder,
     config
   } = fieldConfig;
+
+  // Calculate dynamic field number
+  const number = (stepNumber !== undefined && fieldIndex !== undefined)
+    ? getFieldNumber(stepNumber, fieldIndex)
+    : null;
 
   // Parse config if it's a string
   const parsedConfig = useMemo(() => {

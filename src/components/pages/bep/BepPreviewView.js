@@ -11,7 +11,6 @@ import { generateDocxSimple } from '../../../services/docxGenerator.simple';
 import { captureCustomComponentScreenshots } from '../../../services/componentScreenshotCapture';
 import HiddenComponentsRenderer from '../../export/HiddenComponentsRenderer';
 import toast from 'react-hot-toast';
-import '../../../utils/debugScreenshots'; // Load debug tools
 
 /**
  * View component for BEP preview and export

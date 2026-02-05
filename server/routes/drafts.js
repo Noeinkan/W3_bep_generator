@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/database');
 const { cuid } = require('@paralleldrive/cuid2');
+const bepStructureService = require('../services/bepStructureService');
 
 /**
  * GET /api/drafts
@@ -120,6 +121,14 @@ router.post('/', async (req, res) => {
     `);
 
     stmt.run(id, userId, projectId || null, title, type, JSON.stringify(data), now, now);
+
+    // Auto-clone BEP structure template to this draft
+    try {
+      bepStructureService.cloneTemplateToDraft(id);
+    } catch (structureError) {
+      console.warn('Failed to clone BEP structure to draft:', structureError.message);
+      // Don't fail draft creation if structure cloning fails
+    }
 
     const draft = db.prepare('SELECT * FROM drafts WHERE id = ?').get(id);
 

@@ -313,15 +313,14 @@ const EirStepWrapper = ({ children }) => {
  * Wraps the content with FormBuilderProvider and EirProvider for dynamic form building
  */
 const BepFormView = () => {
-  const { bepType } = useBepForm();
-  const { currentDraft } = useBepForm();
+  const { bepType, currentDraft } = useBepForm();
 
-  // Get project ID from current draft if available
-  const projectId = currentDraft?.id || null;
+  // Use draftId for draft-level structure isolation
+  const draftId = currentDraft?.id || null;
 
   return (
     <EirProvider>
-      <FormBuilderProvider projectId={projectId} bepType={bepType}>
+      <FormBuilderProvider draftId={draftId} bepType={bepType}>
         <EirStepWrapper>
           <BepFormViewContent />
         </EirStepWrapper>

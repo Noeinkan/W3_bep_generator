@@ -5,7 +5,7 @@ import { useTidpData } from '../../../hooks/useTidpData';
 import { useMidpData } from '../../../hooks/useMidpData';
 import { useExport } from '../../../hooks/useExport';
 import { getDefaultContainer } from '../../../utils/csvHelpers';
-import Toast from '../../common/Toast';
+import toast, { Toaster } from 'react-hot-toast';
 import TIDPImportDialog from '../../tidp/TIDPImportDialog';
 import MIDPEvolutionDashboard from '../../midp/MIDPEvolutionDashboard';
 import TIDPList from '../../tidp/TIDPList';
@@ -24,7 +24,19 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
   const [showEvolutionDashboard, setShowEvolutionDashboard] = useState(null);
   const [detailsItem, setDetailsItem] = useState(null);
   const [detailsForm, setDetailsForm] = useState({ taskTeam: '', description: '', containers: [] });
-  const [toast, setToast] = useState({ open: false, message: '', type: 'info' });
+
+  // Helper to convert setToast-style calls to react-hot-toast for child components
+  const showToast = (toastData) => {
+    if (typeof toastData === 'string') {
+      toast(toastData);
+    } else if (toastData.type === 'success') {
+      toast.success(toastData.message);
+    } else if (toastData.type === 'error') {
+      toast.error(toastData.message);
+    } else {
+      toast(toastData.message);
+    }
+  };
 
   // Custom hooks
   const { tidps, loading: tidpLoading, loadTidps, createTidp, updateTidp, deleteTidp, bulkUpdateTidps } = useTidpData();
@@ -100,11 +112,7 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
         }
       } catch (error) {
         console.error('Failed to load initial data:', error);
-        setToast({
-          open: true,
-          message: 'Failed to load data. Please ensure the backend server is running.',
-          type: 'error'
-        });
+        toast.error('Failed to load data. Please ensure the backend server is running.');
       }
     };
     loadData();
@@ -114,15 +122,15 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
   const handleCreateTidp = async () => {
     console.log('handleCreateTidp invoked', tidpForm);
     if (!tidpForm.taskTeam || tidpForm.taskTeam.trim().length < 2) {
-      setToast({ open: true, message: 'Task team is required', type: 'error' });
+      toast.error('Task team is required');
       return;
     }
     if (!tidpForm.discipline) {
-      setToast({ open: true, message: 'Discipline is required', type: 'error' });
+      toast.error('Discipline is required');
       return;
     }
     if (!tidpForm.teamLeader || tidpForm.teamLeader.trim().length < 2) {
-      setToast({ open: true, message: 'Team leader is required', type: 'error' });
+      toast.error('Team leader is required');
       return;
     }
 
@@ -130,7 +138,7 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
       setCreateLoading(true);
       const created = await createTidp(tidpForm);
       console.log('createTidp result', created);
-      setToast({ open: true, message: 'TIDP created', type: 'success' });
+      toast.success('TIDP created');
       setShowTidpForm(false);
       resetTidpForm();
 
@@ -151,16 +159,14 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
           description: t.description || '',
           containers: t.containers || []
         });
-        // Update URL to include id and a readable slug from the TIDP name
+        // Update URL to include id
         try {
-          const slugify = require('../../../utils/slugify').default || require('../../../utils/slugify');
-          const slug = slugify(t.taskTeam || t.name || t.title || 'tidp');
-          navigate(`/tidp-editor/${t.id}${slug ? '--' + slug : ''}`);
+          navigate(`/tidp-editor/${t.id}`);
         } catch (e) { /* noop */ }
       }
     } catch (err) {
       console.error('Create TIDP failed', err);
-      setToast({ open: true, message: err.message || 'Failed to create TIDP', type: 'error' });
+      toast.error(err.message || 'Failed to create TIDP');
     }
     finally {
       setCreateLoading(false);
@@ -171,7 +177,7 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
     try {
       setCreateLoading(true);
       await updateTidp(id, update);
-      setToast({ open: true, message: 'TIDP updated', type: 'success' });
+      toast.success('TIDP updated');
       setDetailsItem(null);
       setShowTidpForm(false);
       resetTidpForm();
@@ -181,7 +187,7 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
       try { navigate('/tidp-midp'); } catch (e) { /* noop */ }
     } catch (err) {
       console.error('Update TIDP failed', err);
-      setToast({ open: true, message: err.message || 'Failed to update TIDP', type: 'error' });
+      toast.error(err.message || 'Failed to update TIDP');
     } finally {
       setCreateLoading(false);
     }
@@ -191,18 +197,18 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
     if (!window.confirm('Delete this TIDP?')) return;
     try {
       await deleteTidp(id);
-      setToast({ open: true, message: 'TIDP deleted', type: 'success' });
+      toast.success('TIDP deleted');
       setDetailsItem(null);
     } catch (err) {
       console.error('Delete TIDP failed', err);
-      setToast({ open: true, message: err.message || 'Failed to delete TIDP', type: 'error' });
+      toast.error(err.message || 'Failed to delete TIDP');
     }
   };
 
   // MIDP handlers
   const handleCreateMidp = async () => {
     if (!midpForm.projectName || midpForm.projectName.trim().length < 2) {
-      setToast({ open: true, message: 'Project name is required', type: 'error' });
+      toast.error('Project name is required');
       return;
     }
     try {
@@ -210,21 +216,17 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
       const message = result.autoGenerated
         ? 'MIDP auto-generated from existing TIDPs'
         : 'MIDP created (add TIDPs to populate)';
-      setToast({ open: true, message, type: 'success' });
+      toast.success(message);
       setShowMidpForm(false);
       setMidpForm({ projectName: '', description: '' });
     } catch (err) {
       console.error('Create MIDP failed', err);
-      setToast({ open: true, message: err.message || 'Failed to create MIDP', type: 'error' });
+      toast.error(err.message || 'Failed to create MIDP');
     }
   };
 
   const handleImportComplete = async (importResults) => {
-    setToast({
-      open: true,
-      message: `Imported ${importResults.successful.length} TIDPs successfully`,
-      type: 'success'
-    });
+    toast.success(`Imported ${importResults.successful.length} TIDPs successfully`);
     setShowImportDialog(false);
     await Promise.all([loadTidps(), loadMidps()]);
   };
@@ -248,9 +250,7 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
       });
       setShowTidpForm(true);
       try {
-  const slugify = require('../../../utils/slugify').default || require('../../../utils/slugify');
-  const slug = slugify(tidp.taskTeam || tidp.name || tidp.title || tidp.taskTeam);
-  navigate(`/tidp-editor/${tidp.id}${slug ? '--' + slug : ''}`);
+        navigate(`/tidp-editor/${tidp.id}`);
       } catch (e) { /* noop */ }
     } else {
       // New TIDP
@@ -264,36 +264,36 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
   const handleExportTidpPdf = async (id) => {
     try {
       await exportTidpPdf(id);
-      setToast({ open: true, message: 'TIDP PDF export downloaded', type: 'success' });
+      toast.success('TIDP PDF export downloaded');
     } catch (err) {
-      setToast({ open: true, message: 'Failed to export TIDP to PDF: ' + (err.message || err), type: 'error' });
+      toast.error('Failed to export TIDP to PDF: ' + (err.message || err));
     }
   };
 
   const handleExportTidpExcel = async (id) => {
     try {
       await exportTidpExcel(id);
-      setToast({ open: true, message: 'TIDP Excel export downloaded', type: 'success' });
+      toast.success('TIDP Excel export downloaded');
     } catch (err) {
-      setToast({ open: true, message: 'Failed to export TIDP to Excel: ' + (err.message || err), type: 'error' });
+      toast.error('Failed to export TIDP to Excel: ' + (err.message || err));
     }
   };
 
   const handleExportMidpPdf = async (id) => {
     try {
       await exportMidpPdf(id);
-      setToast({ open: true, message: 'MIDP PDF export downloaded', type: 'success' });
+      toast.success('MIDP PDF export downloaded');
     } catch (err) {
-      setToast({ open: true, message: 'Failed to export MIDP to PDF: ' + (err.message || err), type: 'error' });
+      toast.error('Failed to export MIDP to PDF: ' + (err.message || err));
     }
   };
 
   const handleExportMidpExcel = async (id) => {
     try {
       await exportMidpExcel(id);
-      setToast({ open: true, message: 'MIDP Excel export downloaded', type: 'success' });
+      toast.success('MIDP Excel export downloaded');
     } catch (err) {
-      setToast({ open: true, message: 'Failed to export MIDP to Excel: ' + (err.message || err), type: 'error' });
+      toast.error('Failed to export MIDP to Excel: ' + (err.message || err));
     }
   };
 
@@ -301,12 +301,12 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
     try {
       const result = await exportAllTidpPdfs(tidps, 3);
       if (result && result.errors && result.errors.length > 0) {
-        setToast({ open: true, message: `Completed with ${result.errors.length} failures`, type: 'error' });
+        toast.error(`Completed with ${result.errors.length} failures`);
       } else {
-        setToast({ open: true, message: `All TIDP exports completed (${tidps.length})`, type: 'success' });
+        toast.success(`All TIDP exports completed (${tidps.length})`);
       }
     } catch (err) {
-      setToast({ open: true, message: 'Some TIDP exports failed', type: 'error' });
+      toast.error('Some TIDP exports failed');
     }
   };
 
@@ -486,7 +486,7 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
                   onShowTidpForm={() => openTidpEditor(null)}
                   onShowMidpForm={() => setShowMidpForm(true)}
                   onImportCsv={handleImportCsv}
-                  onToast={setToast}
+                  onToast={showToast}
                 />
               )}
               {activeTab === 'tidps' && (
@@ -507,14 +507,14 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
                   bulkExportRunning={bulkExportRunning}
                   bulkProgress={bulkProgress}
                   midps={midps}
-                  onToast={setToast}
+                  onToast={showToast}
                   onBulkUpdate={async (updates) => {
                     try {
                       await bulkUpdateTidps(updates);
-                      setToast({ open: true, message: `Bulk update applied to ${updates.length} items`, type: 'success' });
+                      toast.success(`Bulk update applied to ${updates.length} items`);
                     } catch (err) {
                       console.error('Bulk update failed', err);
-                      setToast({ open: true, message: 'Bulk update failed: ' + (err.message || err), type: 'error' });
+                      toast.error('Bulk update failed: ' + (err.message || err));
                     }
                   }}
                 />
@@ -576,12 +576,7 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
       </div>
 
       {/* Toast Notification */}
-      <Toast
-        open={toast.open}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast((t) => ({ ...t, open: false }))}
-      />
+      <Toaster position="top-right" />
 
       {/* Import Dialog */}
       <TIDPImportDialog

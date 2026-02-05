@@ -142,9 +142,13 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_drafts_updated_at ON drafts(updated_at);
 
   -- BEP Structure: Step configurations (H1 level)
+  -- draft_id: Links to a specific draft for draft-level isolation
+  -- project_id: Kept for backward compatibility (deprecated, use draft_id)
+  -- NULL draft_id AND NULL project_id = default template
   CREATE TABLE IF NOT EXISTS bep_step_configs (
     id TEXT PRIMARY KEY,
     project_id TEXT,
+    draft_id TEXT,
     step_number TEXT NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
@@ -155,7 +159,8 @@ db.exec(`
     bep_type TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
-    is_deleted INTEGER DEFAULT 0
+    is_deleted INTEGER DEFAULT 0,
+    FOREIGN KEY(draft_id) REFERENCES drafts(id) ON DELETE CASCADE
   );
 
   CREATE INDEX IF NOT EXISTS idx_step_configs_project ON bep_step_configs(project_id);
@@ -163,9 +168,11 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_step_configs_deleted ON bep_step_configs(is_deleted);
 
   -- BEP Structure: Field configurations (H2 level)
+  -- draft_id: Links to a specific draft for draft-level isolation
   CREATE TABLE IF NOT EXISTS bep_field_configs (
     id TEXT PRIMARY KEY,
     project_id TEXT,
+    draft_id TEXT,
     step_id TEXT NOT NULL,
     field_id TEXT NOT NULL,
     label TEXT NOT NULL,
@@ -182,7 +189,8 @@ db.exec(`
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     is_deleted INTEGER DEFAULT 0,
-    FOREIGN KEY(step_id) REFERENCES bep_step_configs(id) ON DELETE CASCADE
+    FOREIGN KEY(step_id) REFERENCES bep_step_configs(id) ON DELETE CASCADE,
+    FOREIGN KEY(draft_id) REFERENCES drafts(id) ON DELETE CASCADE
   );
 
   CREATE INDEX IF NOT EXISTS idx_field_configs_step ON bep_field_configs(step_id, order_index);
@@ -214,6 +222,24 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_documents_user_id ON client_documents(user_id);
   CREATE INDEX IF NOT EXISTS idx_documents_status ON client_documents(status);
 `);
+
+// Migration: Add draft_id columns if they don't exist (for existing databases)
+const stepColumns = db.prepare("PRAGMA table_info(bep_step_configs)").all();
+const stepHasDraftId = stepColumns.some(col => col.name === 'draft_id');
+
+const fieldColumns = db.prepare("PRAGMA table_info(bep_field_configs)").all();
+const fieldHasDraftId = fieldColumns.some(col => col.name === 'draft_id');
+
+if (!stepHasDraftId) {
+  db.exec('ALTER TABLE bep_step_configs ADD COLUMN draft_id TEXT');
+}
+if (!fieldHasDraftId) {
+  db.exec('ALTER TABLE bep_field_configs ADD COLUMN draft_id TEXT');
+}
+
+// Create indexes for draft_id (safe to run even if they exist)
+db.exec('CREATE INDEX IF NOT EXISTS idx_step_configs_draft ON bep_step_configs(draft_id)');
+db.exec('CREATE INDEX IF NOT EXISTS idx_field_configs_draft ON bep_field_configs(draft_id)');
 
 console.log('Database initialized at:', dbPath);
 

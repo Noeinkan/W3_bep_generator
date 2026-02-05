@@ -86,6 +86,7 @@ class BepStructureService {
     const step = {
       id: uuidv4(),
       project_id: stepData.project_id || null,
+      draft_id: stepData.draft_id || null,
       step_number: stepData.step_number,
       title: stepData.title,
       description: stepData.description || null,
@@ -101,13 +102,14 @@ class BepStructureService {
 
     const stmt = db.prepare(`
       INSERT INTO bep_step_configs
-      (id, project_id, step_number, title, description, category, order_index, is_visible, icon, bep_type, created_at, updated_at, is_deleted)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, project_id, draft_id, step_number, title, description, category, order_index, is_visible, icon, bep_type, created_at, updated_at, is_deleted)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
       step.id,
       step.project_id,
+      step.draft_id,
       step.step_number,
       step.title,
       step.description,
@@ -310,6 +312,7 @@ class BepStructureService {
     const field = {
       id: uuidv4(),
       project_id: fieldData.project_id || null,
+      draft_id: fieldData.draft_id || null,
       step_id: fieldData.step_id,
       field_id: fieldData.field_id,
       label: fieldData.label,
@@ -330,13 +333,14 @@ class BepStructureService {
 
     const stmt = db.prepare(`
       INSERT INTO bep_field_configs
-      (id, project_id, step_id, field_id, label, type, number, order_index, is_visible, is_required, placeholder, help_text, config, default_value, bep_type, created_at, updated_at, is_deleted)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, project_id, draft_id, step_id, field_id, label, type, number, order_index, is_visible, is_required, placeholder, help_text, config, default_value, bep_type, created_at, updated_at, is_deleted)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
       field.id,
       field.project_id,
+      field.draft_id,
       field.step_id,
       field.field_id,
       field.label,
@@ -560,6 +564,119 @@ class BepStructureService {
       }));
     }
     return this.getDefaultTemplate(bepType);
+  }
+
+  // ============================================
+  // DRAFT-LEVEL OPERATIONS
+  // ============================================
+
+  /**
+   * Get all steps for a draft
+   * @param {string} draftId - Draft ID
+   * @param {string|null} bepType - Filter by BEP type
+   * @returns {Array} List of steps ordered by order_index
+   */
+  getStepsForDraft(draftId, bepType = null) {
+    let query = `
+      SELECT * FROM bep_step_configs
+      WHERE is_deleted = 0 AND draft_id = ?
+    `;
+    const params = [draftId];
+
+    if (bepType) {
+      query += ` AND (bep_type = ? OR bep_type = 'both')`;
+      params.push(bepType);
+    }
+
+    query += ` ORDER BY order_index ASC`;
+
+    const stmt = db.prepare(query);
+    return stmt.all(...params);
+  }
+
+  /**
+   * Check if a draft has custom structure
+   * @param {string} draftId - Draft ID
+   * @returns {boolean} True if draft has custom structure
+   */
+  hasCustomStructureForDraft(draftId) {
+    const stmt = db.prepare(`
+      SELECT COUNT(*) as count FROM bep_step_configs WHERE draft_id = ? AND is_deleted = 0
+    `);
+    const result = stmt.get(draftId);
+    return result.count > 0;
+  }
+
+  /**
+   * Get structure for a draft (uses draft-specific if exists, otherwise default)
+   * @param {string} draftId - Draft ID
+   * @param {string|null} bepType - Filter by BEP type
+   * @returns {Array} Steps with nested fields
+   */
+  getStructureForDraft(draftId, bepType = null) {
+    if (this.hasCustomStructureForDraft(draftId)) {
+      const steps = this.getStepsForDraft(draftId, bepType);
+      return steps.map(step => ({
+        ...step,
+        fields: this.getFieldsForStep(step.id, bepType)
+      }));
+    }
+    return this.getDefaultTemplate(bepType);
+  }
+
+  /**
+   * Clone the default template to a draft
+   * @param {string} draftId - Draft ID to clone to
+   * @returns {Array} Cloned structure (steps with fields)
+   */
+  cloneTemplateToDraft(draftId) {
+    const template = this.getDefaultTemplate();
+    const stepIdMap = {}; // Maps old step IDs to new step IDs
+
+    const transaction = db.transaction(() => {
+      // Clone steps
+      template.forEach(step => {
+        const newStep = this.createStep({
+          ...step,
+          project_id: null,
+          draft_id: draftId
+        });
+        stepIdMap[step.id] = newStep.id;
+
+        // Clone fields for this step
+        step.fields.forEach(field => {
+          this.createField({
+            ...field,
+            project_id: null,
+            draft_id: draftId,
+            step_id: newStep.id,
+            config: field.config // Already parsed
+          });
+        });
+      });
+    });
+
+    transaction();
+
+    return this.getStructureForDraft(draftId);
+  }
+
+  /**
+   * Reset a draft to the default template (delete custom and re-clone)
+   * @param {string} draftId - Draft ID to reset
+   * @returns {Array} New structure
+   */
+  resetDraftToDefault(draftId) {
+    const transaction = db.transaction(() => {
+      // Hard delete all draft-specific steps and fields
+      db.prepare(`DELETE FROM bep_field_configs WHERE draft_id = ?`).run(draftId);
+      db.prepare(`DELETE FROM bep_step_configs WHERE draft_id = ?`).run(draftId);
+    });
+
+    transaction();
+
+    // Clone fresh template
+    return this.cloneTemplateToDraft(draftId);
   }
 
   // ============================================

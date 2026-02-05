@@ -11,7 +11,7 @@ import {
   Plus
 } from 'lucide-react';
 import ApiService from '../../../services/apiService';
-import Toast from '../../common/Toast';
+import toast, { Toaster } from 'react-hot-toast';
 
 // Sub-components
 import StatisticsCards from './dashboard/StatisticsCards';
@@ -40,9 +40,6 @@ const IDRMDashboard = () => {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-
-  // Toast state
-  const [toast, setToast] = useState({ open: false, message: '', type: 'info' });
 
   // Statistics
   const [stats, setStats] = useState({
@@ -103,7 +100,7 @@ const IDRMDashboard = () => {
     } catch (error) {
       if (mountedRef.current) {
         console.error('Failed to load IDRM data:', error);
-        setToast({ open: true, message: 'Failed to load data', type: 'error' });
+        toast.error('Failed to load data');
       }
     } finally {
       if (mountedRef.current) setLoading(false);
@@ -123,20 +120,12 @@ const IDRMDashboard = () => {
   };
 
   const handleExportMatrix = async (type) => {
-    setToast({ open: true, message: `Exporting ${type} matrix...`, type: 'info' });
+    toast(`Exporting ${type} matrix...`);
     try {
       const result = await ApiService.exportIDRMMatrix(type);
-      setToast({
-        open: true,
-        message: 'Matrix exported successfully!',
-        type: 'success'
-      });
+      toast.success('Matrix exported successfully!');
     } catch (error) {
-      setToast({
-        open: true,
-        message: 'Failed to export matrix',
-        type: 'error'
-      });
+      toast.error('Failed to export matrix');
     }
   };
 
@@ -294,12 +283,7 @@ const IDRMDashboard = () => {
       {/* Help Modal */}
       <HelpModal show={showHelp} onClose={() => setShowHelp(false)} />
 
-      <Toast
-        open={toast.open}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast((t) => ({ ...t, open: false }))}
-      />
+      <Toaster position="top-right" />
     </div>
   );
 };

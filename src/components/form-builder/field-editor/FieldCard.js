@@ -19,12 +19,15 @@ import {
   Circle
 } from 'lucide-react';
 import { getFieldType } from '../FieldTypeRegistry';
+import { getFieldNumber } from '../utils/fieldNumberUtils';
 
 /**
  * FieldCard
  *
  * @param {Object} props
  * @param {Object} props.field - Field data from database
+ * @param {string|number} props.stepNumber - Step number for dynamic field numbering
+ * @param {number} props.fieldIndex - Field index within the step (0-based)
  * @param {boolean} props.isEditMode - Whether edit mode is active
  * @param {Function} props.onEdit - Called when edit button is clicked
  * @param {Function} props.onDelete - Called when delete button is clicked
@@ -34,6 +37,8 @@ import { getFieldType } from '../FieldTypeRegistry';
  */
 export default function FieldCard({
   field,
+  stepNumber,
+  fieldIndex,
   isEditMode = false,
   onEdit,
   onDelete,
@@ -88,9 +93,9 @@ export default function FieldCard({
         )}
 
         {/* Field Number */}
-        {field.number && (
+        {stepNumber !== undefined && fieldIndex !== undefined && (
           <span className="text-xs font-medium text-blue-600 mr-2 min-w-[2rem]">
-            {field.number}
+            {getFieldNumber(stepNumber, fieldIndex)}
           </span>
         )}
 

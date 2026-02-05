@@ -11,7 +11,7 @@ import { useDraftFilters } from '../../../hooks/useDraftFilters';
 import { useDraftOperations } from '../../../hooks/useDraftOperations';
 import { validateDraftName } from '../../../utils/validationUtils';
 import ConfirmDialog from '../../common/ConfirmDialog';
-import Toast from '../../common/Toast';
+import toast, { Toaster } from 'react-hot-toast';
 
 const DraftManager = ({ user, currentFormData, onLoadDraft, onClose, bepType }) => {
   const navigate = useNavigate();
@@ -31,8 +31,6 @@ const DraftManager = ({ user, currentFormData, onLoadDraft, onClose, bepType }) 
   const [debouncedEditingName, setDebouncedEditingName] = useState('');
   // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null });
-  // Toast state
-  const [toast, setToast] = useState({ open: false, message: '', type: 'info' });
 
   // Debounce effects
   useEffect(() => {
@@ -62,9 +60,9 @@ const DraftManager = ({ user, currentFormData, onLoadDraft, onClose, bepType }) 
       setNewDraftName('');
       setDebouncedNewDraftName('');
       refreshDrafts();
-      setToast({ open: true, message: 'Draft saved successfully!', type: 'success' });
+      toast.success('Draft saved successfully!');
     } else {
-      setToast({ open: true, message: operations.error || 'Failed to save draft.', type: 'error' });
+      toast.error(operations.error || 'Failed to save draft.');
     }
   };
 
@@ -79,9 +77,9 @@ const DraftManager = ({ user, currentFormData, onLoadDraft, onClose, bepType }) 
         const success = await operations.deleteDraft(draftId);
         if (success) {
           refreshDrafts();
-          setToast({ open: true, message: 'Draft deleted.', type: 'success' });
+          toast.success('Draft deleted.');
         } else {
-          setToast({ open: true, message: operations.error || 'Failed to delete draft.', type: 'error' });
+          toast.error(operations.error || 'Failed to delete draft.');
         }
       }
     });
@@ -101,9 +99,9 @@ const DraftManager = ({ user, currentFormData, onLoadDraft, onClose, bepType }) 
           setEditingName('');
           setDebouncedEditingName('');
           refreshDrafts();
-          setToast({ open: true, message: 'Draft renamed.', type: 'success' });
+          toast.success('Draft renamed.');
         } else {
-          setToast({ open: true, message: operations.error || 'Failed to rename draft.', type: 'error' });
+          toast.error(operations.error || 'Failed to rename draft.');
         }
       }
     });
@@ -119,7 +117,7 @@ const DraftManager = ({ user, currentFormData, onLoadDraft, onClose, bepType }) 
         setConfirmDialog((d) => ({ ...d, open: false }));
         const success = operations.loadDraft(draft);
         if (!success) {
-          setToast({ open: true, message: operations.error || 'Failed to load draft.', type: 'error' });
+          toast.error(operations.error || 'Failed to load draft.');
         }
         // If successful, onLoadDraft callback will handle closing and navigation
         // No need to show toast or do anything else here
@@ -376,12 +374,7 @@ const DraftManager = ({ user, currentFormData, onLoadDraft, onClose, bepType }) 
         onCancel={() => setConfirmDialog((d) => ({ ...d, open: false }))}
       />
       {/* Toast Notification */}
-      <Toast
-        open={toast.open}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast((t) => ({ ...t, open: false }))}
-      />
+      <Toaster position="top-right" />
     </div>
   );
 };

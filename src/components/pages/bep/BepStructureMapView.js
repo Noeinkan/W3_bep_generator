@@ -54,6 +54,7 @@ const StructureMapEditLayout = ({ onStepSelect }) => {
           <FieldStructureEditor
             stepId={selectedStep.id}
             stepTitle={selectedStep.title}
+            stepNumber={selectedStep.step_number}
           />
         )}
         <StepStructureEditor

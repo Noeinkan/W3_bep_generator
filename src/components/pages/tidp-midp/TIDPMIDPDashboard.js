@@ -10,7 +10,7 @@ import {
   Layers
 } from 'lucide-react';
 import ApiService from '../../../services/apiService';
-import Toast from '../../common/Toast';
+import toast, { Toaster } from 'react-hot-toast';
 import TIDPImportDialog from '../../tidp/TIDPImportDialog';
 import MIDPEvolutionDashboard from '../../midp/MIDPEvolutionDashboard';
 import { useTIDPFilters } from '../../../hooks/useTIDPFilters';
@@ -43,9 +43,6 @@ const TIDPMIDPDashboard = () => {
     setFilterDiscipline,
     disciplines
   } = useTIDPFilters(tidps);
-
-  // Toast state
-  const [toast, setToast] = useState({ open: false, message: '', type: 'info' });
 
   // Statistics
   const [stats, setStats] = useState({
@@ -102,7 +99,7 @@ const TIDPMIDPDashboard = () => {
     } catch (error) {
       if (mountedRef.current) {
         console.error('Failed to load TIDP/MIDP data:', error);
-        setToast({ open: true, message: 'Failed to load data', type: 'error' });
+        toast.error('Failed to load data');
       }
     } finally {
       if (mountedRef.current) setLoading(false);
@@ -111,57 +108,40 @@ const TIDPMIDPDashboard = () => {
 
   const handleExportTidpCsvTemplate = () => {
     const result = exportTidpCsvTemplate();
-    setToast({
-      open: true,
-      message: result.success ? 'TIDP CSV template downloaded successfully!' : 'Failed to download CSV template',
-      type: result.success ? 'success' : 'error'
-    });
+    if (result.success) {
+      toast.success('TIDP CSV template downloaded successfully!');
+    } else {
+      toast.error('Failed to download CSV template');
+    }
   };
 
   const handleImportComplete = async (importResults) => {
-    setToast({
-      open: true,
-      message: `Imported ${importResults.successful.length} TIDPs successfully`,
-      type: 'success'
-    });
+    toast.success(`Imported ${importResults.successful.length} TIDPs successfully`);
     setShowImportDialog(false);
     await loadData();
   };
 
   const handleViewTidpDetails = (tidpId) => {
-    try {
-      // fetch tidp to build a readable slug if available
-      const ApiService = require('../../../services/apiService').default || require('../../../services/apiService');
-      ApiService.getTIDP(tidpId).then((resp) => {
-        const t = resp && resp.data ? resp.data : resp;
-        const slugify = require('../../../utils/slugify').default || require('../../../utils/slugify');
-  const slug = slugify(t?.taskTeam || t?.name || t?.title || 'tidp');
-  navigate(`/tidp-editor/${tidpId}${slug ? '--' + slug : ''}`);
-      }).catch(() => {
-  navigate(`/tidp-editor/${tidpId}`);
-      });
-    } catch (e) {
-      navigate(`/tidp-editor/${tidpId}`);
-    }
+    navigate(`/tidp-editor/${tidpId}`);
   };
 
   const handleDownloadTidp = async (tidp) => {
     const result = exportTidpToCSV(tidp);
-    setToast({
-      open: true,
-      message: result.success ? 'TIDP downloaded successfully!' : 'Failed to download TIDP',
-      type: result.success ? 'success' : 'error'
-    });
+    if (result.success) {
+      toast.success('TIDP downloaded successfully!');
+    } else {
+      toast.error('Failed to download TIDP');
+    }
   };
 
   const handleDownloadMidp = async (midp) => {
-    setToast({ open: true, message: 'Downloading MIDP report...', type: 'info' });
+    toast('Downloading MIDP report...');
     const result = exportMidpToCSV(midp);
-    setToast({
-      open: true,
-      message: result.success ? 'MIDP report downloaded successfully!' : 'Failed to download MIDP report',
-      type: result.success ? 'success' : 'error'
-    });
+    if (result.success) {
+      toast.success('MIDP report downloaded successfully!');
+    } else {
+      toast.error('Failed to download MIDP report');
+    }
   };
 
   const autoGenerateMIDP = async () => {
@@ -172,11 +152,11 @@ const TIDPMIDPDashboard = () => {
         description: 'Master Information Delivery Plan compiled from all TIDPs'
       });
 
-      setToast({ open: true, message: 'MIDP auto-generated successfully', type: 'success' });
+      toast.success('MIDP auto-generated successfully');
       await loadData();
     } catch (err) {
       console.error('Auto-generate MIDP failed', err);
-      setToast({ open: true, message: err.message || 'Failed to auto-generate MIDP', type: 'error' });
+      toast.error(err.message || 'Failed to auto-generate MIDP');
     } finally {
       setLoading(false);
     }
@@ -184,20 +164,20 @@ const TIDPMIDPDashboard = () => {
 
   const handleComplianceCheck = async () => {
     const result = checkMIDPCompliance(midps);
-    setToast({
-      open: true,
-      message: result.message,
-      type: result.compliant ? 'success' : 'warning'
-    });
+    if (result.compliant) {
+      toast.success(result.message);
+    } else {
+      toast(result.message, { icon: '⚠️' });
+    }
   };
 
   const handleGenerateReport = async () => {
     const result = await generateComplianceReport(midps);
-    setToast({
-      open: true,
-      message: result.success ? 'Report generated successfully' : 'Failed to generate report',
-      type: result.success ? 'success' : 'error'
-    });
+    if (result.success) {
+      toast.success('Report generated successfully');
+    } else {
+      toast.error('Failed to generate report');
+    }
   };
 
   return (
@@ -340,12 +320,7 @@ const TIDPMIDPDashboard = () => {
 
       <HelpModal show={showHelp} onClose={() => setShowHelp(false)} />
 
-      <Toast
-        open={toast.open}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast((t) => ({ ...t, open: false }))}
-      />
+      <Toaster position="top-right" />
     </div>
   );
 };

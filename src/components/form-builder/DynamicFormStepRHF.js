@@ -111,7 +111,7 @@ const DynamicFormStepRHF = ({ stepIndex }) => {
         {currentStep.description && (
           <p className="text-gray-600">{currentStep.description}</p>
         )}
-        <FieldStructureEditor stepId={currentStep.id} />
+        <FieldStructureEditor stepId={currentStep.id} stepNumber={currentStep.step_number} />
       </div>
     );
   }
@@ -132,7 +132,7 @@ const DynamicFormStepRHF = ({ stepIndex }) => {
       )}
 
       <div className={`grid grid-cols-1 ${gridColsClass} gap-4`}>
-        {fields.map(fieldConfig => {
+        {fields.map((fieldConfig, fieldIndex) => {
           // Get error for this field from React Hook Form
           const fieldError = errors[fieldConfig.field_id];
           const fieldValue = formData[fieldConfig.field_id];
@@ -157,6 +157,8 @@ const DynamicFormStepRHF = ({ stepIndex }) => {
                 onChange={handleFieldChange}
                 error={fieldError?.message || ''}
                 formData={formData}
+                stepNumber={currentStep.step_number}
+                fieldIndex={fieldIndex}
               />
             </div>
           );

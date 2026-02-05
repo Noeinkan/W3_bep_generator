@@ -5,6 +5,7 @@ import FormBuilderContext from './FormBuilderContext';
 import { useBepStructure } from './useBepStructure';
 import { StepStructureEditor } from './step-editor';
 import FieldStructureEditor from './field-editor/FieldStructureEditor';
+import { getFieldNumber } from './utils/fieldNumberUtils';
 
 const CATEGORY_ORDER = ['Management', 'Commercial', 'Technical'];
 
@@ -338,7 +339,7 @@ const StructureMap = ({
                                     <div className="mt-2 border-t border-gray-100 pt-3">
                                       <div className="border-l border-gray-200 pl-4 space-y-2">
                                         {stepFields.length > 0 ? (
-                                          stepFields.map((field) => (
+                                          stepFields.map((field, fieldIndex) => (
                                             <div key={field.id} className="relative">
                                               <div className="absolute left-[-17px] top-3 h-px w-4 bg-gray-200" />
                                               <div className="flex items-center justify-between rounded-md border border-gray-100 bg-gray-50 px-3 py-2">
@@ -350,11 +351,9 @@ const StructureMap = ({
                                                     {field.type}{field.is_required ? ' • required' : ''}
                                                   </div>
                                                 </div>
-                                                {field.number && (
-                                                  <span className="ml-3 inline-flex items-center rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-gray-500 border border-gray-200">
-                                                    {field.number}
-                                                  </span>
-                                                )}
+                                                <span className="ml-3 inline-flex items-center rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-gray-500 border border-gray-200">
+                                                  {getFieldNumber(step.step_number, fieldIndex)}
+                                                </span>
                                               </div>
                                             </div>
                                           ))
@@ -382,6 +381,7 @@ const StructureMap = ({
               <FieldStructureEditor
                 stepId={selectedStep.id}
                 stepTitle={selectedStep.title}
+                stepNumber={selectedStep.step_number}
               />
             </div>
           )}
@@ -439,6 +439,7 @@ const StructureMapWithContext = ({
 
 const StructureMapWithFetch = ({
   projectId,
+  draftId,
   bepType,
   onStepClick,
   currentStepIndex,
@@ -450,7 +451,7 @@ const StructureMapWithFetch = ({
     fields,
     isLoading,
     error
-  } = useBepStructure(projectId, bepType);
+  } = useBepStructure({ projectId, draftId, bepType });
 
   return (
     <StructureMap

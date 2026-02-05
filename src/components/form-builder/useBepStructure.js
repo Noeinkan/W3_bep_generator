@@ -13,11 +13,13 @@ const API_BASE_URL = process.env.REACT_APP_API_URL
 /**
  * useBepStructure
  *
- * @param {string|null} projectId - Project ID or null for default template
- * @param {string} bepType - BEP type ('pre-appointment' or 'post-appointment')
+ * @param {Object} options - Configuration options
+ * @param {string|null} options.projectId - Project ID or null for default template (deprecated, use draftId)
+ * @param {string|null} options.draftId - Draft ID for draft-specific structure
+ * @param {string} options.bepType - BEP type ('pre-appointment' or 'post-appointment')
  * @returns {Object} Structure data and operations
  */
-export function useBepStructure(projectId = null, bepType = null) {
+export function useBepStructure({ projectId = null, draftId = null, bepType = null } = {}) {
   // State
   const [steps, setSteps] = useState([]);
   const [fields, setFields] = useState([]);
@@ -68,19 +70,23 @@ export function useBepStructure(projectId = null, bepType = null) {
     try {
       // Build query params
       const params = new URLSearchParams();
-      if (projectId) params.append('projectId', projectId);
       if (bepType) params.append('bepType', bepType);
 
-      // Fetch structure for project (or default template)
+      // Fetch structure - prioritize draftId over projectId
       let structureData;
-      if (projectId) {
+      if (draftId) {
+        // Draft-level structure
+        const response = await apiCall(`/draft/${draftId}?${params}`);
+        structureData = response.data;
+        setHasCustomStructure(response.hasCustomStructure);
+      } else if (projectId) {
+        // Project-level structure (deprecated)
         const response = await apiCall(`/project/${projectId}?${params}`);
         structureData = response.data;
         setHasCustomStructure(response.hasCustomStructure);
       } else {
-        console.log('[DEBUG] Fetching template, params:', params.toString(), 'bepType:', bepType);
+        // Default template
         const response = await apiCall(`/template?${params}`);
-        console.log('[DEBUG] Template response:', JSON.stringify({ success: response.success, dataLength: response.data?.length, count: response.count }));
         structureData = response.data;
         setHasCustomStructure(false);
       }
@@ -113,7 +119,7 @@ export function useBepStructure(projectId = null, bepType = null) {
     } finally {
       setIsLoading(false);
     }
-  }, [projectId, bepType, apiCall]);
+  }, [draftId, projectId, bepType, apiCall]);
 
   // Initial fetch
   useEffect(() => {
@@ -136,6 +142,7 @@ export function useBepStructure(projectId = null, bepType = null) {
         method: 'POST',
         body: JSON.stringify({
           ...stepData,
+          draft_id: draftId,
           project_id: projectId
         })
       });
@@ -145,7 +152,7 @@ export function useBepStructure(projectId = null, bepType = null) {
       setError(err.message);
       throw err;
     }
-  }, [apiCall, projectId]);
+  }, [apiCall, draftId, projectId]);
 
   const updateStep = useCallback(async (stepId, updates) => {
     try {
@@ -216,6 +223,7 @@ export function useBepStructure(projectId = null, bepType = null) {
         method: 'POST',
         body: JSON.stringify({
           ...fieldData,
+          draft_id: draftId,
           project_id: projectId
         })
       });
@@ -225,7 +233,7 @@ export function useBepStructure(projectId = null, bepType = null) {
       setError(err.message);
       throw err;
     }
-  }, [apiCall, projectId]);
+  }, [apiCall, draftId, projectId]);
 
   const updateField = useCallback(async (fieldId, updates) => {
     try {
@@ -308,14 +316,22 @@ export function useBepStructure(projectId = null, bepType = null) {
   // ========================================
 
   const cloneTemplate = useCallback(async () => {
-    if (!projectId) {
-      throw new Error('Cannot clone template without a project ID');
+    if (!draftId && !projectId) {
+      throw new Error('Cannot clone template without a draft ID or project ID');
     }
     try {
-      const response = await apiCall('/clone-template', {
-        method: 'POST',
-        body: JSON.stringify({ projectId })
-      });
+      let response;
+      if (draftId) {
+        response = await apiCall('/clone-to-draft', {
+          method: 'POST',
+          body: JSON.stringify({ draftId })
+        });
+      } else {
+        response = await apiCall('/clone-template', {
+          method: 'POST',
+          body: JSON.stringify({ projectId })
+        });
+      }
       setHasCustomStructure(true);
       await fetchStructure();
       return response.data;
@@ -323,21 +339,26 @@ export function useBepStructure(projectId = null, bepType = null) {
       setError(err.message);
       throw err;
     }
-  }, [apiCall, projectId, fetchStructure]);
+  }, [apiCall, draftId, projectId, fetchStructure]);
 
   const resetToDefault = useCallback(async () => {
-    if (!projectId) {
-      throw new Error('Cannot reset without a project ID');
+    if (!draftId && !projectId) {
+      throw new Error('Cannot reset without a draft ID or project ID');
     }
     try {
-      const response = await apiCall(`/reset/${projectId}`, { method: 'POST' });
+      let response;
+      if (draftId) {
+        response = await apiCall(`/reset-draft/${draftId}`, { method: 'POST' });
+      } else {
+        response = await apiCall(`/reset/${projectId}`, { method: 'POST' });
+      }
       await fetchStructure();
       return response.data;
     } catch (err) {
       setError(err.message);
       throw err;
     }
-  }, [apiCall, projectId, fetchStructure]);
+  }, [apiCall, draftId, projectId, fetchStructure]);
 
   return {
     // Data
