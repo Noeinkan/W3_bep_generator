@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Upload,
   TrendingUp,
@@ -7,9 +7,6 @@ import {
   FileText,
   CheckCircle,
   Download,
-  BarChart3,
-  Users,
-  Calendar,
   Layers
 } from 'lucide-react';
 import ApiService from '../../../services/apiService';
@@ -22,33 +19,21 @@ import { checkMIDPCompliance, generateComplianceReport } from '../../../utils/co
 
 // Sub-components
 import StatisticsCards from './dashboard/StatisticsCards';
-import QuickActions from './dashboard/QuickActions';
-import RecentTIDPs from './dashboard/RecentTIDPs';
 import TIDPsView from './dashboard/TIDPsView';
-import MIDPsView from './dashboard/MIDPsView';
-import ImportView from './dashboard/ImportView';
+import MIDPSummaryPanel from './dashboard/MIDPSummaryPanel';
+import MIDPAnalyticsDrawer from './dashboard/MIDPAnalyticsDrawer';
 import HelpModal from './dashboard/HelpModal';
 
 const TIDPMIDPDashboard = () => {
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // Parse current view from URL
-  const getCurrentView = () => {
-    const path = location.pathname;
-    if (path.includes('/tidps')) return 'tidps';
-    if (path.includes('/midps')) return 'midps';
-    if (path.includes('/import')) return 'import';
-    return 'dashboard';
-  };
-
-  const [activeView, setActiveView] = useState(getCurrentView());
   const [tidps, setTidps] = useState([]);
   const [midps, setMidps] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showEvolutionDashboard, setShowEvolutionDashboard] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [showMIDPDrawer, setShowMIDPDrawer] = useState(false);
 
   // Use custom hook for TIDP filtering
   const {
@@ -77,14 +62,6 @@ const TIDPMIDPDashboard = () => {
     loadData();
     return () => { mountedRef.current = false; };
   }, []);
-
-  useEffect(() => {
-    // Update URL when view changes using React Router
-    const newPath = activeView === 'dashboard' ? '/tidp-midp' : `/tidp-midp/${activeView}`;
-    if (location.pathname !== newPath) {
-      navigate(newPath, { replace: true });
-    }
-  }, [activeView, location.pathname, navigate]);
 
   const loadData = async () => {
     setLoading(true);
@@ -177,10 +154,6 @@ const TIDPMIDPDashboard = () => {
     });
   };
 
-  const handleViewMidpDetails = (midpId) => {
-    setShowEvolutionDashboard(midpId);
-  };
-
   const handleDownloadMidp = async (midp) => {
     setToast({ open: true, message: 'Downloading MIDP report...', type: 'info' });
     const result = exportMidpToCSV(midp);
@@ -227,17 +200,9 @@ const TIDPMIDPDashboard = () => {
     });
   };
 
-  // Navigation items
-  const navigationItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-    { id: 'tidps', label: 'TIDPs', icon: Users },
-    { id: 'midps', label: 'MIDPs', icon: Calendar },
-    { id: 'import', label: 'Import', icon: Upload }
-  ];
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50" data-page-uri="/tidp-midp">
-      {/* Header - BEP-aligned styling */}
+      {/* Header */}
       <div className="sticky top-0 z-30 bg-white shadow-lg border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -266,15 +231,13 @@ const TIDPMIDPDashboard = () => {
           </div>
 
           <div className="flex items-center space-x-2">
-            {activeView === 'tidps' && (
-              <button
-                onClick={() => setShowImportDialog(true)}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 transition-all duration-200"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Import
-              </button>
-            )}
+            <button
+              onClick={() => setShowImportDialog(true)}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 transition-all duration-200"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Import
+            </button>
 
             <button
               onClick={autoGenerateMIDP}
@@ -316,80 +279,37 @@ const TIDPMIDPDashboard = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Navigation Tabs - BEP card style */}
-        <div className="mb-8">
-          <nav className="flex space-x-2 bg-white/60 backdrop-blur-sm p-1.5 rounded-xl border border-slate-200/50 shadow-sm">
-            {navigationItems.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                onClick={() => setActiveView(id)}
-                className={`flex-1 py-2.5 px-4 rounded-lg font-medium text-sm flex items-center justify-center space-x-2 transition-all duration-200 ${
-                  activeView === id
-                    ? 'bg-white text-blue-600 shadow-md border border-slate-200'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{label}</span>
-              </button>
-            ))}
-          </nav>
-        </div>
+      {/* Unified Dashboard Content */}
+      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        {/* Statistics Cards */}
+        <StatisticsCards stats={stats} loading={loading} />
 
-        {/* Dashboard View */}
-        {activeView === 'dashboard' && (
-          <div className="space-y-8">
-            <StatisticsCards stats={stats} loading={loading} />
-            <QuickActions
-              onViewTIDPs={() => setActiveView('tidps')}
-              onViewMIDPs={() => setActiveView('midps')}
-              // On the dashboard the Import Data quick action should take the user
-              // to the Manage TIDPs page where the Import button is available.
-              onImport={() => setActiveView('tidps')}
-              showImport={false}
-            />
-            <RecentTIDPs
-              tidps={tidps}
-              onCreateNew={() => setActiveView('tidps')}
-            />
-          </div>
-        )}
+        {/* TIDPs Management Section */}
+        <TIDPsView
+          tidps={tidps}
+          loading={loading}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          filterDiscipline={filterDiscipline}
+          onFilterChange={setFilterDiscipline}
+          disciplines={disciplines}
+          onCreateNew={() => navigate('/tidp-editor')}
+          onDownloadTemplate={handleExportTidpCsvTemplate}
+          onViewDetails={handleViewTidpDetails}
+          onDownloadTidp={handleDownloadTidp}
+        />
 
-        {/* TIDPs View */}
-        {activeView === 'tidps' && (
-          <TIDPsView
-            tidps={tidps}
-            loading={loading}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            filterDiscipline={filterDiscipline}
-            onFilterChange={setFilterDiscipline}
-            disciplines={disciplines}
-            onCreateNew={() => navigate('/tidp-editor')}
-            onDownloadTemplate={handleExportTidpCsvTemplate}
-            onViewDetails={handleViewTidpDetails}
-            onDownloadTidp={handleDownloadTidp}
-          />
-        )}
-
-        {/* MIDPs View */}
-        {activeView === 'midps' && (
-          <MIDPsView
-            midps={midps}
-            loading={loading}
-            searchTerm={searchTerm}
-            onAutoGenerate={autoGenerateMIDP}
-            onViewDetails={handleViewMidpDetails}
-            onViewEvolution={setShowEvolutionDashboard}
-            onDownloadMidp={handleDownloadMidp}
-          />
-        )}
-
-        {/* Import View */}
-        {activeView === 'import' && (
-          <ImportView onImport={() => setShowImportDialog(true)} />
-        )}
+        {/* MIDP Summary Panel */}
+        <MIDPSummaryPanel
+          midps={midps}
+          loading={loading}
+          onRefreshMIDP={autoGenerateMIDP}
+          onDownloadCSV={() => {
+            const activeMidp = midps.length > 0 ? midps[midps.length - 1] : null;
+            if (activeMidp) handleDownloadMidp(activeMidp);
+          }}
+          onViewFullAnalytics={() => setShowMIDPDrawer(true)}
+        />
       </div>
 
       {/* Dialogs and Modals */}
@@ -405,6 +325,18 @@ const TIDPMIDPDashboard = () => {
           onClose={() => setShowEvolutionDashboard(null)}
         />
       )}
+
+      {/* MIDP Analytics Drawer */}
+      <MIDPAnalyticsDrawer
+        isOpen={showMIDPDrawer}
+        onClose={() => setShowMIDPDrawer(false)}
+        midps={midps}
+        onRefreshMIDP={autoGenerateMIDP}
+        onDownloadCSV={() => {
+          const activeMidp = midps.length > 0 ? midps[midps.length - 1] : null;
+          if (activeMidp) handleDownloadMidp(activeMidp);
+        }}
+      />
 
       <HelpModal show={showHelp} onClose={() => setShowHelp(false)} />
 

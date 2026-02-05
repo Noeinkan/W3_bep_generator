@@ -3,6 +3,9 @@
 ## Project Overview
 BEP Generator — React 19 + Express + SQLite tool for building/exporting BEP documents.
 
+## Environment
+This is a Windows development environment. For bash commands, use PowerShell-compatible syntax and handle output display issues by using explicit print/echo statements or alternative verification methods.
+
 ## Workflow rules
 
 - **Describe approach first.** Before writing any code, outline the plan and wait for approval. If requirements are ambiguous, ask clarifying questions before touching a file.
@@ -12,6 +15,10 @@ BEP Generator — React 19 + Express + SQLite tool for building/exporting BEP do
 - **Learn from corrections.** Whenever a correction is made, add a new rule here so the same mistake doesn't repeat.
 - **Never add dependencies** without checking `package.json` first.
 - **After code changes,** run `npm test` before considering done.
+- **Stay focused.** Do not perform additional unrequested work like installing packages, creating extra documentation, or expanding scope without explicit user approval.
+
+## Workflow Preferences
+- Before starting implementation, briefly confirm the approach with the user rather than diving into extensive codebase exploration. Keep initial exploration focused and minimal.
 
 ## Project layout
 
@@ -78,3 +85,9 @@ BEP Generator — React 19 + Express + SQLite tool for building/exporting BEP do
 - "Cannot read context" → Component is outside provider (see FormBuilderProvider scope)
 - CORS errors in dev → Check proxy config in `package.json`
 - ML service 500 → Restart Python process separately
+
+## Session Management
+When hitting usage limits mid-task, always save progress by:
+1. Documenting what's been completed
+2. Listing specific next steps
+3. Noting any files with partial edits that need attention

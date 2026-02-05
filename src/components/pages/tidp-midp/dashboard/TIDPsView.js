@@ -26,9 +26,20 @@ const TIDPsView = ({
   });
 
   return (
-    <div className="space-y-6">
-      {/* Filters and Search - BEP-aligned card */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* Section Header */}
+      <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Task Information Delivery Plans</h2>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {filteredTidps.length} of {tidps.length} TIDP{tidps.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+      </div>
+
+      <div className="p-5 space-y-6">
+      {/* Filters and Search */}
+      <div className="bg-slate-50 rounded-xl border border-slate-200 p-5">
         <div className="flex flex-col lg:flex-row gap-4">
           <div className="flex-1">
             <label className="block text-sm font-semibold text-slate-700 mb-2">Search TIDPs</label>
@@ -186,6 +197,7 @@ const TIDPsView = ({
           </button>
         </div>
       )}
+      </div>
     </div>
   );
 };
