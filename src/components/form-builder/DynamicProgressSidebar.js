@@ -9,6 +9,8 @@ import React from 'react';
 import { CheckCircle, AlertCircle, Settings2, Check } from 'lucide-react';
 import { useFormBuilder } from './FormBuilderContext';
 import * as LucideIcons from 'lucide-react';
+import ProgressBar from '../forms/controls/ProgressBar';
+import DeliveryStatus from '../forms/controls/DeliveryStatus';
 
 /**
  * Get Lucide icon component by name
@@ -143,42 +145,8 @@ const DynamicProgressSidebar = React.memo(({
           </div>
 
           {/* Progress bar */}
-          <div className="mt-6 pt-4 border-t">
-            <div className="text-sm text-gray-600 mb-2">
-              BEP Completion: {Math.round((completedSections.size / visibleSteps.length) * 100)}%
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${(completedSections.size / visibleSteps.length) * 100}%` }}
-              />
-            </div>
-          </div>
-
-          {/* TIDP/MIDP Status */}
-          <div className="mt-4 pt-4 border-t">
-            <div className="text-sm text-gray-600 mb-2">Information Delivery Status</div>
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">TIDPs Created:</span>
-                <span className={`font-medium ${tidpData.length > 0 ? 'text-green-600' : 'text-gray-400'}`}>
-                  {tidpData.length}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">MIDPs Generated:</span>
-                <span className={`font-medium ${midpData.length > 0 ? 'text-green-600' : 'text-gray-400'}`}>
-                  {midpData.length}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">ISO 19650 Ready:</span>
-                <span className={`font-medium ${tidpData.length > 0 && midpData.length > 0 ? 'text-green-600' : 'text-orange-500'}`}>
-                  {tidpData.length > 0 && midpData.length > 0 ? '✓' : '○'}
-                </span>
-              </div>
-            </div>
-          </div>
+          <ProgressBar completed={completedSections.size} total={visibleSteps.length} />
+          <DeliveryStatus tidpData={tidpData} midpData={midpData} />
 
           {/* Category breakdown */}
           <div className="mt-4 pt-4 border-t">

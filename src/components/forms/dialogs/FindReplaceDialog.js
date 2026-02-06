@@ -1,5 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { X, Search, Replace, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Replace, ChevronDown, ChevronUp } from 'lucide-react';
+import BaseTextInput from '../base/BaseTextInput';
+import Modal from '../../common/Modal';
+import Button from '../../common/Button';
 
 const FindReplaceDialog = ({ editor, onClose }) => {
   const [findText, setFindText] = useState('');
@@ -81,30 +84,17 @@ const FindReplaceDialog = ({ editor, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">Find & Replace</h3>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded transition-colors"
-            title="Close"
-            type="button"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
+    <Modal open={true} onClose={onClose} title="Find & Replace" size="sm">
         <div className="space-y-4">
           {/* Find Input */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Find</label>
             <div className="relative">
-              <input
+              <BaseTextInput
                 type="text"
                 value={findText}
                 onChange={handleFindChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="px-3 py-2 border-gray-300"
                 placeholder="Enter text to find..."
                 autoFocus
               />
@@ -139,11 +129,11 @@ const FindReplaceDialog = ({ editor, onClose }) => {
           {/* Replace Input */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Replace with</label>
-            <input
+            <BaseTextInput
               type="text"
               value={replaceText}
               onChange={(e) => setReplaceText(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-3 py-2 border-gray-300"
               placeholder="Enter replacement text..."
             />
           </div>
@@ -166,36 +156,34 @@ const FindReplaceDialog = ({ editor, onClose }) => {
 
           {/* Action Buttons */}
           <div className="flex gap-2 pt-2">
-            <button
+            <Button
               onClick={findNext}
               disabled={!findText || matchCount === 0}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              type="button"
+              icon={Search}
+              className="flex-1"
             >
-              <Search size={16} />
               Find Next
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="success"
               onClick={replaceOne}
               disabled={!findText || !replaceText || matchCount === 0}
-              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              type="button"
+              icon={Replace}
+              className="flex-1"
             >
-              <Replace size={16} />
               Replace
-            </button>
+            </Button>
           </div>
-          <button
+          <Button
+            variant="danger"
             onClick={replaceAll}
             disabled={!findText || !replaceText || matchCount === 0}
-            className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            type="button"
+            fullWidth
           >
             Replace All ({matchCount})
-          </button>
+          </Button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 };
 

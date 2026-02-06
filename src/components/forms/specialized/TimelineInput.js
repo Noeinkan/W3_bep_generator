@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import FieldHeader from '../base/FieldHeader';
+import FieldError from '../base/FieldError';
+import BaseTextInput from '../base/BaseTextInput';
 
 const CustomDatePicker = ({ value, onChange, label, placeholder }) => {
   const [showPicker, setShowPicker] = useState(false);
@@ -345,11 +347,10 @@ const TimelineInput = ({ field, value, onChange, error }) => {
         <label className="block text-xs font-medium text-gray-600 mb-1">
           Additional Notes (Optional)
         </label>
-        <input
+        <BaseTextInput
           type="text"
           value={timeline.notes}
           onChange={(e) => handleChange('notes', e.target.value)}
-          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           placeholder="e.g., Including 2-month contingency"
         />
       </div>
@@ -373,9 +374,7 @@ const TimelineInput = ({ field, value, onChange, error }) => {
         </div>
       )}
 
-      {error && (
-        <p className="text-sm text-red-600 mt-1">{error}</p>
-      )}
+      <FieldError error={error} className="text-red-600" />
     </div>
   );
 };

@@ -2,6 +2,7 @@ import React from 'react';
 import { Info, ExternalLink } from 'lucide-react';
 import EditableTable from '../base/EditableTable';
 import TipTapEditor from '../editors/TipTapEditor';
+import FieldError from '../base/FieldError';
 
 /**
  * RACIReferenceBuilder
@@ -176,7 +177,7 @@ const RACIReferenceBuilder = ({ field, value = {}, onChange, error, disabled = f
         </div>
       </div>
 
-      {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+      <FieldError error={error} />
     </div>
   );
 };

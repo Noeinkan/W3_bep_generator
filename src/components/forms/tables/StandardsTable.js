@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus, X, Edit2, GripVertical, AlertTriangle } from 'lucide-react';
 import FieldHeader from '../base/FieldHeader';
+import FieldError from '../base/FieldError';
 
 const StandardsTable = React.memo(({ field, value, onChange, error }) => {
   const { name, label, number, required } = field;
@@ -484,7 +485,7 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
         )}
       </div>
 
-      {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+      <FieldError error={error} />
 
       {/* Delete Column Confirmation Modal */}
       {columnToDelete !== null && (

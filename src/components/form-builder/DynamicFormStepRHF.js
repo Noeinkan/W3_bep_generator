@@ -3,14 +3,18 @@
  *
  * A form step component that loads fields from the database via FormBuilderContext.
  * Supports both view mode (form rendering) and edit mode (field structure editing).
+ *
+ * Uses the unified InputFieldRHF (backed by FieldTypeRegistry) for rendering,
+ * eliminating the need for a separate DynamicFieldRenderer.
  */
 
 import React, { useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { useFormBuilder } from './FormBuilderContext';
-import DynamicFieldRenderer from './DynamicFieldRenderer';
+import InputFieldRHF from '../forms/base/InputFieldRHF';
 import { FieldStructureEditor } from './field-editor';
 import { getFullWidthFieldTypes } from './FieldTypeRegistry';
+import { getFieldNumber } from './utils/fieldNumberUtils';
 
 // Field types that should span 3 columns (landscape tables)
 const THREE_COLUMN_FIELD_TYPES = ['standardsTable'];
@@ -22,7 +26,7 @@ const THREE_COLUMN_FIELD_TYPES = ['standardsTable'];
  * @param {number} props.stepIndex - Current step index (0-based)
  */
 const DynamicFormStepRHF = ({ stepIndex }) => {
-  const { watch, setValue, formState: { errors } } = useFormContext();
+  const { formState: { errors } } = useFormContext();
 
   const {
     visibleSteps,
@@ -44,14 +48,6 @@ const DynamicFormStepRHF = ({ stepIndex }) => {
 
   // Get full-width field types from registry
   const fullWidthTypes = useMemo(() => getFullWidthFieldTypes(), []);
-
-  // Get form data for dependent fields
-  const formData = watch();
-
-  // Handle field change
-  const handleFieldChange = (fieldName, value) => {
-    setValue(fieldName, value, { shouldDirty: true, shouldTouch: true });
-  };
 
   // Loading state
   if (isLoading) {
@@ -135,7 +131,6 @@ const DynamicFormStepRHF = ({ stepIndex }) => {
         {fields.map((fieldConfig, fieldIndex) => {
           // Get error for this field from React Hook Form
           const fieldError = errors[fieldConfig.field_id];
-          const fieldValue = formData[fieldConfig.field_id];
 
           // Determine column span
           const isThreeColumn = THREE_COLUMN_FIELD_TYPES.includes(fieldConfig.type);
@@ -149,16 +144,29 @@ const DynamicFormStepRHF = ({ stepIndex }) => {
                 ? 'md:col-span-2'
                 : '';
 
+          // Build a field object compatible with InputFieldRHF
+          const parsedConfig = typeof fieldConfig.config === 'string'
+            ? (() => { try { return JSON.parse(fieldConfig.config); } catch { return {}; } })()
+            : (fieldConfig.config || {});
+
+          const fieldObj = {
+            name: fieldConfig.field_id,
+            label: fieldConfig.label,
+            number: getFieldNumber(currentStep.step_number, fieldIndex),
+            type: fieldConfig.type,
+            required: !!fieldConfig.is_required,
+            placeholder: fieldConfig.placeholder,
+            rows: parsedConfig.rows,
+            options: parsedConfig.options,
+            columns: parsedConfig.columns,
+            ...parsedConfig,
+          };
+
           return (
             <div key={fieldConfig.id} className={colSpanClass}>
-              <DynamicFieldRenderer
-                fieldConfig={fieldConfig}
-                value={fieldValue}
-                onChange={handleFieldChange}
+              <InputFieldRHF
+                field={fieldObj}
                 error={fieldError?.message || ''}
-                formData={formData}
-                stepNumber={currentStep.step_number}
-                fieldIndex={fieldIndex}
               />
             </div>
           );

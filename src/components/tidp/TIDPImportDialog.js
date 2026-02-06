@@ -3,6 +3,7 @@ import { Upload, Download, FileText, AlertCircle, CheckCircle } from 'lucide-rea
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import ApiService from '../../services/apiService';
+import { Modal, Button } from '../common';
 
 const TIDPImportDialog = ({ open, onClose, onImportComplete }) => {
   const [importType, setImportType] = useState('excel');
@@ -173,16 +174,14 @@ const TIDPImportDialog = ({ open, onClose, onImportComplete }) => {
     }
   };
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Import TIDPs</h2>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">✕</button>
-          </div>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Import TIDPs"
+      size="lg"
+      className="max-h-[90vh] overflow-y-auto"
+    >
 
           {!importResults ? (
             <div className="space-y-6">
@@ -238,14 +237,14 @@ const TIDPImportDialog = ({ open, onClose, onImportComplete }) => {
                       Download the import template to ensure your data is in the correct format
                     </p>
                   </div>
-                  <button
+                  <Button
                     onClick={downloadTemplate}
                     disabled={!template}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-blue-700 disabled:opacity-50"
+                    variant="secondary"
+                    icon={<Download className="w-4 h-4" />}
                   >
-                    <Download className="w-4 h-4" />
-                    <span>Template</span>
-                  </button>
+                    Template
+                  </Button>
                 </div>
 
                 {template && (
@@ -356,27 +355,26 @@ const TIDPImportDialog = ({ open, onClose, onImportComplete }) => {
               </div>
 
               <div className="flex space-x-4">
-                <button
+                <Button
+                  variant="secondary"
                   onClick={() => {
                     setImportResults(null);
                     setLoading(false);
                   }}
-                  className="flex-1 bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300"
+                  className="flex-1"
                 >
                   Import More
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={onClose}
-                  className="flex-1 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+                  className="flex-1"
                 >
                   Done
-                </button>
+                </Button>
               </div>
             </div>
           )}
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 };
 

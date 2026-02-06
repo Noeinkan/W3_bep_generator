@@ -42,6 +42,11 @@ const VolumeStrategyMindmap = React.lazy(() => import('../forms/diagrams/diagram
 const CDEPlatformEcosystem = React.lazy(() => import('../forms/custom/CDEPlatformEcosystem'));
 const NamingConventionBuilder = React.lazy(() => import('../forms/custom/NamingConventionBuilder'));
 const FederationStrategyBuilder = React.lazy(() => import('../forms/custom/FederationStrategyBuilder'));
+const MilestonesTableField = React.lazy(() => import('../forms/specialized/MilestonesTableField'));
+const TidpReferenceField = React.lazy(() => import('../forms/specialized/TidpReferenceField'));
+const TidpSectionField = React.lazy(() => import('../forms/specialized/TidpSectionField'));
+const DeliverablesMatrixField = React.lazy(() => import('../forms/specialized/DeliverablesMatrixField'));
+const ImActivitiesMatrixField = React.lazy(() => import('../forms/specialized/ImActivitiesMatrixField'));
 
 /**
  * Field Type Categories
@@ -95,7 +100,7 @@ export const FIELD_TYPE_REGISTRY = {
   // BASIC TYPES
   // ========================================
   text: {
-    component: null, // Inline in DynamicFieldRenderer
+    component: null, // Rendered inline (simple <input>)
     category: 'basic',
     icon: Type,
     label: 'Text Input',
@@ -123,7 +128,7 @@ export const FIELD_TYPE_REGISTRY = {
   },
 
   select: {
-    component: null, // Inline in DynamicFieldRenderer
+    component: null, // Rendered inline (simple <select>)
     category: 'basic',
     icon: ChevronDown,
     label: 'Dropdown',
@@ -199,7 +204,7 @@ export const FIELD_TYPE_REGISTRY = {
   },
 
   'milestones-table': {
-    component: null, // Defined in InputField.js as MilestonesTableField
+    component: MilestonesTableField,
     category: 'table',
     icon: Calendar,
     label: 'Milestones Table',
@@ -272,7 +277,7 @@ export const FIELD_TYPE_REGISTRY = {
   },
 
   'tidp-reference': {
-    component: null, // Defined in InputField.js as TidpReferenceField
+    component: TidpReferenceField,
     category: 'specialized',
     icon: Link,
     label: 'TIDP Reference',
@@ -286,7 +291,7 @@ export const FIELD_TYPE_REGISTRY = {
   },
 
   'tidp-section': {
-    component: null, // Defined in InputField.js as TidpSectionField
+    component: TidpSectionField,
     category: 'specialized',
     icon: FileText,
     label: 'TIDP Section',
@@ -300,7 +305,7 @@ export const FIELD_TYPE_REGISTRY = {
   },
 
   'deliverables-matrix': {
-    component: null, // Defined in InputField.js as DeliverablesMatrixField
+    component: DeliverablesMatrixField,
     category: 'specialized',
     icon: Grid3X3,
     label: 'Deliverables Matrix',
@@ -314,7 +319,7 @@ export const FIELD_TYPE_REGISTRY = {
   },
 
   'im-activities-matrix': {
-    component: null, // Defined in InputField.js as ImActivitiesMatrixField
+    component: ImActivitiesMatrixField,
     category: 'specialized',
     icon: Grid3X3,
     label: 'IM Activities Matrix',
@@ -404,7 +409,7 @@ export const FIELD_TYPE_REGISTRY = {
   // UTILITY TYPES
   // ========================================
   'section-header': {
-    component: null, // Inline in DynamicFieldRenderer
+    component: null, // Rendered inline (simple header element)
     category: 'utility',
     icon: Heading,
     label: 'Section Header',

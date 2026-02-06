@@ -9,6 +9,7 @@ import {
   Clock,
   Plug
 } from 'lucide-react';
+import BaseTextArea from '../base/BaseTextArea';
 import {
   SYNC_TYPES,
   SYNC_FREQUENCIES,
@@ -309,12 +310,12 @@ const CDEIntegrationEditor = ({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Description / Notes
             </label>
-            <textarea
+            <BaseTextArea
               value={formData.description}
               onChange={e => handleChange('description', e.target.value)}
               placeholder="Describe the purpose and any special requirements for this integration..."
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              className="px-3 py-2 border-gray-300 focus:ring-indigo-500 resize-none"
             />
           </div>
         </div>

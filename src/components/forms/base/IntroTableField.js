@@ -2,6 +2,7 @@ import React from 'react';
 import TipTapEditor from '../editors/TipTapEditor';
 import EditableTable from './EditableTable';
 import FieldHeader from './FieldHeader';
+import FieldError from './FieldError';
 
 const IntroTableField = React.memo(({ field, value, onChange, error }) => {
   const { name, label, number, required, introPlaceholder, tableColumns } = field;
@@ -59,7 +60,7 @@ const IntroTableField = React.memo(({ field, value, onChange, error }) => {
         error={null}
       />
 
-      {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+      <FieldError error={error} />
     </div>
   );
 });

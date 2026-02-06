@@ -204,6 +204,22 @@ class OllamaGenerator:
         additional = (max_length // 100) * 10
         return min(base_timeout + additional, 300)  # Cap at 5 minutes
 
+    def _add_table_guidance(self, context: str) -> str:
+        """
+        Add structure-based table guidance to prompts.
+
+        Tables should be used only when the content structure implies tabular data.
+        Enforce a maximum of 15 rows total when a table is used.
+        """
+        table_guidance = (
+            "If the content is best represented as a table (multiple items with consistent fields), "
+            "output a simple HTML table using <table>, <thead>, <tbody>, <tr>, <th>, <td>. "
+            "Only use a table when the content structure clearly implies it; otherwise use paragraphs or bullet lists. "
+            "If you output a table, limit it to 15 rows total (including the header) and a maximum of 6 columns. "
+            "Do not wrap output in code fences."
+        )
+        return f"{context}\n\n{table_guidance}"
+
     def generate_text(
         self,
         prompt: str,
@@ -323,6 +339,7 @@ class OllamaGenerator:
         """
         field_config = self.field_prompts.get(field_type, self.default_prompt)
         context = field_config.get('context', 'Provide professional BIM content.')
+        context = self._add_table_guidance(context)
         temperature = field_config.get('temperature', 0.5)
 
         prompt = f"{context}\n\nGenerate professional content for this section."
@@ -379,6 +396,7 @@ class OllamaGenerator:
         # Get field-specific configuration
         field_config = self.field_prompts.get(field_type, self.default_prompt)
         context = field_config.get('context', 'Provide professional BIM content.')
+        context = self._add_table_guidance(context)
 
         # Determine temperature: parameter > field config > default
         if temperature is None:

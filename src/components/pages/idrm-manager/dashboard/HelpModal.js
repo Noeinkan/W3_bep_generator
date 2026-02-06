@@ -1,28 +1,23 @@
 import React from 'react';
-import { X, BookOpen, Table2, FileText, CheckCircle } from 'lucide-react';
+import { Table2, FileText, CheckCircle } from 'lucide-react';
+import Modal from '../../../common/Modal';
+import Button from '../../../common/Button';
 
 const HelpModal = ({ show, onClose }) => {
-  if (!show) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-purple-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900">IDRM Manager Help</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors p-2"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        <div className="px-6 py-6 space-y-8">
+    <Modal
+      open={show}
+      onClose={onClose}
+      title="IDRM Manager Help"
+      size="xl"
+      className="max-h-[90vh] overflow-y-auto"
+      footer={
+        <Button onClick={onClose} className="w-full bg-purple-600 hover:bg-purple-700">
+          Got it, thanks!
+        </Button>
+      }
+    >
+        <div className="space-y-8">
           {/* Introduction */}
           <div>
             <h3 className="text-lg font-bold text-gray-900 mb-3">What is IDRM?</h3>
@@ -111,17 +106,7 @@ const HelpModal = ({ show, onClose }) => {
             </ul>
           </div>
         </div>
-
-        <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4">
-          <button
-            onClick={onClose}
-            className="w-full px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors"
-          >
-            Got it, thanks!
-          </button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 };
 

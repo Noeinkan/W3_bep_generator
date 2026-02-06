@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db/database');
-const { cuid } = require('@paralleldrive/cuid2');
+const { createId } = require('@paralleldrive/cuid2');
 const bepStructureService = require('../services/bepStructureService');
 
 /**
@@ -112,7 +112,7 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const id = cuid();
+    const id = createId();
     const now = new Date().toISOString();
 
     const stmt = db.prepare(`

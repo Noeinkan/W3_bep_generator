@@ -15,6 +15,9 @@ export function markdownToTipTapHtml(markdown) {
     return '';
   }
 
+  const MAX_TABLE_ROWS = 15;
+  const MAX_TABLE_COLUMNS = 6;
+
   // Pre-process: Add newlines before numbered lists and after periods for better structure
   // This helps when AI generates continuous text without proper line breaks
   let processed = markdown;
@@ -67,14 +70,104 @@ export function markdownToTipTapHtml(markdown) {
     }
   };
 
-  lines.forEach((line, index) => {
+  const isMarkdownTableSeparator = (line) => {
+    return /^\s*\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?\s*$/.test(line);
+  };
+
+  const splitTableRow = (line) => {
+    let row = line.trim();
+    if (row.startsWith('|')) row = row.slice(1);
+    if (row.endsWith('|')) row = row.slice(0, -1);
+    return row.split('|').map((cell) => cell.trim());
+  };
+
+  const buildTableHtml = (headerCells, bodyRows) => {
+    const maxBodyRows = Math.max(MAX_TABLE_ROWS - 1, 0);
+    const limitedRows = bodyRows.slice(0, maxBodyRows);
+    const allColumns = Math.max(headerCells.length, ...limitedRows.map((row) => row.length));
+    const columnCount = Math.min(allColumns, MAX_TABLE_COLUMNS);
+
+    const normalizeRow = (row) => {
+      const normalized = row.slice(0, columnCount);
+      while (normalized.length < columnCount) normalized.push('');
+      return normalized;
+    };
+
+    const normalizedHeader = normalizeRow(headerCells);
+    const headerHtml = normalizedHeader
+      .map((cell) => `<th><p>${processInlineFormatting(cell)}</p></th>`)
+      .join('');
+
+    const bodyHtml = limitedRows
+      .map((row) => {
+        const normalized = normalizeRow(row);
+        const cellsHtml = normalized
+          .map((cell) => `<td><p>${processInlineFormatting(cell)}</p></td>`)
+          .join('');
+        return `<tr>${cellsHtml}</tr>`;
+      })
+      .join('');
+
+    const hasTruncatedRows = bodyRows.length > maxBodyRows;
+    const overflowHtml = hasTruncatedRows
+      ? `<tr><td colspan="${columnCount}"><p>Additional items omitted for brevity.</p></td></tr>`
+      : '';
+
+    return `<table class="tiptap-table"><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}${overflowHtml}</tbody></table>`;
+  };
+
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
     const trimmed = line.trim();
 
     // Empty line - close any open lists
     if (!trimmed) {
       closeBulletList();
       closeNumberedList();
-      return;
+      continue;
+    }
+
+    // Preserve HTML tables from AI output
+    if (trimmed.startsWith('<table')) {
+      closeBulletList();
+      closeNumberedList();
+      const tableLines = [line];
+      while (index + 1 < lines.length && !lines[index].includes('</table>')) {
+        index += 1;
+        tableLines.push(lines[index]);
+        if (lines[index].includes('</table>')) break;
+      }
+      htmlBlocks.push(tableLines.join('\n'));
+      continue;
+    }
+
+    // Markdown tables
+    const nextLine = lines[index + 1]?.trim();
+    if (trimmed.includes('|') && nextLine && isMarkdownTableSeparator(nextLine)) {
+      closeBulletList();
+      closeNumberedList();
+      const headerCells = splitTableRow(trimmed);
+      let rowIndex = index + 2; // Skip header and separator
+      const bodyRows = [];
+
+      while (rowIndex < lines.length) {
+        const rowLine = lines[rowIndex].trim();
+        if (!rowLine || !rowLine.includes('|')) break;
+        if (isMarkdownTableSeparator(rowLine)) {
+          rowIndex += 1;
+          continue;
+        }
+        bodyRows.push(splitTableRow(rowLine));
+        if (bodyRows.length >= Math.max(MAX_TABLE_ROWS - 1, 0)) {
+          rowIndex += 1;
+          break;
+        }
+        rowIndex += 1;
+      }
+
+      htmlBlocks.push(buildTableHtml(headerCells, bodyRows));
+      index = rowIndex - 1;
+      continue;
     }
 
     // Headings with # markers
@@ -85,7 +178,7 @@ export function markdownToTipTapHtml(markdown) {
       const level = headingMatch[1].length;
       const text = processInlineFormatting(headingMatch[2]);
       htmlBlocks.push(`<h${level}>${text}</h${level}>`);
-      return;
+      continue;
     }
 
     // Detect section headers (lines ending with colon, capitalized, no punctuation before)
@@ -94,7 +187,7 @@ export function markdownToTipTapHtml(markdown) {
       closeBulletList();
       closeNumberedList();
       htmlBlocks.push(`<h4>${processInlineFormatting(sectionHeaderMatch[1])}</h4>`);
-      return;
+      continue;
     }
 
     // Detect standalone capitalized titles (short lines, all caps or title case, no punctuation at end)
@@ -108,7 +201,7 @@ export function markdownToTipTapHtml(markdown) {
         closeBulletList();
         closeNumberedList();
         htmlBlocks.push(`<h4>${processInlineFormatting(trimmed)}</h4>`);
-        return;
+        continue;
       }
     }
 
@@ -118,7 +211,7 @@ export function markdownToTipTapHtml(markdown) {
       closeNumberedList();
       inBulletList = true;
       bulletListItems.push(bulletMatch[1]);
-      return;
+      continue;
     }
 
     // Numbered lists (1. or 1))
@@ -127,7 +220,7 @@ export function markdownToTipTapHtml(markdown) {
       closeBulletList();
       inNumberedList = true;
       numberedListItems.push(numberedMatch[1]);
-      return;
+      continue;
     }
 
     // Blockquote
@@ -136,7 +229,7 @@ export function markdownToTipTapHtml(markdown) {
       closeBulletList();
       closeNumberedList();
       htmlBlocks.push(`<blockquote><p>${processInlineFormatting(quoteMatch[1])}</p></blockquote>`);
-      return;
+      continue;
     }
 
     // Horizontal rule
@@ -144,14 +237,14 @@ export function markdownToTipTapHtml(markdown) {
       closeBulletList();
       closeNumberedList();
       htmlBlocks.push('<hr />');
-      return;
+      continue;
     }
 
     // Regular paragraph
     closeBulletList();
     closeNumberedList();
     htmlBlocks.push(`<p>${processInlineFormatting(trimmed)}</p>`);
-  });
+  }
 
   // Close any remaining lists
   closeBulletList();

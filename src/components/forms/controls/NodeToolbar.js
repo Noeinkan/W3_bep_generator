@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Edit2, Trash2, Copy, Palette, Type } from 'lucide-react';
 import { getNodeTypeConfig, NODE_TYPES } from '../../../utils/nodeTypes';
+import BaseTextInput from '../base/BaseTextInput';
 
 const NodeToolbar = ({ node, position, onRename, onDelete, onDuplicate, onChangeType, onClose }) => {
   const [isRenaming, setIsRenaming] = useState(false);
@@ -80,14 +81,14 @@ const NodeToolbar = ({ node, position, onRename, onDelete, onDuplicate, onChange
       <div className="bg-white rounded-lg shadow-2xl border-2 border-blue-400 overflow-visible">
         {isRenaming ? (
           <div className="p-2 min-w-64">
-            <input
+            <BaseTextInput
               ref={inputRef}
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={handleKeyDown}
               onBlur={handleRename}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              className="px-3 py-2 border-gray-300 rounded-md text-sm"
               placeholder="Node name..."
             />
             <div className="mt-1 text-xs text-gray-500">

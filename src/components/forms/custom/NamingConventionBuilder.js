@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { Plus, Trash2, Info } from 'lucide-react';
 import TipTapEditor from '../editors/TipTapEditor';
 import FieldHeader from '../base/FieldHeader';
+import FieldError from '../base/FieldError';
+import BaseTextInput from '../base/BaseTextInput';
 import NamingPatternVisualizer from './NamingPatternVisualizer';
 import DeliverableAttributesVisualizer from './DeliverableAttributesVisualizer';
 
@@ -276,39 +278,39 @@ const NamingConventionBuilder = ({ field, value = {}, onChange, error, disabled 
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Field Name
                     </label>
-                    <input
+                    <BaseTextInput
                       type="text"
                       value={field.fieldName}
                       onChange={(e) => updateNamingField(index, 'fieldName', e.target.value)}
                       disabled={disabled}
                       placeholder="e.g., Project Code"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="px-3 py-2 border-gray-300 text-sm"
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Example Value
                     </label>
-                    <input
+                    <BaseTextInput
                       type="text"
                       value={field.exampleValue}
                       onChange={(e) => updateNamingField(index, 'exampleValue', e.target.value)}
                       disabled={disabled}
                       placeholder="e.g., PRJ001"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="px-3 py-2 border-gray-300 text-sm"
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Description
                     </label>
-                    <input
+                    <BaseTextInput
                       type="text"
                       value={field.description}
                       onChange={(e) => updateNamingField(index, 'description', e.target.value)}
                       disabled={disabled}
                       placeholder="e.g., Unique project identifier"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="px-3 py-2 border-gray-300 text-sm"
                     />
                   </div>
                 </div>
@@ -368,39 +370,39 @@ const NamingConventionBuilder = ({ field, value = {}, onChange, error, disabled 
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Attribute Name
                     </label>
-                    <input
+                    <BaseTextInput
                       type="text"
                       value={attr.attributeName}
                       onChange={(e) => updateAttribute(index, 'attributeName', e.target.value)}
                       disabled={disabled}
                       placeholder="e.g., File Format"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="px-3 py-2 border-gray-300 text-sm"
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Example Value
                     </label>
-                    <input
+                    <BaseTextInput
                       type="text"
                       value={attr.exampleValue}
                       onChange={(e) => updateAttribute(index, 'exampleValue', e.target.value)}
                       disabled={disabled}
                       placeholder="e.g., .rvt, .dwg, .pdf"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="px-3 py-2 border-gray-300 text-sm"
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Description
                     </label>
-                    <input
+                    <BaseTextInput
                       type="text"
                       value={attr.description}
                       onChange={(e) => updateAttribute(index, 'description', e.target.value)}
                       disabled={disabled}
                       placeholder="e.g., Acceptable file formats"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="px-3 py-2 border-gray-300 text-sm"
                     />
                   </div>
                 </div>
@@ -426,7 +428,7 @@ const NamingConventionBuilder = ({ field, value = {}, onChange, error, disabled 
         </div>
       </div>
 
-      {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+      <FieldError error={error} />
     </div>
   );
 };

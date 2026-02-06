@@ -17,6 +17,8 @@ import {
   GripVertical
 } from 'lucide-react';
 import { PLATFORM_ROLES, getPlatformById, getRoleById } from '../../../data/cdePlatformLibrary';
+import BaseTextInput from '../base/BaseTextInput';
+import BaseTextArea from '../base/BaseTextArea';
 
 // Icon mapping for vendors
 const ICON_MAP = {
@@ -160,16 +162,17 @@ const CDEPlatformCard = ({
         <div className="flex-1 min-w-0">
           {isEditing ? (
             <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-              <input
+              <BaseTextInput
                 type="text"
                 value={editName}
                 onChange={e => setEditName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleNameSave()}
                 onBlur={handleNameSave}
                 autoFocus
-                className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="flex-1 px-2 py-1 text-sm"
               />
               <button
+                type="button"
                 onClick={handleNameSave}
                 className="p-1 text-green-600 hover:bg-green-50 rounded"
               >
@@ -304,13 +307,13 @@ const CDEPlatformCard = ({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Description / Notes
             </label>
-            <textarea
+            <BaseTextArea
               value={platform.description || ''}
               onChange={e => onUpdate({ ...platform, description: e.target.value })}
               disabled={disabled}
               placeholder={platformTemplate.description}
               rows={2}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              className="text-sm resize-none"
             />
           </div>
 

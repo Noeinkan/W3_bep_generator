@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Users, X, Edit2, Sparkles, Maximize2, Plus } from 'lucide-react';
 import TipTapEditor from '../editors/TipTapEditor';
 import FieldHeader from './FieldHeader';
+import FieldError from './FieldError';
 import FullscreenTableModal from './FullscreenTableModal';
 import COMMERCIAL_OFFICE_TEMPLATE from '../../../data/templates/commercialOfficeTemplate';
 
@@ -620,7 +621,7 @@ const EditableTable = React.memo(({ field, value, onChange, error }) => {
       {/* Floating row action buttons - rendered via Portal (available in both normal and fullscreen) */}
       {renderFloatingButtons()}
 
-      {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+      <FieldError error={error} />
 
       {/* Delete Column Confirmation Modal */}
       {columnToDelete !== null && createPortal(

@@ -14,6 +14,7 @@ import {
   GripVertical
 } from 'lucide-react';
 import FieldHeader from '../../base/FieldHeader';
+import FieldError from '../../base/FieldError';
 
 // Tooltip Component
 const Tooltip = ({ children, content, position = 'top' }) => {
@@ -1043,10 +1044,12 @@ const FolderStructureDiagram = ({ field, value, onChange, error }) => {
         </div>
       </div>
 
-      {error && <p className="text-red-500 text-sm mt-2 flex items-center space-x-1">
-        <X className="w-4 h-4" />
-        <span>{error}</span>
-      </p>}
+      <FieldError
+        error={error}
+        className="mt-2 flex items-center space-x-1"
+        icon={<X className="w-4 h-4" />}
+        iconClassName="inline-flex"
+      />
 
       {/* Context Menu */}
       {contextMenu && (

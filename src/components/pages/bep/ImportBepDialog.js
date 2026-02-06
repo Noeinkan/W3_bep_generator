@@ -1,5 +1,7 @@
 import React, { useRef, useState } from 'react';
-import { Upload, X, FileJson, AlertCircle, CheckCircle } from 'lucide-react';
+import { Upload, FileJson, AlertCircle, CheckCircle } from 'lucide-react';
+import Modal from '../../common/Modal';
+import Button from '../../common/Button';
 
 const ImportBepDialog = ({ show, onImport, onCancel, isLoading }) => {
   const fileInputRef = useRef(null);
@@ -69,27 +71,26 @@ const ImportBepDialog = ({ show, onImport, onCancel, isLoading }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 sm:p-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-              <Upload className="w-6 h-6 text-orange-600" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-slate-900">Import BEP</h3>
-              <p className="text-sm text-slate-600">Load a previously exported BEP JSON file</p>
-            </div>
-          </div>
-          <button
-            onClick={handleCancel}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-            disabled={isLoading}
+    <Modal
+      open={show}
+      onClose={handleCancel}
+      title="Import BEP"
+      size="lg"
+      footer={
+        <>
+          <Button variant="secondary" onClick={handleCancel} disabled={isLoading}>Cancel</Button>
+          <Button
+            onClick={handleImportClick}
+            disabled={!selectedFile || isLoading}
+            loading={isLoading}
+            icon={Upload}
+            className="bg-orange-600 hover:bg-orange-700"
           >
-            <X className="w-5 h-5 text-slate-600" />
-          </button>
-        </div>
+            {isLoading ? 'Importing...' : 'Import BEP'}
+          </Button>
+        </>
+      }
+    >
 
         {/* File Drop Zone */}
         <div
@@ -193,36 +194,7 @@ const ImportBepDialog = ({ show, onImport, onCancel, isLoading }) => {
             </div>
           </div>
         </div>
-
-        {/* Actions */}
-        <div className="flex items-center justify-end space-x-3">
-          <button
-            onClick={handleCancel}
-            className="px-6 py-3 border border-slate-300 text-slate-700 rounded-lg font-semibold hover:bg-slate-50 transition-colors"
-            disabled={isLoading}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleImportClick}
-            disabled={!selectedFile || isLoading}
-            className="px-6 py-3 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
-          >
-            {isLoading ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Importing...</span>
-              </>
-            ) : (
-              <>
-                <Upload className="w-5 h-5" />
-                <span>Import BEP</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 };
 

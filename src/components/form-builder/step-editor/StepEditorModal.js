@@ -5,7 +5,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { X, Save, Plus } from 'lucide-react';
+import { Save, Plus } from 'lucide-react';
+import { Modal, Button, Select } from '../../common';
 
 // Category options
 const CATEGORIES = [
@@ -120,33 +121,27 @@ export default function StepEditorModal({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold text-gray-900">
-            {isEditing ? 'Edit Step' : 'Add New Step'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      title={isEditing ? 'Edit Step' : 'Add New Step'}
+      size="sm"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button
+            onClick={handleSave}
+            disabled={isSaving}
+            loading={isSaving}
+            icon={isEditing ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
           >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="p-4 space-y-4">
+            {isEditing ? 'Save Changes' : 'Add Step'}
+          </Button>
+        </>
+      }
+    >
+        <div className="space-y-4">
           {/* Step Number */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -245,21 +240,18 @@ export default function StepEditorModal({
           </div>
 
           {/* BEP Type */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Applies To
-            </label>
-            <select
-              name="bep_type"
-              value={formData.bep_type}
-              onChange={handleChange}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="both">Both BEP Types</option>
-              <option value="pre-appointment">Pre-Appointment Only</option>
-              <option value="post-appointment">Post-Appointment Only</option>
-            </select>
-          </div>
+          <Select
+            label="Applies To"
+            name="bep_type"
+            value={formData.bep_type}
+            onChange={handleChange}
+            placeholder={null}
+            options={[
+              { value: 'both', label: 'Both BEP Types' },
+              { value: 'pre-appointment', label: 'Pre-Appointment Only' },
+              { value: 'post-appointment', label: 'Post-Appointment Only' },
+            ]}
+          />
 
           {/* Error message */}
           {errors.submit && (
@@ -268,34 +260,6 @@ export default function StepEditorModal({
             </div>
           )}
         </div>
-
-        {/* Footer */}
-        <div className="flex justify-end space-x-2 p-4 border-t bg-gray-50 rounded-b-xl">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 disabled:opacity-50"
-          >
-            {isSaving ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Saving...</span>
-              </>
-            ) : (
-              <>
-                {isEditing ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                <span>{isEditing ? 'Save Changes' : 'Add Step'}</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

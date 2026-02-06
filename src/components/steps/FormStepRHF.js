@@ -1,41 +1,20 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
 import InputFieldRHF from '../forms/base/InputFieldRHF';
 import CONFIG from '../../config/bepConfig';
-
-// Field types that should span full width (both columns) in the grid layout
-const FULL_WIDTH_FIELD_TYPES = [
-  'section-header',
-  'textarea',
-  'checkbox',
-  'table',
-  'introTable',
-  'fileStructure',
-  'cdeDiagram',
-  'mindmap',
-  'orgchart',
-  'orgstructure-data-table',
-  // Step 5 specialized types
-  'milestones-table',
-  'tidp-reference',
-  'tidp-section',
-  'deliverables-matrix',
-  'im-activities-matrix',
-  'naming-conventions',
-  'federation-strategy'
-];
+import { getFullWidthFieldTypes } from '../form-builder/FieldTypeRegistry';
 
 // Field types that should span all 3 columns
-const THREE_COLUMN_FIELD_TYPES = [
-  'standardsTable'
-];
+const THREE_COLUMN_FIELD_TYPES = ['standardsTable'];
 
 /**
  * Form step component using React Hook Form
- * Renders fields for a specific step using the form context
+ * Renders fields for a specific step using the form context.
+ * Full-width metadata is sourced from FieldTypeRegistry.
  */
 const FormStepRHF = ({ stepIndex, bepType }) => {
   const { formState: { errors } } = useFormContext();
+  const fullWidthTypes = useMemo(() => getFullWidthFieldTypes(), []);
 
   // Safety check - ensure we have the required props
   if (!bepType) {
@@ -71,7 +50,7 @@ const FormStepRHF = ({ stepIndex, bepType }) => {
             <div key={field.name} className={
               isAppendicesStep ? 'md:col-span-3' :
               THREE_COLUMN_FIELD_TYPES.includes(field.type) ? 'md:col-span-3' :
-              FULL_WIDTH_FIELD_TYPES.includes(field.type) ? 'md:col-span-2' : ''
+              fullWidthTypes.includes(field.type) ? 'md:col-span-2' : ''
             }>
               <InputFieldRHF
                 field={field}

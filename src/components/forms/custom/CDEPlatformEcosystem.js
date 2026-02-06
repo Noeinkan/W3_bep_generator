@@ -30,6 +30,7 @@ import {
   getPlatformList,
   getTemplateList
 } from '../../../data/cdePlatformLibrary';
+import FieldError from '../base/FieldError';
 
 /**
  * CDEPlatformEcosystem
@@ -981,9 +982,7 @@ const CDEPlatformEcosystemInner = ({
         </div>
       </FullscreenDiagramModal>
 
-      {error && (
-        <p className="text-red-500 text-sm mt-2">{error}</p>
-      )}
+      <FieldError error={error} className="mt-2" />
     </div>
   );
 };

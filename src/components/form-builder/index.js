@@ -12,7 +12,6 @@ export { default as FormBuilderContext } from './FormBuilderContext';
 export { useBepStructure } from './useBepStructure';
 
 // Components
-export { default as DynamicFieldRenderer } from './DynamicFieldRenderer';
 export { default as DynamicFormStepRHF } from './DynamicFormStepRHF';
 export { default as DynamicProgressSidebar } from './DynamicProgressSidebar';
 export { default as BepStructureMap } from './BepStructureMap';

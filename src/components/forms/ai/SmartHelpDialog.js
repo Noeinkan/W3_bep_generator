@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   X,
   Sparkles,
@@ -13,49 +13,11 @@ import {
   CheckCircle,
   AlertCircle as AlertCircleIcon
 } from 'lucide-react';
+import { Modal } from '../../common';
 import axios from 'axios';
 import COMMERCIAL_OFFICE_TEMPLATE from '../../../data/templates/commercialOfficeTemplate';
 import { markdownToTipTapHtml } from '../../../utils/markdownToHtml';
-
-// Field examples mapping (from TemplateSelector)
-const FIELD_EXAMPLES = {
-  'projectDescription': COMMERCIAL_OFFICE_TEMPLATE.projectDescription,
-  'projectContext': COMMERCIAL_OFFICE_TEMPLATE.projectContext,
-  'bimStrategy': COMMERCIAL_OFFICE_TEMPLATE.bimStrategy,
-  'keyCommitments': COMMERCIAL_OFFICE_TEMPLATE.keyCommitments,
-  'valueProposition': COMMERCIAL_OFFICE_TEMPLATE.valueProposition,
-  'teamCapabilities': COMMERCIAL_OFFICE_TEMPLATE.teamCapabilities,
-  'proposedBimGoals': COMMERCIAL_OFFICE_TEMPLATE.proposedBimGoals,
-  'proposedObjectives': COMMERCIAL_OFFICE_TEMPLATE.proposedObjectives,
-  'tenderApproach': COMMERCIAL_OFFICE_TEMPLATE.tenderApproach,
-  'deliveryApproach': COMMERCIAL_OFFICE_TEMPLATE.deliveryApproach,
-  'referencedMaterial': COMMERCIAL_OFFICE_TEMPLATE.referencedMaterial,
-  'informationManagementResponsibilities': COMMERCIAL_OFFICE_TEMPLATE.informationManagementResponsibilities,
-  'organizationalStructure': COMMERCIAL_OFFICE_TEMPLATE.organizationalStructure,
-  'confirmedBimGoals': COMMERCIAL_OFFICE_TEMPLATE.confirmedBimGoals,
-  'implementationObjectives': COMMERCIAL_OFFICE_TEMPLATE.implementationObjectives,
-  'projectInformationRequirements': COMMERCIAL_OFFICE_TEMPLATE.projectInformationRequirements,
-  'midpDescription': COMMERCIAL_OFFICE_TEMPLATE.midpDescription,
-  'tidpRequirements': COMMERCIAL_OFFICE_TEMPLATE.tidpRequirements,
-  'mobilisationPlan': COMMERCIAL_OFFICE_TEMPLATE.mobilisationPlan,
-  'mobilizationPlan': COMMERCIAL_OFFICE_TEMPLATE.mobilizationPlan,
-  'proposedMobilizationPlan': COMMERCIAL_OFFICE_TEMPLATE.proposedMobilizationPlan,
-  'resourceAllocationTable': COMMERCIAL_OFFICE_TEMPLATE.resourceAllocationTable,
-  'proposedResourceAllocation': COMMERCIAL_OFFICE_TEMPLATE.proposedResourceAllocation,
-  'teamCapabilitySummary': COMMERCIAL_OFFICE_TEMPLATE.teamCapabilitySummary,
-  'taskTeamExchange': COMMERCIAL_OFFICE_TEMPLATE.taskTeamExchange,
-  'modelReferencing3d': COMMERCIAL_OFFICE_TEMPLATE.modelReferencing3d,
-  'informationBreakdownStrategy': COMMERCIAL_OFFICE_TEMPLATE.informationBreakdownStrategy,
-  'federationProcess': COMMERCIAL_OFFICE_TEMPLATE.federationProcess,
-  'bimGoals': COMMERCIAL_OFFICE_TEMPLATE.bimGoals,
-  'primaryObjectives': COMMERCIAL_OFFICE_TEMPLATE.primaryObjectives,
-  'collaborativeProductionGoals': COMMERCIAL_OFFICE_TEMPLATE.collaborativeProductionGoals,
-  'alignmentStrategy': COMMERCIAL_OFFICE_TEMPLATE.alignmentStrategy,
-  'cdeStrategy': COMMERCIAL_OFFICE_TEMPLATE.cdeStrategy,
-  'volumeStrategy': COMMERCIAL_OFFICE_TEMPLATE.volumeStrategy,
-  'bimValueApplications': COMMERCIAL_OFFICE_TEMPLATE.bimValueApplications,
-  'strategicAlignment': COMMERCIAL_OFFICE_TEMPLATE.strategicAlignment,
-};
+import FIELD_EXAMPLES from '../../../constants/fieldExamples';
 
 /**
  * SmartHelpDialog - Context-aware help dialog
@@ -73,21 +35,7 @@ const SmartHelpDialog = ({
   helpContent,
   onClose
 }) => {
-  const dialogRef = useRef(null);
-
-  // Auto-scroll dialog into view when opened
-  useEffect(() => {
-    if (dialogRef.current) {
-      // Small delay to ensure DOM is ready
-      setTimeout(() => {
-        dialogRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-          inline: 'center'
-        });
-      }, 100);
-    }
-  }, []); // Run once when dialog opens
+  const contentRef = useRef(null);
 
   // Tab configuration based on field state
   const getTabsConfig = () => {
@@ -122,32 +70,6 @@ const SmartHelpDialog = ({
     expand: false,
     concise: false
   });
-
-  // Close on click outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dialogRef.current && !dialogRef.current.contains(event.target)) {
-        onClose();
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.body.style.overflow = 'unset';
-    };
-  }, [onClose]);
-
-  // Close on Escape
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [onClose]);
 
   // Load example text
   const handleLoadExample = () => {
@@ -213,6 +135,19 @@ const SmartHelpDialog = ({
             editor.state.selection.to
           ) || editor.getText();
 
+      const isTabularCandidate = (text) => {
+        if (!text) return false;
+        const lines = text.split('\n').map((line) => line.trim()).filter(Boolean);
+        const bulletLines = lines.filter((line) => /^([•\-*]|\d+[\.)])\s+/.test(line));
+
+        if (bulletLines.length < 5) return false;
+
+        const bulletContent = bulletLines.map((line) => line.replace(/^([•\-*]|\d+[\.)])\s+/, '').trim());
+        const withDelimiter = bulletContent.filter((line) => /:\s+|\s+-\s+|\s+–\s+/.test(line));
+
+        return withDelimiter.length >= Math.max(4, Math.ceil(bulletContent.length * 0.7));
+      };
+
       // Build improvement instructions
       const instructions = [];
       if (improveOptions.grammar) instructions.push('improve grammar and clarity');
@@ -221,9 +156,13 @@ const SmartHelpDialog = ({
       if (improveOptions.expand) instructions.push('expand with more details');
       if (improveOptions.concise) instructions.push('make more concise');
 
+      const tableGuidance = isTabularCandidate(currentContent)
+        ? 'If the content has repeated items with consistent fields, convert it into a concise HTML table with a header row. Limit the table to 15 rows total (including header) and a maximum of 6 columns. Use <table>, <thead>, <tbody>, <tr>, <th>, <td>. Otherwise keep as paragraphs or bullet points.'
+        : 'Only use a table when the content structure clearly implies tabular data. If you use a table, limit it to 15 rows total (including header) and a maximum of 6 columns, and output HTML table tags.';
+
       const prompt = instructions.length > 0
-        ? `Rewrite the following text to ${instructions.join(', ')}. Output ONLY the improved text without any introduction, explanation, or commentary.\n\nText to improve:\n${currentContent}`
-        : currentContent;
+        ? `Rewrite the following text to ${instructions.join(', ')}. ${tableGuidance} Output ONLY the improved text without any introduction, explanation, or commentary.\n\nText to improve:\n${currentContent}`
+        : `${tableGuidance}\n\n${currentContent}`;
 
       const response = await axios.post('/api/ai/suggest', {
         field_type: fieldType || fieldName,
@@ -297,17 +236,14 @@ const SmartHelpDialog = ({
   };
 
   return (
-    <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-[9998]" />
-
-      {/* Dialog */}
-      <div
-        ref={dialogRef}
-        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden z-[9999] flex flex-col"
-      >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-500 text-white p-6 flex-shrink-0">
+    <Modal
+      open={true}
+      onClose={onClose}
+      size="xl"
+      className="max-h-[90vh] overflow-hidden flex flex-col"
+    >
+        {/* Custom gradient header */}
+        <div className="bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-500 text-white p-6 flex-shrink-0 -mx-6 -mt-6">
           <div className="flex justify-between items-start">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-white bg-opacity-20 rounded-lg">
@@ -332,7 +268,7 @@ const SmartHelpDialog = ({
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-200 bg-gray-50 px-4 flex-shrink-0">
+        <div className="border-b border-gray-200 bg-gray-50 -mx-6 px-4 flex-shrink-0">
           <div className="flex gap-1">
             {tabs.map(tab => {
               const Icon = tab.icon;
@@ -365,11 +301,10 @@ const SmartHelpDialog = ({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div ref={contentRef} className="flex-1 overflow-y-auto -mx-6 -mb-4 p-6">
           {renderTabContent()}
         </div>
-      </div>
-    </>
+    </Modal>
   );
 };
 

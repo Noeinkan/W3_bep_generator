@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import FullscreenDiagramModal from '../diagram-ui/FullscreenDiagramModal';
 import FieldHeader from '../../base/FieldHeader';
+import FieldError from '../../base/FieldError';
 
 import { nodeTypes, availableShapes } from '../diagram-nodes/CustomNodes';
 import {
@@ -743,9 +744,7 @@ const CDEDiagramBuilderInner = ({ field, value, onChange, error, readOnly = fals
         </div>
       </div>
 
-      {error && (
-        <p className="text-red-500 text-sm mt-1">{error}</p>
-      )}
+      <FieldError error={error} />
 
       {/* Focus Mode - Fullscreen Modal */}
       <FullscreenDiagramModal

@@ -3,6 +3,7 @@ import { Info, Upload, Download } from 'lucide-react';
 import TipTapEditor from '../editors/TipTapEditor';
 import ClashMatrixHeatmap from './ClashMatrixHeatmap';
 import FieldHeader from '../base/FieldHeader';
+import FieldError from '../base/FieldError';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 
@@ -487,7 +488,7 @@ const FederationStrategyBuilder = ({ field, value = {}, onChange, error, disable
         </div>
       </div>
 
-      {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+      <FieldError error={error} />
     </div>
   );
 };

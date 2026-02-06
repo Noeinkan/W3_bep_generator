@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search, X, SortAsc, SortDesc } from 'lucide-react';
+import Select from '../../common/Select';
 
 const SearchAndFilters = ({
   searchQuery,
@@ -48,54 +49,50 @@ const SearchAndFilters = ({
         <div className="bg-gray-50 rounded-lg p-4 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* BEP Type Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                BEP Type
-              </label>
-              <select
-                value={selectedBepTypeFilter}
-                onChange={(e) => onBepTypeFilterChange(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">All types</option>
-                <option value="pre-appointment">Pre-Appointment</option>
-                <option value="post-appointment">Post-Appointment</option>
-              </select>
-            </div>
+            <Select
+              label="BEP Type"
+              value={selectedBepTypeFilter}
+              onChange={(e) => onBepTypeFilterChange(e.target.value)}
+              placeholder={null}
+              options={[
+                { value: 'all', label: 'All types' },
+                { value: 'pre-appointment', label: 'Pre-Appointment' },
+                { value: 'post-appointment', label: 'Post-Appointment' },
+              ]}
+            />
 
             {/* Date Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Modified
-              </label>
-              <select
-                value={dateFilter}
-                onChange={(e) => onDateFilterChange(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">All dates</option>
-                <option value="today">Today</option>
-                <option value="week">Last week</option>
-                <option value="month">Last month</option>
-              </select>
-            </div>
+            <Select
+              label="Modified"
+              value={dateFilter}
+              onChange={(e) => onDateFilterChange(e.target.value)}
+              placeholder={null}
+              options={[
+                { value: 'all', label: 'All dates' },
+                { value: 'today', label: 'Today' },
+                { value: 'week', label: 'Last week' },
+                { value: 'month', label: 'Last month' },
+              ]}
+            />
 
             {/* Sort Controls */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Sort by
               </label>
               <div className="flex space-x-2">
-                <select
+                <Select
                   value={sortBy}
                   onChange={(e) => onSortByChange(e.target.value)}
-                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="lastModified">Modified date</option>
-                  <option value="name">Draft name</option>
-                  <option value="projectName">Project name</option>
-                  <option value="bepType">BEP type</option>
-                </select>
+                  placeholder={null}
+                  className="flex-1"
+                  options={[
+                    { value: 'lastModified', label: 'Modified date' },
+                    { value: 'name', label: 'Draft name' },
+                    { value: 'projectName', label: 'Project name' },
+                    { value: 'bepType', label: 'BEP type' },
+                  ]}
+                />
                 <button
                   onClick={() => onSortOrderChange(sortOrder === 'asc' ? 'desc' : 'asc')}
                   className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"

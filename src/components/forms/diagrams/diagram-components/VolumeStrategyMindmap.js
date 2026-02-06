@@ -21,6 +21,7 @@ import NodeToolbar from '../../controls/NodeToolbar';
 import NodeContextMenu from '../../controls/NodeContextMenu';
 import CommandPalette from '../../controls/CommandPalette';
 import FullscreenDiagramModal from '../diagram-ui/FullscreenDiagramModal';
+import FieldError from '../../base/FieldError';
 
 const VolumeStrategyMindmap = ({ field, value, onChange, error }) => {
   const { name, label, number, required } = field;
@@ -574,7 +575,7 @@ const VolumeStrategyMindmap = ({ field, value, onChange, error }) => {
         </div>
       </div>
 
-      {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+      <FieldError error={error} />
 
       {/* Fullscreen Modal */}
       <FullscreenDiagramModal
