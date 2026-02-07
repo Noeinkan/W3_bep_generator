@@ -590,18 +590,30 @@ router.post('/bep/pdf', async (req, res, next) => {
     console.log(`   TIDPs: ${tidpData?.length || 0}, MIDPs: ${midpData?.length || 0}`);
     console.log(`   Component Images: ${Object.keys(componentImages || {}).length}`);
 
-    // Generate HTML from template
-    const html = await htmlTemplateService.generateBEPHTML(
-      formData,
-      bepType,
-      tidpData || [],
-      midpData || [],
-      componentImages || {}
-    );
+    // Calculate request payload size for debugging
+    const payloadSize = JSON.stringify(req.body).length;
+    console.log(`   Payload size: ${(payloadSize / (1024 * 1024)).toFixed(2)} MB`);
 
-    console.log(`✅ HTML generated (${(html.length / 1024).toFixed(2)} KB)`);
+    // Generate HTML from template
+    console.log('📝 Generating HTML from template...');
+    let html;
+    try {
+      html = await htmlTemplateService.generateBEPHTML(
+        formData,
+        bepType,
+        tidpData || [],
+        midpData || [],
+        componentImages || {}
+      );
+      console.log(`✅ HTML generated (${(html.length / 1024).toFixed(2)} KB)`);
+    } catch (htmlError) {
+      console.error('❌ HTML generation failed:', htmlError);
+      throw new Error(`HTML generation failed: ${htmlError.message}`);
+    }
 
     // Generate PDF with Puppeteer
+    // Increased timeouts to handle large HTML with embedded compressed images
+    console.log('🖨️  Generating PDF with Puppeteer...');
     const pdfOptions = {
       format: 'A4',
       orientation: options?.orientation || 'portrait',
@@ -611,10 +623,17 @@ router.post('/bep/pdf', async (req, res, next) => {
         bottom: '25mm',
         left: '20mm'
       },
-      timeout: options?.quality === 'high' ? 120000 : 60000
+      timeout: options?.quality === 'high' ? 180000 : 90000, // 3min high, 1.5min standard
+      deviceScaleFactor: 1.5 // Optimized for A4 print quality
     };
 
-    const filepath = await puppeteerPdfService.generatePDFFromHTML(html, pdfOptions);
+    let filepath;
+    try {
+      filepath = await puppeteerPdfService.generatePDFFromHTML(html, pdfOptions);
+    } catch (pdfError) {
+      console.error('❌ Puppeteer PDF generation failed:', pdfError);
+      throw new Error(`PDF generation failed: ${pdfError.message}`);
+    }
 
     // Stream PDF to client
     const filename = `BEP_${bepType}_${new Date().toISOString().split('T')[0]}.pdf`;

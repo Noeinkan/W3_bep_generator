@@ -90,24 +90,29 @@ class PuppeteerPdfService {
       const browser = await this.getBrowser();
       page = await browser.newPage();
 
-      // Set timeout
-      const timeout = options.timeout || 60000;
+      // Set timeout (increased for large HTML with embedded images)
+      const timeout = options.timeout || 90000; // Default 90s
       await page.setDefaultTimeout(timeout);
 
-      // Set viewport for consistent rendering
+      // Set viewport for A4 consistent rendering
       await page.setViewport({
         width: 1200,
         height: 1600,
-        deviceScaleFactor: options.deviceScaleFactor || 2
+        deviceScaleFactor: options.deviceScaleFactor || 1.5 // Reduced from 2 for performance
       });
 
       console.log('📄 Loading HTML content...');
 
-      // Load HTML content
+      // Load HTML content with optimized wait strategy
+      // Use 'domcontentloaded' instead of 'networkidle0' for faster loading
+      // All images are embedded as data URLs, so no network requests
       await page.setContent(html, {
-        waitUntil: ['networkidle0', 'load'],
+        waitUntil: 'domcontentloaded',
         timeout: timeout
       });
+
+      // Small delay to ensure all embedded images are rendered
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       console.log('🖨️  Generating PDF...');
 

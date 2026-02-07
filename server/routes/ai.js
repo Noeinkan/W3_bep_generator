@@ -333,4 +333,188 @@ router.post('/suggest-from-eir', async (req, res) => {
   }
 });
 
+// ============================================================================
+// Guided AI: Question-based Content Generation
+// ============================================================================
+
+/**
+ * Generate contextual questions for a BEP field
+ *
+ * POST /api/ai/generate-questions
+ * Body: {
+ *   field_type: string,
+ *   field_label: string,
+ *   field_context?: { step_name, step_number, existing_fields, draft_id }
+ * }
+ */
+router.post('/generate-questions', async (req, res) => {
+  try {
+    const { field_type, field_label, field_context } = req.body;
+
+    // Validate request
+    if (!field_type || typeof field_type !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request',
+        message: 'field_type is required and must be a string'
+      });
+    }
+
+    if (!field_label || typeof field_label !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request',
+        message: 'field_label is required and must be a string'
+      });
+    }
+
+    console.log(`Guided AI: generating questions for field_type=${field_type}`);
+
+    const mlClient = getMLClient();
+    const response = await mlClient.post('/generate-questions', {
+      field_type,
+      field_label,
+      field_context: field_context || null
+    }, {
+      timeout: 30000 // 30s for question generation
+    });
+
+    res.json({
+      success: true,
+      questions: response.data.questions,
+      field_type: response.data.field_type
+    });
+
+  } catch (error) {
+    console.error('Guided AI question generation error:', error.message);
+
+    if (error.response) {
+      return res.status(error.response.status).json({
+        success: false,
+        error: 'Question generation failed',
+        message: error.response.data.detail || error.message
+      });
+    }
+
+    if (error.code === 'ECONNREFUSED') {
+      return res.status(503).json({
+        success: false,
+        error: 'ML service unavailable',
+        message: 'AI service is not running. Please start the ML service.'
+      });
+    }
+
+    if (error.code === 'ECONNABORTED') {
+      return res.status(408).json({
+        success: false,
+        error: 'Request timeout',
+        message: 'Question generation timed out. Please try again.'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * Generate content from user answers to guided questions
+ *
+ * POST /api/ai/generate-from-answers
+ * Body: {
+ *   field_type: string,
+ *   field_label?: string,
+ *   session_id?: string,
+ *   answers: [{ question_id, question_text, answer }],
+ *   field_context?: object
+ * }
+ */
+router.post('/generate-from-answers', async (req, res) => {
+  try {
+    const { field_type, field_label, session_id, answers, field_context } = req.body;
+
+    // Validate request
+    if (!field_type || typeof field_type !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request',
+        message: 'field_type is required and must be a string'
+      });
+    }
+
+    if (!Array.isArray(answers)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request',
+        message: 'answers must be an array'
+      });
+    }
+
+    // Truncate long answers (max 500 chars each)
+    const sanitizedAnswers = answers.map(a => ({
+      question_id: a.question_id,
+      question_text: a.question_text,
+      answer: a.answer ? String(a.answer).slice(0, 500) : null
+    }));
+
+    const answeredCount = sanitizedAnswers.filter(a => a.answer).length;
+    console.log(`Guided AI: generating from ${answeredCount}/${sanitizedAnswers.length} answers for field_type=${field_type}`);
+
+    const mlClient = getMLClient();
+    const response = await mlClient.post('/generate-from-answers', {
+      field_type,
+      field_label: field_label || field_type,
+      session_id: session_id || null,
+      answers: sanitizedAnswers,
+      field_context: field_context || null
+    }, {
+      timeout: 60000 // 60s for content generation
+    });
+
+    res.json({
+      success: true,
+      text: response.data.text,
+      questions_answered: response.data.questions_answered,
+      questions_total: response.data.questions_total,
+      model: response.data.model
+    });
+
+  } catch (error) {
+    console.error('Guided AI content generation error:', error.message);
+
+    if (error.response) {
+      return res.status(error.response.status).json({
+        success: false,
+        error: 'Content generation failed',
+        message: error.response.data.detail || error.message
+      });
+    }
+
+    if (error.code === 'ECONNREFUSED') {
+      return res.status(503).json({
+        success: false,
+        error: 'ML service unavailable',
+        message: 'AI service is not running. Please start the ML service.'
+      });
+    }
+
+    if (error.code === 'ECONNABORTED') {
+      return res.status(408).json({
+        success: false,
+        error: 'Request timeout',
+        message: 'Content generation timed out. Please try again.'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;

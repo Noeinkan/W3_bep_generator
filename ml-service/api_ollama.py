@@ -391,6 +391,155 @@ class SuggestFromEirResponse(BaseModel):
     model: str = Field(..., description="Model used")
 
 
+# ============================================================================
+# Guided AI Question-based Generation Endpoints
+# ============================================================================
+
+class FieldContext(BaseModel):
+    """Context about the field being edited"""
+    step_name: Optional[str] = Field(None, description="Current step name")
+    step_number: Optional[int] = Field(None, description="Current step number")
+    existing_fields: Optional[Dict[str, Any]] = Field(None, description="Other filled fields in the same step")
+    draft_id: Optional[int] = Field(None, description="Draft ID for additional context")
+
+
+class GenerateQuestionsRequest(BaseModel):
+    """Request model for generating guided questions"""
+    field_type: str = Field(..., description="Type of BEP field")
+    field_label: str = Field(..., description="Human-readable field label")
+    field_context: Optional[FieldContext] = Field(None, description="Field context information")
+
+
+class QuestionItem(BaseModel):
+    """A single question for the wizard"""
+    id: str = Field(..., description="Question identifier")
+    text: str = Field(..., description="Question text")
+    hint: str = Field("", description="Optional hint for the user")
+
+
+class GenerateQuestionsResponse(BaseModel):
+    """Response model for generated questions"""
+    success: bool = True
+    questions: list = Field(..., description="List of questions")
+    field_type: str = Field(..., description="Field type")
+
+
+class AnswerItem(BaseModel):
+    """A single answer to a question"""
+    question_id: str = Field(..., description="Question identifier")
+    question_text: str = Field(..., description="Original question text")
+    answer: Optional[str] = Field(None, description="User's answer (None if skipped)")
+
+
+class GenerateFromAnswersRequest(BaseModel):
+    """Request model for generating content from answers"""
+    field_type: str = Field(..., description="Type of BEP field")
+    field_label: Optional[str] = Field(None, description="Human-readable field label")
+    session_id: Optional[str] = Field(None, description="Session identifier")
+    answers: list = Field(..., description="List of answer objects")
+    field_context: Optional[FieldContext] = Field(None, description="Field context information")
+
+
+class GenerateFromAnswersResponse(BaseModel):
+    """Response model for content generated from answers"""
+    success: bool = True
+    text: str = Field(..., description="Generated text content")
+    questions_answered: int = Field(..., description="Number of questions answered")
+    questions_total: int = Field(..., description="Total number of questions")
+    model: str = Field(..., description="Model used for generation")
+
+
+@app.post("/generate-questions", response_model=GenerateQuestionsResponse, tags=["Guided AI"])
+async def generate_questions(request: GenerateQuestionsRequest):
+    """
+    Generate contextual questions for a BEP field.
+
+    The AI generates 3-5 specific questions to help the user provide information
+    that will be used to generate more accurate, project-specific BEP content.
+    """
+    try:
+        generator = get_ollama_generator(model=OLLAMA_MODEL)
+
+        field_context_dict = None
+        if request.field_context:
+            field_context_dict = request.field_context.dict()
+
+        questions = generator.generate_questions_for_field(
+            field_type=request.field_type,
+            field_label=request.field_label,
+            field_context=field_context_dict
+        )
+
+        logger.info(f"Generated {len(questions)} questions for field: {request.field_type}")
+
+        return GenerateQuestionsResponse(
+            success=True,
+            questions=questions,
+            field_type=request.field_type
+        )
+
+    except Exception as e:
+        logger.error(f"Question generation error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Question generation failed: {str(e)}"
+        )
+
+
+@app.post("/generate-from-answers", response_model=GenerateFromAnswersResponse, tags=["Guided AI"])
+async def generate_from_answers(request: GenerateFromAnswersRequest):
+    """
+    Generate BEP content incorporating user answers to guided questions.
+
+    Takes the user's answers from the question wizard and generates professional
+    BEP content that naturally incorporates the provided information.
+    """
+    try:
+        generator = get_ollama_generator(model=OLLAMA_MODEL)
+
+        field_context_dict = None
+        if request.field_context:
+            field_context_dict = request.field_context.dict()
+
+        # Convert answers to plain dicts
+        answers_list = []
+        for a in request.answers:
+            if isinstance(a, dict):
+                answers_list.append(a)
+            else:
+                answers_list.append(a.dict() if hasattr(a, 'dict') else dict(a))
+
+        text = generator.generate_from_answers(
+            field_type=request.field_type,
+            answers=answers_list,
+            field_context=field_context_dict,
+            field_label=request.field_label
+        )
+
+        questions_answered = sum(1 for a in answers_list if a.get('answer'))
+        questions_total = len(answers_list)
+
+        logger.info(
+            f"Generated content from {questions_answered}/{questions_total} answers "
+            f"for field: {request.field_type}"
+        )
+
+        return GenerateFromAnswersResponse(
+            success=True,
+            text=text,
+            questions_answered=questions_answered,
+            questions_total=questions_total,
+            model=OLLAMA_MODEL
+        )
+
+    except Exception as e:
+        logger.error(f"Answer-based generation error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Content generation failed: {str(e)}"
+        )
+
+
 @app.post("/suggest-from-eir", response_model=SuggestFromEirResponse, tags=["EIR Analysis"])
 async def suggest_from_eir(request: SuggestFromEirRequest):
     """

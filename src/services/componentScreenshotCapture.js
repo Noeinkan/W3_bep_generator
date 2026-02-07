@@ -1,48 +1,26 @@
-import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
+import { compressImagesBatch } from '../utils/imageCompression';
 
 /**
  * Simplified screenshot capture service for custom visual components
  * Captures screenshots from components rendered by HiddenComponentsRenderer
+ * Optimized for A4 PDF output with image compression
  */
 
 // List of custom visual component field names and their types
+// Note: namingConventions removed - rendered as HTML text instead of screenshot
 const VISUAL_COMPONENTS = [
   { name: 'organizationalStructure', type: 'orgchart' },
   { name: 'leadAppointedPartiesTable', type: 'orgstructure-data-table' },
   { name: 'cdeStrategy', type: 'cdeDiagram' },
   { name: 'volumeStrategy', type: 'mindmap' },
   { name: 'fileStructureDiagram', type: 'fileStructure' },
-  { name: 'namingConventions', type: 'naming-conventions' },
   { name: 'federationStrategy', type: 'federation-strategy' }
 ];
 
 /**
- * Wait for an element to be present in the DOM
- */
-const waitForElement = (selector, timeout = 5000) => {
-  return new Promise((resolve, reject) => {
-    const element = document.querySelector(selector);
-    if (element) {
-      return resolve(element);
-    }
-
-    const startTime = Date.now();
-    const interval = setInterval(() => {
-      const el = document.querySelector(selector);
-      if (el) {
-        clearInterval(interval);
-        resolve(el);
-      } else if (Date.now() - startTime > timeout) {
-        clearInterval(interval);
-        reject(new Error(`Element ${selector} not found after ${timeout}ms`));
-      }
-    }, 100);
-  });
-};
-
-/**
  * Capture a single component as a screenshot using html-to-image
+ * Optimized for A4 PDF output (max 1200px width for print quality)
  * This library handles SVG and Canvas elements better than html2canvas
  */
 const captureComponent = async (element) => {
@@ -50,12 +28,21 @@ const captureComponent = async (element) => {
     // Minimal wait for component to fully render
     await new Promise(resolve => setTimeout(resolve, 100));
 
+    // Calculate optimal dimensions for A4 PDF
+    const width = element.scrollWidth;
+    const height = element.scrollHeight;
+
+    // Use 1.5x pixel ratio for good quality without excessive size
+    // A4 content area ~1200px max, so 1.5x gives us up to 1800px which is plenty
+    const pixelRatio = width > 800 ? 1.5 : 2; // Lower ratio for large components
+
     // Use html-to-image (toPng) which handles SVG/Canvas better
     const dataUrl = await toPng(element, {
-      pixelRatio: 2, // High quality (2x)
+      pixelRatio: pixelRatio,
       backgroundColor: '#ffffff',
-      width: element.scrollWidth,
-      height: element.scrollHeight,
+      width: width,
+      height: height,
+      quality: 0.95, // High quality PNG
       style: {
         transform: 'scale(1)',
         transformOrigin: 'top left'
@@ -71,15 +58,18 @@ const captureComponent = async (element) => {
 
 /**
  * Main function: captures all custom visual components
- * Returns a map of fieldName -> base64 image data
+ * Returns a map of fieldName -> compressed base64 image data
  *
  * Strategy: Prioritize hidden components container for reliable capture
+ * Images are compressed to JPEG for optimal A4 PDF output
  */
 export const captureCustomComponentScreenshots = async (formData) => {
   const screenshots = {};
 
+  console.log('📸 Starting component screenshot capture...');
+
   // Capture each component that has data
-  for (const { name, type } of VISUAL_COMPONENTS) {
+  for (const { name } of VISUAL_COMPONENTS) {
     // Skip if no data for this field
     if (!formData[name]) continue;
 
@@ -103,19 +93,36 @@ export const captureCustomComponentScreenshots = async (formData) => {
       try {
         screenshots[name] = await captureComponent(element);
         captured = true;
+        console.log(`  ✓ Captured ${name}`);
         break;
       } catch (error) {
         continue;
       }
     }
+
+    if (!captured) {
+      console.warn(`  ⚠ Failed to capture ${name}`);
+    }
   }
+
+  console.log(`📦 Compressing ${Object.keys(screenshots).length} images for A4 PDF...`);
+
+  // Compress images for A4 PDF output
+  const compressedScreenshots = await compressImagesBatch(screenshots, {
+    maxWidth: 1200,      // A4 content width
+    maxHeight: 1600,     // A4 content height
+    quality: 0.85,       // Good quality JPEG
+    outputFormat: 'image/jpeg'
+  });
+
+  console.log('✅ Screenshots captured and compressed');
 
   // Save to window for debugging
   if (typeof window !== 'undefined') {
-    window.lastCapturedScreenshots = screenshots;
+    window.lastCapturedScreenshots = compressedScreenshots;
   }
 
-  return screenshots;
+  return compressedScreenshots;
 };
 
 /**

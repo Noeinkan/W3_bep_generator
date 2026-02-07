@@ -515,6 +515,190 @@ class OllamaGenerator:
 
         return text.strip()
 
+    # ── Guided AI: Question Generation & Answer-based Content ──────────
+
+    def generate_questions_for_field(
+        self,
+        field_type: str,
+        field_label: str,
+        field_context: Optional[dict] = None
+    ) -> list:
+        """
+        Generate 3-5 contextual questions to help the user write better content
+        for a specific BEP field.
+
+        Args:
+            field_type: Type of BEP field (e.g., 'projectDescription').
+            field_label: Human-readable label (e.g., 'Project Description').
+            field_context: Optional dict with step_name, step_number,
+                          existing_fields, draft_id.
+
+        Returns:
+            List of question dicts: [{"id": "q1", "text": "...", "hint": "..."}, ...]
+        """
+        import json as _json
+
+        step_name = (field_context or {}).get('step_name', 'Unknown')
+        existing_fields = (field_context or {}).get('existing_fields', {})
+
+        # Summarise existing fields (truncate long values)
+        existing_summary = ''
+        if existing_fields:
+            parts = []
+            for k, v in existing_fields.items():
+                if v and str(v).strip():
+                    val = str(v).strip()
+                    if len(val) > 100:
+                        val = val[:100] + '…'
+                    parts.append(f"- {k}: {val}")
+            if parts:
+                existing_summary = "Already filled fields in this step:\n" + "\n".join(parts)
+
+        prompt = (
+            "You are a BIM Execution Plan (BEP) expert assistant. "
+            "Your role is to help users write professional BEP content by asking them clarifying questions.\n\n"
+            f"Generate 3-4 specific questions to help the user write content for the BEP field: "
+            f"\"{field_label}\" (type: {field_type}).\n\n"
+            f"Context:\n- Step: {step_name}\n"
+        )
+        if existing_summary:
+            prompt += f"{existing_summary}\n"
+        prompt += (
+            "\nRequirements:\n"
+            "1. Ask specific, actionable questions that will help generate better content\n"
+            "2. Questions should be relevant to the field and ISO 19650 standards\n"
+            "3. Keep questions clear and concise\n"
+            "4. Each question should gather different information\n"
+            "5. Avoid yes/no questions - ask open-ended questions\n\n"
+            "Format your response as a JSON array:\n"
+            '[{"id": "q1", "text": "question text", "hint": "optional hint"}, ...]\n\n'
+            "Output ONLY the JSON array, no other text."
+        )
+
+        raw = self.generate_text(prompt=prompt, max_length=400, temperature=0.6)
+
+        # Parse questions from response
+        questions = self._parse_questions_json(raw)
+
+        # Validate we got at least 2 questions; retry once if not
+        if len(questions) < 2:
+            logger.warning("First question generation produced < 2 questions, retrying…")
+            raw = self.generate_text(prompt=prompt, max_length=400, temperature=0.7)
+            questions = self._parse_questions_json(raw)
+
+        # Fallback: hardcoded generic questions
+        if len(questions) < 2:
+            logger.warning("Using fallback generic questions for %s", field_type)
+            questions = [
+                {"id": "q1", "text": f"What are the key objectives for {field_label}?",
+                 "hint": "Think about the main goals and outcomes."},
+                {"id": "q2", "text": "What is the project type and scale?",
+                 "hint": "e.g., commercial office, 10,000 sqm, £50M budget"},
+                {"id": "q3", "text": "Are there specific standards or requirements to address?",
+                 "hint": "e.g., BREEAM, Passivhaus, client-specific standards"},
+            ]
+
+        return questions[:5]  # Cap at 5
+
+    def _parse_questions_json(self, raw: str) -> list:
+        """Attempt to parse a JSON array of questions from raw LLM output."""
+        import json as _json
+
+        raw = raw.strip()
+
+        # Try direct parse
+        try:
+            parsed = _json.loads(raw)
+            if isinstance(parsed, list):
+                return [self._normalise_question(q, i) for i, q in enumerate(parsed)]
+        except _json.JSONDecodeError:
+            pass
+
+        # Try to extract JSON array from surrounding text
+        match = re.search(r'\[.*\]', raw, re.DOTALL)
+        if match:
+            try:
+                parsed = _json.loads(match.group())
+                if isinstance(parsed, list):
+                    return [self._normalise_question(q, i) for i, q in enumerate(parsed)]
+            except _json.JSONDecodeError:
+                pass
+
+        logger.warning("Could not parse questions JSON from LLM output: %s", raw[:200])
+        return []
+
+    @staticmethod
+    def _normalise_question(q: dict, index: int) -> dict:
+        """Ensure a question dict has id, text, hint keys."""
+        return {
+            "id": q.get("id", f"q{index + 1}"),
+            "text": q.get("text", q.get("question", "")),
+            "hint": q.get("hint", ""),
+        }
+
+    def generate_from_answers(
+        self,
+        field_type: str,
+        answers: list,
+        field_context: Optional[dict] = None,
+        field_label: Optional[str] = None
+    ) -> str:
+        """
+        Generate BEP content incorporating user answers to guided questions.
+
+        Args:
+            field_type: Type of BEP field.
+            answers: List of dicts with question_id, question_text, answer.
+                    answer=None means the question was skipped.
+            field_context: Optional context dict.
+            field_label: Human-readable field label.
+
+        Returns:
+            Generated text incorporating answers.
+        """
+        label = field_label or field_type
+
+        # Separate answered and skipped
+        answered = [a for a in answers if a.get('answer')]
+        skipped = len(answers) - len(answered)
+
+        # If all skipped, fall back to autonomous generation
+        if not answered:
+            logger.info("All questions skipped – falling back to autonomous generation for %s", field_type)
+            return self.suggest_for_field(field_type=field_type, max_length=300)
+
+        # Format answers for the prompt
+        formatted = []
+        for a in answered:
+            formatted.append(f"Q: {a.get('question_text', 'N/A')}\nA: {a['answer']}")
+        answers_block = "\n\n".join(formatted)
+
+        # Get field config for context
+        field_config = self.field_prompts.get(field_type, self.default_prompt)
+        system_context = field_config.get('context', 'Provide professional BIM content.')
+
+        prompt = (
+            f"You are a BIM Execution Plan (BEP) expert following ISO 19650 standards.\n\n"
+            f"Generate professional content for the BEP field: \"{label}\" (type: {field_type}).\n\n"
+            f"The user provided the following information through guided questions:\n\n"
+            f"{answers_block}\n\n"
+            f"Additional context: {system_context}\n\n"
+            "Requirements:\n"
+            "1. Incorporate the user's answers naturally into professional BEP content\n"
+            "2. Follow ISO 19650 information management principles\n"
+            "3. Use appropriate technical terminology\n"
+            "4. Structure content clearly (paragraphs/bullets as appropriate)\n"
+            "5. Be specific and quantify where possible\n"
+            "6. Keep professional tone\n"
+            "7. Output ONLY the content without preambles like 'Here is...' or explanations\n\n"
+            "Generate content (150-250 words):"
+        )
+
+        generated = self.generate_text(prompt=prompt, max_length=400, temperature=0.5)
+        cleaned = self._clean_suggestion(generated, '')
+
+        return cleaned
+
 
 # Global instance for singleton pattern
 _ollama_generator: Optional[OllamaGenerator] = None
@@ -563,7 +747,3 @@ def reset_generator() -> None:
             _ollama_generator.clear_cache()
             _ollama_generator = None
         logger.debug("Global generator instance reset")
-
-
-# Alias for backward compatibility
-get_generator = get_ollama_generator

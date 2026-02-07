@@ -4,7 +4,6 @@ import OrgStructureDataTable from '../forms/specialized/OrgStructureDataTable';
 import CDEPlatformEcosystem from '../forms/custom/CDEPlatformEcosystem';
 import VolumeStrategyMindmap from '../forms/diagrams/diagram-components/VolumeStrategyMindmap';
 import FolderStructureDiagram from '../forms/diagrams/diagram-components/FolderStructureDiagram';
-import NamingConventionBuilder from '../forms/custom/NamingConventionBuilder';
 import FederationStrategyBuilder from '../forms/custom/FederationStrategyBuilder';
 
 /**
@@ -90,16 +89,7 @@ const HiddenComponentsRenderer = ({ formData, bepType }) => {
         </div>
       )}
 
-      {/* Naming Conventions */}
-      {formData.namingConventions && (
-        <div data-field-name="namingConventions" data-component-type="naming-conventions" style={{ marginBottom: '50px' }}>
-          <NamingConventionBuilder
-            field={{ name: 'namingConventions', label: 'Naming Conventions' }}
-            value={formData.namingConventions}
-            onChange={noop}
-          />
-        </div>
-      )}
+      {/* Naming Conventions - NOT rendered here, rendered as HTML text in PDF backend */}
 
       {/* Federation Strategy */}
       {formData.federationStrategy && (

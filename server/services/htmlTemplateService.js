@@ -257,21 +257,29 @@ class HtmlTemplateService {
     `;
 
     sections.forEach((section) => {
+      const sectionId = this.generateSectionId(section.number, section.title);
+
       html += `
         <li class="toc-item">
-          <span class="toc-item-number">${section.number}.</span>
-          <span class="toc-item-title">${this.escapeHtml(section.title)}</span>
-          <span class="toc-item-dots"></span>
+          <a href="#${sectionId}" class="toc-link">
+            <span class="toc-item-number">${section.number}.</span>
+            <span class="toc-item-title">${this.escapeHtml(section.title)}</span>
+            <span class="toc-item-dots"></span>
+          </a>
         </li>
       `;
 
       // Add subsections
       section.subsections.forEach(sub => {
+        const subId = this.generateSectionId(sub.number, sub.title);
+
         html += `
           <li class="toc-item toc-item-subsection">
-            <span class="toc-item-number">${sub.number}</span>
-            <span class="toc-item-title">${this.escapeHtml(sub.title)}</span>
-            <span class="toc-item-dots"></span>
+            <a href="#${subId}" class="toc-link">
+              <span class="toc-item-number">${sub.number}</span>
+              <span class="toc-item-title">${this.escapeHtml(sub.title)}</span>
+              <span class="toc-item-dots"></span>
+            </a>
           </li>
         `;
       });
@@ -283,6 +291,22 @@ class HtmlTemplateService {
     `;
 
     return html;
+  }
+
+  /**
+   * Generate a unique ID for a section or subsection
+   * @param {string|number} number - Section number
+   * @param {string} title - Section title
+   * @returns {string} Unique section ID
+   */
+  generateSectionId(number, title) {
+    // Create a safe ID from number and title
+    const safeTitle = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    return number ? `section-${number}-${safeTitle}` : `section-${safeTitle}`;
   }
 
   /**
@@ -375,11 +399,13 @@ class HtmlTemplateService {
 
       if (!hasContent) return;
 
-      // Section header
+      // Section header with ID for TOC linking
+      const sectionId = this.generateSectionId(stepConfig.number, stepConfig.title);
+
       html += `
         <div class="section">
           <div class="section-header">
-            <h2 class="section-title">${stepConfig.number}. ${this.escapeHtml(stepConfig.title)}</h2>
+            <h2 class="section-title" id="${sectionId}">${stepConfig.number}. ${this.escapeHtml(stepConfig.title)}</h2>
           </div>
           <div class="section-content">
       `;
@@ -391,9 +417,12 @@ class HtmlTemplateService {
         const value = formData[field.name];
         if (!this.hasRenderableValue(field, value)) return;
 
+        // Generate ID for subsection (if it has a number)
+        const fieldId = field.number ? this.generateSectionId(field.number, field.label) : '';
+
         html += `
           <div class="field-group">
-            <h3 class="field-label">${field.number ? field.number + ' ' : ''}${this.escapeHtml(field.label)}</h3>
+            <h3 class="field-label"${fieldId ? ` id="${fieldId}"` : ''}>${field.number ? field.number + ' ' : ''}${this.escapeHtml(field.label)}</h3>
             ${this.renderFieldValue(field, value, componentImages)}
           </div>
         `;
@@ -416,8 +445,15 @@ class HtmlTemplateService {
    * @returns {string} Field value HTML
    */
   renderFieldValue(field, value, componentImages) {
+    // Special handling for naming-conventions - render as HTML instead of screenshot
+    // Check both field.type and field.name for robustness (in case CONFIG doesn't load)
+    if (field.type === 'naming-conventions' || field.name === 'namingConventions') {
+      console.log(`   📝 Rendering naming conventions as HTML (type: ${field.type}, name: ${field.name})`);
+      return this.renderNamingConventions(value);
+    }
+
     // Custom visual components - use embedded screenshots
-    const visualComponentTypes = ['orgchart', 'orgstructure-data-table', 'cdeDiagram', 'mindmap', 'fileStructure', 'naming-conventions', 'federation-strategy'];
+    const visualComponentTypes = ['orgchart', 'orgstructure-data-table', 'cdeDiagram', 'mindmap', 'fileStructure', 'federation-strategy'];
 
     if (visualComponentTypes.includes(field.type)) {
       return this.renderComponentImage(field.name, componentImages);
@@ -470,6 +506,11 @@ class HtmlTemplateService {
     if (typeof value === 'object') {
       if (field?.type === 'table') {
         return Array.isArray(value) && value.length > 0;
+      }
+
+      // Special handling for naming conventions - check if it has data
+      if (field?.type === 'naming-conventions' || field?.name === 'namingConventions') {
+        return value.namingFields?.length > 0 || value.deliverableAttributes?.length > 0 || value.overview;
       }
 
       return Object.keys(value).length > 0;
@@ -614,24 +655,151 @@ class HtmlTemplateService {
   }
 
   /**
+   * Render naming conventions section with structured HTML
+   * @param {Object} value - Naming conventions data
+   * @returns {string} Naming conventions HTML
+   */
+  renderNamingConventions(value) {
+    if (!value || typeof value !== 'object') {
+      return '<p class="field-value">No naming conventions defined</p>';
+    }
+
+    let html = '<div class="naming-conventions-section">';
+
+    // 9.2.1 Overview
+    if (value.overview) {
+      html += `
+        <div class="subsection">
+          <h4 class="subsection-title">9.2.1 Overview</h4>
+          <div class="rich-text-content">${value.overview}</div>
+        </div>
+      `;
+    }
+
+    // 9.2.2 Naming Convention Fields
+    if (value.namingFields && Array.isArray(value.namingFields) && value.namingFields.length > 0) {
+      html += `
+        <div class="subsection">
+          <h4 class="subsection-title">9.2.2 Naming Convention Fields</h4>
+          <div class="table-wrapper">
+            <table class="data-table naming-fields-table">
+              <thead>
+                <tr>
+                  <th style="width: 5%">#</th>
+                  <th style="width: 30%">Field Name</th>
+                  <th style="width: 20%">Example Value</th>
+                  <th style="width: 45%">Description</th>
+                </tr>
+              </thead>
+              <tbody>
+      `;
+
+      value.namingFields.forEach((field, index) => {
+        html += `
+          <tr>
+            <td style="text-align: center;">${index + 1}</td>
+            <td><code style="background: #f3f4f6; padding: 2px 6px; border-radius: 3px; color: #7c3aed;">${this.escapeHtml(field.fieldName || 'N/A')}</code></td>
+            <td><code style="background: #f0fdf4; padding: 2px 6px; border-radius: 3px; color: #15803d;">${this.escapeHtml(field.exampleValue || 'N/A')}</code></td>
+            <td>${this.escapeHtml(field.description || '')}</td>
+          </tr>
+        `;
+      });
+
+      html += `
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    // 9.2.3 Naming Pattern & Example
+    if (value.namingFields && value.namingFields.length > 0) {
+      // Generate pattern from fields
+      const pattern = value.namingFields.map(f => f.fieldName || '[Field]').join('-');
+      const example = value.namingFields.map(f => f.exampleValue || 'XXX').join('-');
+
+      html += `
+        <div class="subsection">
+          <h4 class="subsection-title">9.2.3 Naming Pattern & Example</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+            <div style="border: 2px solid #a855f7; border-radius: 8px; padding: 12px; background: #faf5ff;">
+              <div style="font-weight: 600; margin-bottom: 8px; color: #6b21a8;">Pattern</div>
+              <code style="background: white; padding: 8px; border-radius: 4px; display: block; color: #7c3aed; font-size: 12px; word-break: break-all;">${this.escapeHtml(pattern)}</code>
+            </div>
+            <div style="border: 2px solid #22c55e; border-radius: 8px; padding: 12px; background: #f0fdf4;">
+              <div style="font-weight: 600; margin-bottom: 8px; color: #15803d;">Example</div>
+              <code style="background: white; padding: 8px; border-radius: 4px; display: block; color: #15803d; font-size: 12px; word-break: break-all;">${this.escapeHtml(example)}.rvt</code>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 9.2.4 Deliverable Attributes
+    if (value.deliverableAttributes && Array.isArray(value.deliverableAttributes) && value.deliverableAttributes.length > 0) {
+      html += `
+        <div class="subsection">
+          <h4 class="subsection-title">9.2.4 Deliverable Attributes</h4>
+          <div class="table-wrapper">
+            <table class="data-table deliverable-attrs-table">
+              <thead>
+                <tr>
+                  <th style="width: 30%">Attribute Name</th>
+                  <th style="width: 25%">Example Value</th>
+                  <th style="width: 45%">Description</th>
+                </tr>
+              </thead>
+              <tbody>
+      `;
+
+      value.deliverableAttributes.forEach((attr) => {
+        html += `
+          <tr>
+            <td style="font-weight: 500;">${this.escapeHtml(attr.attributeName || 'N/A')}</td>
+            <td><code style="background: #dbeafe; padding: 2px 6px; border-radius: 3px; color: #1e40af;">${this.escapeHtml(attr.exampleValue || 'N/A')}</code></td>
+            <td>${this.escapeHtml(attr.description || '')}</td>
+          </tr>
+        `;
+      });
+
+      html += `
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    html += '</div>';
+    return html;
+  }
+
+  /**
    * Render TIDP/MIDP sections
    * @param {Array} tidpData - TIDP data
    * @param {Array} midpData - MIDP data
    * @returns {string} TIDP/MIDP sections HTML
    */
   renderTIDPMIDPSections(tidpData, midpData) {
+    // Generate section ID
+    const sectionNumber = 'information-delivery-planning';
+    const sectionId = this.generateSectionId('', 'Information Delivery Planning');
+
     let html = `
       <div class="section">
         <div class="section-header tidp-header">
-          <h2 class="section-title">Information Delivery Planning</h2>
+          <h2 class="section-title" id="${sectionId}">Information Delivery Planning</h2>
         </div>
         <div class="section-content">
     `;
 
     // TIDP table
     if (tidpData.length > 0) {
+      const tidpId = this.generateSectionId('', 'Task Information Delivery Plans (TIDPs)');
+
       html += `
-        <h3 class="subsection-title">Task Information Delivery Plans (TIDPs)</h3>
+        <h3 class="subsection-title" id="${tidpId}">Task Information Delivery Plans (TIDPs)</h3>
         <div class="table-wrapper">
           <table class="data-table tidp-table">
             <thead>
@@ -666,8 +834,10 @@ class HtmlTemplateService {
 
     // MIDP table
     if (midpData.length > 0) {
+      const midpId = this.generateSectionId('', 'Master Information Delivery Plan (MIDP)');
+
       html += `
-        <h3 class="subsection-title">Master Information Delivery Plan (MIDP)</h3>
+        <h3 class="subsection-title" id="${midpId}">Master Information Delivery Plan (MIDP)</h3>
         <div class="table-wrapper">
           <table class="data-table midp-table">
             <thead>
@@ -885,6 +1055,19 @@ class HtmlTemplateService {
         font-size: 12pt;
       }
 
+      .toc-link {
+        display: flex;
+        align-items: baseline;
+        width: 100%;
+        text-decoration: none;
+        color: inherit;
+        transition: opacity 0.2s;
+      }
+
+      .toc-link:hover {
+        opacity: 0.7;
+      }
+
       .toc-item-number {
         font-weight: 600;
         color: #2563eb;
@@ -1044,6 +1227,65 @@ class HtmlTemplateService {
 
       .monospace {
         font-family: 'Courier New', Courier, monospace;
+      }
+
+      /* Naming Conventions Styles */
+      .naming-conventions-section {
+        margin: 20px 0;
+      }
+
+      .naming-conventions-section .subsection {
+        margin-bottom: 30px;
+        page-break-inside: avoid;
+      }
+
+      .naming-conventions-section .subsection-title {
+        font-size: 14pt;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 12px;
+      }
+
+      .naming-conventions-section .rich-text-content {
+        margin: 10px 0;
+        color: #4b5563;
+        line-height: 1.6;
+      }
+
+      .naming-conventions-section .rich-text-content p {
+        margin: 8px 0;
+      }
+
+      .naming-conventions-section .rich-text-content strong {
+        font-weight: 600;
+        color: #111827;
+      }
+
+      .naming-fields-table,
+      .deliverable-attrs-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 10pt;
+      }
+
+      .naming-fields-table thead th,
+      .deliverable-attrs-table thead th {
+        background-color: #f3f4f6;
+        font-weight: 600;
+        text-align: left;
+        padding: 10px;
+        border: 1px solid #d1d5db;
+      }
+
+      .naming-fields-table tbody td,
+      .deliverable-attrs-table tbody td {
+        padding: 8px 10px;
+        border: 1px solid #e5e7eb;
+      }
+
+      .naming-fields-table tbody tr:nth-child(even),
+      .deliverable-attrs-table tbody tr:nth-child(even) {
+        background-color: #f9fafb;
       }
 
       @page {

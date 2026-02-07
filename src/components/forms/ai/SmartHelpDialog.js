@@ -4,28 +4,25 @@ import {
   Sparkles,
   FileText,
   HelpCircle,
-  Zap,
   BookOpen,
   Shield,
   Lightbulb,
-  AlertTriangle,
-  Loader2,
-  CheckCircle,
-  AlertCircle as AlertCircleIcon
+  AlertTriangle
 } from 'lucide-react';
 import { Modal } from '../../common';
 import axios from 'axios';
 import COMMERCIAL_OFFICE_TEMPLATE from '../../../data/templates/commercialOfficeTemplate';
 import { markdownToTipTapHtml } from '../../../utils/markdownToHtml';
 import FIELD_EXAMPLES from '../../../constants/fieldExamples';
+import AIAssistantTab from './AIAssistantTab';
 
 /**
  * SmartHelpDialog - Context-aware help dialog
  *
- * Shows different tabs based on field state:
- * - Empty field: Examples (default) → AI Generate → Guidelines
- * - Has content: AI Improve (default) → Guidelines → Examples
- * - Has selection: AI Improve Selection (default) → Guidelines → Examples
+ * Three tabs:
+ *   1. AI Assistant (Quick AI + Guided AI)
+ *   2. Guidelines
+ *   3. Examples / Reference
  */
 const SmartHelpDialog = ({
   editor,
@@ -39,19 +36,11 @@ const SmartHelpDialog = ({
 
   // Tab configuration based on field state
   const getTabsConfig = () => {
-    if (fieldState === 'empty') {
-      return [
-        { id: 'examples', label: 'Quick Examples', icon: FileText, priority: 1 },
-        { id: 'ai-generate', label: 'AI Generate', icon: Sparkles, priority: 2 },
-        { id: 'guidelines', label: 'Guidelines', icon: HelpCircle, priority: 3 }
-      ];
-    } else {
-      return [
-        { id: 'ai-improve', label: 'AI Improve', icon: Zap, priority: 1 },
-        { id: 'guidelines', label: 'Guidelines', icon: HelpCircle, priority: 2 },
-        { id: 'examples', label: 'Reference', icon: FileText, priority: 3 }
-      ];
-    }
+    return [
+      { id: 'ai-assistant', label: 'AI Assistant', icon: Sparkles, priority: 1 },
+      { id: 'guidelines', label: 'Guidelines', icon: HelpCircle, priority: 2 },
+      { id: 'examples', label: fieldState === 'empty' ? 'Examples' : 'Reference', icon: FileText, priority: 3 }
+    ];
   };
 
   const tabs = getTabsConfig();
@@ -198,30 +187,27 @@ const SmartHelpDialog = ({
   // Render tab content
   const renderTabContent = () => {
     switch (activeTab) {
+      case 'ai-assistant':
+        return <AIAssistantTab
+          editor={editor}
+          fieldName={fieldName}
+          fieldType={fieldType}
+          fieldState={fieldState}
+          onClose={onClose}
+          aiLoading={aiLoading}
+          aiError={aiError}
+          aiSuccess={aiSuccess}
+          handleAIGenerate={handleAIGenerate}
+          handleAIImprove={handleAIImprove}
+          improveOptions={improveOptions}
+          setImproveOptions={setImproveOptions}
+        />;
+
       case 'examples':
         return <ExamplesTab
           fieldName={fieldName}
           fieldState={fieldState}
           onLoadExample={handleLoadExample}
-        />;
-
-      case 'ai-generate':
-        return <AIGenerateTab
-          onGenerate={handleAIGenerate}
-          isLoading={aiLoading}
-          error={aiError}
-          success={aiSuccess}
-        />;
-
-      case 'ai-improve':
-        return <AIImproveTab
-          fieldState={fieldState}
-          improveOptions={improveOptions}
-          setImproveOptions={setImproveOptions}
-          onImprove={handleAIImprove}
-          isLoading={aiLoading}
-          error={aiError}
-          success={aiSuccess}
         />;
 
       case 'guidelines':
@@ -360,348 +346,6 @@ const ExamplesTab = ({ fieldName, fieldState, onLoadExample }) => {
         <p className="text-xs text-blue-800">
           <strong>Tip:</strong> You can edit the example after loading, or use AI to customize it for your project.
         </p>
-      </div>
-    </div>
-  );
-};
-
-const AIGenerateTab = ({ onGenerate, isLoading, error, success }) => {
-  return (
-    <div className="space-y-4">
-      <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-        <div className="flex items-start gap-3">
-          <Sparkles className="text-purple-600 flex-shrink-0 mt-1" size={20} />
-          <div>
-            <h4 className="font-semibold text-purple-900 mb-1">AI Content Generation</h4>
-            <p className="text-sm text-purple-800">
-              Generate professional, ISO 19650-compliant content tailored to this field using AI.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Loading Progress Bar */}
-      {isLoading && (
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-center gap-3 mb-3">
-            <Loader2 size={20} className="animate-spin text-blue-600" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-blue-900">Generating content...</p>
-              <p className="text-xs text-blue-700 mt-0.5">AI is analyzing and creating content for you</p>
-            </div>
-          </div>
-          {/* Animated progress bar */}
-          <div className="w-full bg-blue-200 rounded-full h-2 overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 rounded-full animate-pulse"
-                 style={{ width: '100%' }}></div>
-          </div>
-        </div>
-      )}
-
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-          <AlertCircleIcon className="text-red-600 flex-shrink-0" size={20} />
-          <div>
-            <h4 className="font-semibold text-red-900 mb-1">Error</h4>
-            <p className="text-sm text-red-800">{error}</p>
-          </div>
-        </div>
-      )}
-
-      {success && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
-          <CheckCircle className="text-green-600 flex-shrink-0" size={20} />
-          <div>
-            <h4 className="font-semibold text-green-900 mb-1">Success!</h4>
-            <p className="text-sm text-green-800">Content generated successfully.</p>
-          </div>
-        </div>
-      )}
-
-      <button
-        onClick={onGenerate}
-        disabled={isLoading || success}
-        className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg hover:from-purple-600 hover:to-indigo-600 transition-all shadow-md hover:shadow-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        type="button"
-      >
-        {isLoading ? (
-          <>
-            <Loader2 size={20} className="animate-spin" />
-            Generating...
-          </>
-        ) : (
-          <>
-            <Sparkles size={20} />
-            Generate Content with AI
-          </>
-        )}
-      </button>
-    </div>
-  );
-};
-
-const AIImproveTab = ({ fieldState, improveOptions, setImproveOptions, onImprove, isLoading, error, success }) => {
-  const [improvementStyle, setImprovementStyle] = useState('quick-polish');
-  const [showCustomOptions, setShowCustomOptions] = useState(false);
-
-  // Update improveOptions based on selected style
-  const handleStyleChange = (style) => {
-    setImprovementStyle(style);
-
-    if (style === 'quick-polish') {
-      setImproveOptions({
-        grammar: true,
-        professional: false,
-        iso19650: false,
-        expand: false,
-        concise: false
-      });
-      setShowCustomOptions(false);
-    } else if (style === 'professional') {
-      setImproveOptions({
-        grammar: true,
-        professional: true,
-        iso19650: true,
-        expand: false,
-        concise: false
-      });
-      setShowCustomOptions(false);
-    } else if (style === 'custom') {
-      setShowCustomOptions(true);
-    }
-  };
-
-  const toggleOption = (key) => {
-    setImproveOptions(prev => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
-        <div className="flex items-start gap-3">
-          <Zap className="text-indigo-600 flex-shrink-0 mt-1" size={20} />
-          <div>
-            <h4 className="font-semibold text-indigo-900 mb-1">AI Content Improvement</h4>
-            <p className="text-sm text-indigo-800">
-              {fieldState === 'hasSelection'
-                ? 'Improve the selected text with AI enhancements.'
-                : 'Enhance your existing content with AI-powered improvements.'
-              }
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <h4 className="font-medium text-gray-800 mb-3">Choose improvement style:</h4>
-        <div className="space-y-3">
-          {/* Quick Polish */}
-          <button
-            onClick={() => handleStyleChange('quick-polish')}
-            className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
-              improvementStyle === 'quick-polish'
-                ? 'border-blue-500 bg-blue-50 shadow-sm'
-                : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
-            }`}
-            type="button"
-          >
-            <div className="flex items-start gap-3">
-              <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
-                improvementStyle === 'quick-polish' ? 'bg-blue-500' : 'bg-gray-200'
-              }`}>
-                <Zap className={`w-5 h-5 ${improvementStyle === 'quick-polish' ? 'text-white' : 'text-gray-500'}`} />
-              </div>
-              <div className="flex-1">
-                <h5 className="font-semibold text-gray-900 mb-1">⚡ Quick Polish</h5>
-                <p className="text-sm text-gray-600">Fixes grammar and improves clarity</p>
-              </div>
-              {improvementStyle === 'quick-polish' && (
-                <div className="flex-shrink-0">
-                  <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                </div>
-              )}
-            </div>
-          </button>
-
-          {/* Professional */}
-          <button
-            onClick={() => handleStyleChange('professional')}
-            className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
-              improvementStyle === 'professional'
-                ? 'border-purple-500 bg-purple-50 shadow-sm'
-                : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
-            }`}
-            type="button"
-          >
-            <div className="flex items-start gap-3">
-              <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
-                improvementStyle === 'professional' ? 'bg-purple-500' : 'bg-gray-200'
-              }`}>
-                <Sparkles className={`w-5 h-5 ${improvementStyle === 'professional' ? 'text-white' : 'text-gray-500'}`} />
-              </div>
-              <div className="flex-1">
-                <h5 className="font-semibold text-gray-900 mb-1">💼 Professional</h5>
-                <p className="text-sm text-gray-600">Formal tone + ISO 19650 terminology</p>
-              </div>
-              {improvementStyle === 'professional' && (
-                <div className="flex-shrink-0">
-                  <div className="w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center">
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                </div>
-              )}
-            </div>
-          </button>
-
-          {/* Custom */}
-          <button
-            onClick={() => handleStyleChange('custom')}
-            className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
-              improvementStyle === 'custom'
-                ? 'border-indigo-500 bg-indigo-50 shadow-sm'
-                : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
-            }`}
-            type="button"
-          >
-            <div className="flex items-start gap-3">
-              <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
-                improvementStyle === 'custom' ? 'bg-indigo-500' : 'bg-gray-200'
-              }`}>
-                <svg className={`w-5 h-5 ${improvementStyle === 'custom' ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h5 className="font-semibold text-gray-900 mb-1">🎯 Custom</h5>
-                <p className="text-sm text-gray-600">Choose specific improvements</p>
-              </div>
-              {improvementStyle === 'custom' && (
-                <div className="flex-shrink-0">
-                  <div className="w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center">
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                </div>
-              )}
-            </div>
-          </button>
-        </div>
-      </div>
-
-      {/* Custom Options - Expandable */}
-      {showCustomOptions && (
-        <div className="space-y-2 animate-fadeIn">
-          <h4 className="font-medium text-gray-800 mb-2 text-sm">Select improvements:</h4>
-          {[
-            { key: 'grammar', label: 'Improve grammar and clarity', icon: BookOpen },
-            { key: 'professional', label: 'Make more professional', icon: Sparkles },
-            { key: 'iso19650', label: 'Add ISO 19650 terminology', icon: Shield },
-            { key: 'expand', label: 'Expand with more details', icon: FileText },
-            { key: 'concise', label: 'Make more concise', icon: Zap }
-          ].map(option => {
-            const Icon = option.icon;
-            return (
-              <label
-                key={option.key}
-                className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
-              >
-                <input
-                  type="checkbox"
-                  checked={improveOptions[option.key]}
-                  onChange={() => toggleOption(option.key)}
-                  className="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500"
-                />
-                <Icon className="w-4 h-4 text-gray-600" />
-                <span className="text-sm text-gray-700">{option.label}</span>
-              </label>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Loading Progress Bar */}
-      {isLoading && (
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-center gap-3 mb-3">
-            <Loader2 size={20} className="animate-spin text-blue-600" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-blue-900">Improving content...</p>
-              <p className="text-xs text-blue-700 mt-0.5">AI is enhancing your text with professional improvements</p>
-            </div>
-          </div>
-          {/* Animated progress bar */}
-          <div className="w-full bg-blue-200 rounded-full h-2 overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-green-500 via-blue-500 to-indigo-500 rounded-full animate-pulse"
-                 style={{ width: '100%' }}></div>
-          </div>
-        </div>
-      )}
-
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-          <AlertCircleIcon className="text-red-600 flex-shrink-0" size={20} />
-          <div>
-            <h4 className="font-semibold text-red-900 mb-1">Error</h4>
-            <p className="text-sm text-red-800">{error}</p>
-          </div>
-        </div>
-      )}
-
-      {success && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
-          <CheckCircle className="text-green-600 flex-shrink-0" size={20} />
-          <div>
-            <h4 className="font-semibold text-green-900 mb-1">Success!</h4>
-            <p className="text-sm text-green-800">Content improved successfully.</p>
-          </div>
-        </div>
-      )}
-
-      <div className="flex gap-3">
-        <button
-          onClick={() => onImprove(false)}
-          disabled={isLoading || success}
-          className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          type="button"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 size={20} className="animate-spin" />
-              Improving...
-            </>
-          ) : (
-            <>
-              <Zap size={20} />
-              {fieldState === 'hasSelection' ? 'Improve Selection' : 'Append Improved'}
-            </>
-          )}
-        </button>
-
-        <button
-          onClick={() => onImprove(true)}
-          disabled={isLoading || success}
-          className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          type="button"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 size={20} className="animate-spin" />
-              Replacing...
-            </>
-          ) : (
-            <>
-              <Sparkles size={20} />
-              Replace All
-            </>
-          )}
-        </button>
       </div>
     </div>
   );
