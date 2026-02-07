@@ -27,7 +27,7 @@ const AISuggestionButton = ({
     setError(null);
 
     try {
-      const response = await axios.post('http://localhost:3001/api/ai/suggest', {
+      const response = await axios.post('/api/ai/suggest', {
         field_type: fieldType,
         partial_text: currentValue,
         max_length: 200
