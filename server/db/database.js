@@ -198,6 +198,17 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_field_configs_deleted ON bep_field_configs(is_deleted);
   CREATE INDEX IF NOT EXISTS idx_field_configs_bep_type ON bep_field_configs(bep_type);
 
+  -- Projects: Top-level organizer for all project-scoped data
+  CREATE TABLE IF NOT EXISTS projects (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
+
   -- Client Documents: EIR and other client-provided documents for analysis
   CREATE TABLE IF NOT EXISTS client_documents (
     id TEXT PRIMARY KEY,

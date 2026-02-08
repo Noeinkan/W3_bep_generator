@@ -1,55 +1,65 @@
 # BIM Execution Plan (BEP) Suite
 
-A comprehensive, professional-grade platform for generating BIM Execution Plans (BEPs) and managing information delivery in accordance with ISO 19650 standards. This suite provides construction and BIM professionals with end-to-end tools for planning, coordinating, and delivering information throughout the building lifecycle.
+A comprehensive, professional-grade platform for generating BIM Execution Plans (BEPs) and managing information delivery in accordance with ISO 19650 standards. Built with integrated AI capabilities powered by local LLMs, this suite provides construction and BIM professionals with end-to-end tools for planning, coordinating, and delivering information throughout the building lifecycle — with intelligent content generation, document analysis, and guided authoring at every step.
 
 ## Overview
 
 The BEP Suite consists of two integrated products:
 
-1. **BEP Generator** - Creates ISO 19650-compliant BIM Execution Plans with intelligent form wizards, AI-powered content suggestions, and professional export capabilities.
+1. **BEP Generator** — Creates ISO 19650-compliant BIM Execution Plans with intelligent form wizards, AI-powered content suggestions, and professional export capabilities.
 
-2. **TIDP/MIDP Manager** - Manages Task Information Delivery Plans (TIDPs) and automatically generates Master Information Delivery Plans (MIDPs) with full project coordination, dependency tracking, and team collaboration features.
+2. **TIDP/MIDP Manager** — Manages Task Information Delivery Plans (TIDPs) and automatically generates Master Information Delivery Plans (MIDPs) with full project coordination, dependency tracking, and team collaboration features.
+
+## Why BEP Suite?
+
+Most BEP tools are static templates or basic form fillers. BEP Suite is different:
+
+- **EIR-to-BEP AI pipeline** — Upload an Exchange Information Requirements document (PDF/DOCX) and the AI extracts structured JSON, then generates field-specific content suggestions tailored to those requirements. No competitor offers this workflow.
+- **Guided Q&A authoring** — Instead of staring at a blank field, answer a few contextual questions and let the AI compose professional, ISO 19650-aligned prose from your responses.
+- **Your data stays on your machine** — All AI inference runs locally via [Ollama](https://ollama.ai). No confidential bid documents are sent to OpenAI, Google, or any external API. Perfect for firms handling sensitive construction and infrastructure projects.
 
 ## Key Features
 
 ### BEP Generator
-- **Interactive Multi-Step Wizard** - Guided BEP creation process with progress tracking
-- **Two BEP Types** - Support for both pre-appointment and post-appointment BEPs
-- **AI-Powered Content Generation** - ML-based text suggestions for all BEP sections
-- **Rich Text Editing** - Professional TipTap editor with formatting, tables, images, and more
-- **Professional Templates** - Pre-built ISO 19650-compliant templates
-- **Draft Management** - Save, load, and manage multiple drafts
-- **Export Capabilities** - High-quality PDF and DOCX exports
-- **Visual Builders** - Interactive diagrams for CDE workflows, folder structures, org charts
-- **Context-Sensitive Help** - Field-level tooltips and guidance
-- **Command Palette** - Quick navigation (Cmd+K style interface)
-- **Onboarding System** - Interactive tutorials for new users
+- **Interactive Multi-Step Wizard** — Guided BEP creation process with progress tracking
+- **Two BEP Types** — Support for both pre-appointment and post-appointment BEPs
+- **AI-Powered Content Generation** — Local LLM-based text suggestions for all BEP sections (see [AI Features](#ai-features))
+- **Guided AI Authoring** — Answer contextual questions and let AI compose professional content from your responses
+- **EIR Document Analysis** — Upload Exchange Information Requirements documents and auto-extract structured data
+- **Rich Text Editing** — Professional TipTap editor with formatting, tables, images, and more
+- **Professional Templates** — Pre-built ISO 19650-compliant templates
+- **Draft Management** — Save, load, and manage multiple drafts
+- **Export Capabilities** — High-quality PDF and DOCX exports
+- **Visual Builders** — Interactive diagrams for CDE workflows, folder structures, org charts
+- **Context-Sensitive Help** — Field-level tooltips and guidance
+- **Command Palette** — Quick navigation (Cmd+K style interface)
+- **Onboarding System** — Interactive tutorials for new users
 
 ### TIDP/MIDP Manager
-- **Task Information Delivery Plan (TIDP) Creation** - Comprehensive TIDP editor with container management
-- **Master Information Delivery Plan (MIDP) Auto-Generation** - Automatically consolidates TIDPs into MIDPs
-- **Multi-Team Collaboration** - Coordinate information delivery across multiple teams
-- **Excel/CSV Import** - Bulk import TIDPs from spreadsheets
-- **Dependency Tracking** - Visualize and manage deliverable dependencies
-- **Resource Allocation** - Track team resources and workload
-- **Evolution Dashboard** - Monitor TIDP/MIDP progress over time
-- **Responsibility Matrix** - ISO 19650 Information Management Activities and Deliverables matrices
-- **Quality Gates** - Validation checks and acceptance criteria
-- **Risk Register** - Identify and manage information delivery risks
-- **Consolidated Exports** - Export entire project data to Excel or PDF
-- **TIDP Synchronization** - Auto-populate information from TIDPs to responsibility matrices
+- **Task Information Delivery Plan (TIDP) Creation** — Comprehensive TIDP editor with container management
+- **Master Information Delivery Plan (MIDP) Auto-Generation** — Automatically consolidates TIDPs into MIDPs
+- **Multi-Team Collaboration** — Coordinate information delivery across multiple teams
+- **Excel/CSV Import** — Bulk import TIDPs from spreadsheets
+- **Dependency Tracking** — Visualize and manage deliverable dependencies
+- **Resource Allocation** — Track team resources and workload
+- **Evolution Dashboard** — Monitor TIDP/MIDP progress over time
+- **Responsibility Matrix** — ISO 19650 Information Management Activities and Deliverables matrices
+- **Quality Gates** — Validation checks and acceptance criteria
+- **Risk Register** — Identify and manage information delivery risks
+- **Consolidated Exports** — Export entire project data to Excel or PDF
+- **TIDP Synchronization** — Auto-populate information from TIDPs to responsibility matrices
 
 ### Advanced Features
-- **Interactive Visualizations** - Node-based diagrams using @xyflow/react
-- **RACI Matrix Builder** - Define roles and responsibilities
-- **Naming Convention Builder** - Create consistent file naming patterns
-- **Timeline & Gantt Charts** - Project schedule visualization
-- **Deliverable Attributes Visualizer** - Comprehensive deliverable properties
-- **Mind Map Builder** - Visual information structure planning
-- **Project Analytics** - Statistics and progress tracking
-- **Real-Time Validation** - ISO 19650 compliance checking
-- **Batch Operations** - Bulk create, update, and delete TIDPs
-- **Dependency Matrix** - Cross-team dependency visualization
+- **Interactive Visualizations** — Node-based diagrams using @xyflow/react
+- **RACI Matrix Builder** — Define roles and responsibilities
+- **Naming Convention Builder** — Create consistent file naming patterns
+- **Timeline & Gantt Charts** — Project schedule visualization
+- **Deliverable Attributes Visualizer** — Comprehensive deliverable properties
+- **Mind Map Builder** — Visual information structure planning
+- **Project Analytics** — Statistics and progress tracking
+- **Real-Time Validation** — ISO 19650 compliance checking
+- **Batch Operations** — Bulk create, update, and delete TIDPs
+- **Dependency Matrix** — Cross-team dependency visualization
 
 ## Technology Stack
 
@@ -71,12 +81,12 @@ The BEP Suite consists of two integrated products:
 - **Express Rate Limit** - API rate limiting
 
 ### ML/AI Service
-- **Ollama** - Local LLM runtime (llama3.2:3b model)
-- **Python 3.8+** - ML runtime environment
-- **FastAPI 0.104.1+** - High-performance API server (Port 8000)
-- **Uvicorn** - ASGI server
-- **PyTorch 2.6.0+** - Deep learning framework (optional, for custom training)
-- **NumPy** - Numerical computing
+- **Ollama** — Local LLM runtime (llama3.2:3b default, configurable)
+- **Python 3.8+** — ML runtime environment
+- **FastAPI 0.104.1+** — High-performance API server (Port 8000)
+- **Uvicorn** — ASGI server
+- **python-docx / PyPDF2** — Document text extraction (EIR upload support)
+- **NumPy** — Numerical computing
 
 ### Export Libraries
 - **jsPDF 3.0.3** - PDF generation
@@ -103,17 +113,67 @@ The application follows a modern three-tier architecture:
 - `information_management_activities` - ISO 19650 IM activities
 - `information_deliverables` - Information deliverables with TIDP linkage
 
-## AI Text Generation
+## AI Features
 
-The ML service uses **Ollama** with the **llama3.2:3b** model for high-quality, context-aware text generation.
+The BEP Suite integrates a full AI layer powered by **Ollama** running the **llama3.2:3b** model locally. All inference runs on your machine — no data leaves your network. The AI service exposes six distinct capabilities, each tuned for its task:
 
-### Features
-- **Local LLM** - Runs entirely on your machine via Ollama
-- Temperature-based sampling for creative control
-- Field-specific prompts for 24+ BEP field types
-- Fast inference with low latency
-- No internet connection required after setup
-- Support for multiple Ollama models (configurable via environment)
+### 1. BEP Content Generation (`/suggest`)
+Generates professional, ISO 19650-aligned content for specific BEP fields (e.g., project description, BIM objectives, naming conventions).
+- Uses field-specific prompts loaded from `helpContentData.js` covering 24+ field types
+- **Tokens:** ~200 | **Temperature:** 0.5
+- Example fields: executive summary, collaboration procedures, CDE workflow, quality assurance, COBie requirements, and more
+
+### 2. EIR Document Analysis (`/analyze-eir`)
+Parses uploaded Exchange Information Requirements (EIR) documents and extracts structured JSON data following ISO 19650. This is the most demanding AI task in the suite.
+- Accepts PDF, DOCX, and plain-text uploads via `/extract-text`
+- Supports automatic chunking for large documents (configurable via `EIR_SINGLE_PASS_CHAR_LIMIT` / `EIR_CHUNK_TOKENS`)
+- Parallel chunk processing with auto-concurrency tuning (`OLLAMA_MAX_CONCURRENCY`, `EIR_AUTO_CONCURRENCY_LATENCY`)
+- **Tokens:** ~2 000 | **Context window:** 8 192 | **Temperature:** 0.3
+- Outputs valid structured JSON covering project info, standards, deliverables, and requirements
+
+### 3. EIR Summary Generation
+Creates human-readable markdown summaries from EIR analysis JSON, making extracted data easy to review before applying to a BEP.
+- **Tokens:** ~800 | **Temperature:** 0.5
+
+### 4. Question Generation (`/generate-questions`)
+Generates 3–5 contextual questions in JSON format to help users reason through and write BEP content for a given field.
+- **Tokens:** ~400 | **Temperature:** 0.6
+- Output: JSON array of questions tailored to the field type and any existing project context
+
+### 5. Answer-based Content Generation (`/generate-from-answers`)
+Takes the user's answers to the generated questions and composes professional BEP content that incorporates those answers.
+- **Tokens:** ~400 | **Temperature:** 0.5
+- Produces ready-to-use prose that can be inserted directly into the BEP document
+
+### 6. EIR-based Field Suggestions (`/suggest-from-eir`)
+Generates field-specific content suggestions pre-populated from EIR analysis data, bridging the gap between EIR requirements and BEP responses.
+- Combines EIR analysis context with field-type-specific prompts for targeted suggestions
+- **Temperature:** 0.5
+
+### AI Architecture
+
+```
+┌─────────────────────┐     ┌────────────────────────┐     ┌──────────────┐
+│  React Frontend     │────▶│  Express Backend        │────▶│  ML Service   │
+│  (Port 3000)        │     │  /api/ai/* proxy routes │     │  FastAPI:8000 │
+│                     │     │  (Port 3001)            │     │               │
+│  useAISuggestion()  │     │  ai.js route handler    │     │  api_ollama.py│
+└─────────────────────┘     └────────────────────────┘     └───────┬───────┘
+                                                                   │
+                                                           ┌───────▼───────┐
+                                                           │  Ollama       │
+                                                           │  llama3.2:3b  │
+                                                           │  (Port 11434) │
+                                                           └───────────────┘
+```
+
+- **Frontend** calls the Express backend via the `useAISuggestion` hook and service layer
+- **Backend** proxies AI requests to the Python ML service (`/api/ai/*` → FastAPI)
+- **ML Service** orchestrates prompt construction, chunking, and calls to the Ollama API
+- **Ollama** runs the LLM locally and returns completions
+
+### Supported BEP Field Types
+Executive summary · Project objectives · BIM objectives · Stakeholders · Roles & responsibilities · Delivery team · Collaboration procedures · Information exchange protocols · CDE workflow · Model requirements · Data standards · Naming conventions · Quality assurance · Validation checks · Technology standards · Software platforms · Coordination process · Health & safety · Handover requirements · COBie requirements · and more
 
 ### Ollama Setup
 1. Install Ollama from [ollama.ai](https://ollama.ai)
@@ -126,23 +186,17 @@ ollama pull llama3.2:3b
 npm run verify:ollama
 ```
 
-### Supported Field Types
-- Executive summary, project objectives, BIM objectives
-- Stakeholders, roles & responsibilities, delivery team
-- Collaboration procedures, information exchange protocols
-- CDE workflow, model requirements, data standards
-- Naming conventions, quality assurance, validation checks
-- Technology standards, software platforms, coordination process
-- Health & safety, handover requirements, COBie requirements
-- And many more...
-
 ### EIR Analysis Tuning (Optional)
 These environment variables let you speed up EIR analysis without reducing accuracy:
 
-- `EIR_SINGLE_PASS_CHAR_LIMIT` (default `30000`) - Max characters analyzed in one pass before chunking
-- `EIR_CHUNK_TOKENS` (default `7000`) - Chunk size used when the document is split
-- `OLLAMA_MAX_CONCURRENCY` (default `auto`) - Max parallel workers (`auto` adapts to the machine)
-- `EIR_AUTO_CONCURRENCY_LATENCY` (default `60`) - Seconds threshold to reduce workers when Ollama is slow
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EIR_SINGLE_PASS_CHAR_LIMIT` | `30000` | Max characters analyzed in one pass before chunking |
+| `EIR_CHUNK_TOKENS` | `7000` | Chunk size used when the document is split |
+| `OLLAMA_MAX_CONCURRENCY` | `auto` | Max parallel workers (`auto` adapts to the machine) |
+| `EIR_AUTO_CONCURRENCY_LATENCY` | `60` | Seconds threshold to reduce workers when Ollama is slow |
+| `OLLAMA_MODEL` | `llama3.2:3b` | Ollama model to use (any Ollama-compatible model) |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server address |
 
 ## API Endpoints
 
@@ -188,10 +242,25 @@ These environment variables let you speed up EIR analysis without reducing accur
 - `POST /project/:projectId/comprehensive` - Comprehensive validation
 - `GET /standards/iso19650` - Get ISO 19650 standards
 
-### ML Service Routes (Port 8000)
-- `POST /generate` - Generate text from prompt
-- `POST /suggest` - Field-specific suggestions
-- `GET /health` - Health check
+### AI Routes (`/api/ai`) — Express Proxy
+- `GET /health` — ML service health check
+- `POST /generate` — Generate text from a prompt
+- `POST /suggest` — Field-specific BEP content suggestions
+- `GET /field-types` — List available BEP field types
+- `POST /suggest-from-eir` — Generate suggestions using EIR analysis data
+- `POST /generate-questions` — Generate guided authoring questions
+- `POST /generate-from-answers` — Generate content from user answers
+
+### ML Service Routes (Port 8000) — FastAPI
+- `GET /health` — Health check with Ollama connection status
+- `GET /models` — List available Ollama models
+- `POST /generate` — Generate text from prompt
+- `POST /suggest` — Field-specific BEP suggestions
+- `POST /extract-text` — Extract text from uploaded documents (PDF, DOCX)
+- `POST /analyze-eir` — Analyze EIR document and extract structured JSON
+- `POST /generate-questions` — Generate guided authoring questions
+- `POST /generate-from-answers` — Generate content from user answers
+- `POST /suggest-from-eir` — EIR-informed field suggestions
 
 ## Getting Started
 
@@ -540,6 +609,42 @@ If you get "database is locked" errors:
 - Reinstall dependencies: `npm install`
 - Ensure you have 8GB+ RAM available
 
+## Roadmap & Planned Features
+
+The following items are either work-in-progress or represent planned value additions. Contributions and feedback are welcome for any of these areas.
+
+### Work in Progress
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| **User Authentication** | Frontend UI complete, backend not yet implemented | Login, registration, and profile pages exist. Backend JWT + bcrypt auth planned — see `auth-implementation-plan.md` |
+| **Protected Routes** | Component exists, not wired | `ProtectedRoute` component built but not applied to routes in `App.js` |
+| **Profile Management** | UI only | Profile page calls API endpoints that don't exist yet; password change shows "Coming soon" |
+| **Settings Persistence** | UI only | Full settings page with appearance, notifications, language, and privacy controls — currently logs to console only |
+| **Compliance Report Export** | Disabled | Original jsPDF implementation preserved in comments; awaiting migration to Puppeteer |
+| **Security Middleware Activation** | Imported, not applied | `helmet` and `express-rate-limit` are installed but need to be enabled in `app.js` |
+| **Additional BEP Templates** | Commented out | Residential Complex and Healthcare Facility templates stubbed in `templateRegistry.js` |
+
+### Potential New Features & Value Adds
+
+| Opportunity | Description |
+|-------------|-------------|
+| **Dark Mode / Theming** | Settings UI has a theme selector (Light / Dark / Auto). Tailwind's `darkMode` support makes this straightforward to implement |
+| **Internationalisation (i18n)** | Language picker (EN, IT, ES, FR, DE) exists in settings. Needs a translation framework (e.g., `react-i18next`) and string extraction |
+| **Notification System** | Toggle UI exists for email notifications, project updates, and weekly digests — backend and delivery pipeline needed |
+| **Multi-User Collaboration** | Real-time co-editing of BEPs and TIDPs using WebSockets; shared project workspaces with role-based access |
+| **Template Marketplace** | Allow users to publish, share, and import community BEP templates beyond the built-in ones |
+| **Version History & Diffing** | Track document revisions with visual diffs; `useUndoRedo` hook already exists and could be extended |
+| **Cloud Sync & Multi-Device** | Persist settings and drafts to the server so users can resume work across devices |
+| **Advanced Analytics Dashboard** | Project-level insights — completion rates, team velocity, deliverable status trends |
+| **Webhook / CI Integration** | Trigger BEP validation on repository commits or design tool exports |
+| **Model Fine-Tuning Pipeline** | Custom LoRA fine-tuning on organisation-specific BEP data to improve suggestion quality |
+| **Bulk EIR Processing** | Batch-upload multiple EIR documents and auto-generate comparative analyses |
+| **PDF Annotation & Markup** | Annotate exported PDFs in-app for review cycles before final issue |
+| **IFC / BCF Integration** | Import IFC model metadata or BCF issues to auto-populate deliverable containers |
+| **Audit Trail & Activity Log** | Record who changed what and when for ISO 19650 information management accountability |
+| **Offline-First PWA** | Service worker caching so the app works fully offline, syncing when connectivity returns |
+
 ## Contributing
 
 Contributions are welcome! Please follow these guidelines:
@@ -563,7 +668,7 @@ For issues, questions, or feature requests, please contact the development team 
 - **ISO 19650** - International standards for information management using BIM
 - **Create React App** - React development environment
 - **TipTap** - Excellent rich text editor framework
-- **PyTorch** - Deep learning framework for AI capabilities
+- **Ollama** - Local LLM runtime for AI capabilities
 - **FastAPI** - Modern Python web framework for ML API
 
 ## Learn More
@@ -585,5 +690,5 @@ For issues, questions, or feature requests, please contact the development team 
 ---
 
 **Version:** 2.0.0
-**Last Updated:** January 2026
+**Last Updated:** February 2026
 **Developed with:** React, Node.js, Python, and Ollama

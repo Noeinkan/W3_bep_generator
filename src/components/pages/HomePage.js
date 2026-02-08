@@ -14,7 +14,10 @@ import {
   ChevronDown,
   Play,
   Table2,
-  RefreshCw
+  RefreshCw,
+  ShieldCheck,
+  Upload,
+  MessageSquareText
 } from 'lucide-react';
 import ProductCard from './ProductCard';
 import SectionLoader from './SectionLoader';
@@ -62,7 +65,7 @@ const HomePage = () => {
 
   const features = {
     bep: [
-      { icon: Zap, title: 'AI Text Generation', desc: 'PyTorch LSTM/GRU model with 24+ field types', color: 'text-yellow-600' },
+      { icon: Zap, title: 'AI Text Generation', desc: 'Local LLM with 24+ field types — your data never leaves your machine', color: 'text-yellow-600' },
       { icon: FileText, title: 'Rich Text Editor', desc: 'TipTap editor with tables, images & formatting', color: 'text-blue-600' },
       { icon: Download, title: 'Professional Export', desc: 'High-quality PDF/DOCX with TOC & diagrams', color: 'text-green-600' },
       { icon: CheckCircle, title: 'Command Palette', desc: 'Quick navigation (Ctrl+K) & onboarding', color: 'text-purple-600' }
@@ -299,6 +302,82 @@ const HomePage = () => {
               route="/idrm-manager"
               buttonText="Manage Responsibility Matrices"
             />
+          </div>
+        </div>
+      </div>
+
+      {/* AI Differentiator Section */}
+      <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-12 lg:py-16 relative overflow-hidden">
+        {/* Subtle background pattern */}
+        <div className="absolute inset-0 opacity-5" style={{
+          backgroundImage: 'url("data:image/svg+xml,%3Csvg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="%23ffffff" fill-opacity="0.3"%3E%3Ccircle cx="20" cy="20" r="1.5"/%3E%3C/g%3E%3C/svg%3E")'
+        }}></div>
+
+        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8 lg:mb-10">
+            <div className="inline-flex items-center px-3 py-1.5 rounded-full bg-green-500 bg-opacity-10 border border-green-500 border-opacity-30 mb-4">
+              <ShieldCheck className="w-4 h-4 text-green-400 mr-2" aria-hidden="true" />
+              <span className="text-sm font-medium text-green-300">100% Local AI — Your Data Never Leaves Your Machine</span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">
+              AI That No Competitor Offers
+            </h2>
+            <p className="text-base lg:text-lg text-gray-400 max-w-3xl mx-auto leading-relaxed">
+              Upload your EIR, get structured intelligence, and generate field-specific BEP content — all powered by a local LLM via Ollama. No confidential bid documents ever leave your network.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+            {/* Step 1: EIR Upload */}
+            <div className="relative bg-white bg-opacity-5 backdrop-blur-sm rounded-2xl p-6 lg:p-8 border border-white border-opacity-10 hover:border-opacity-20 transition-all duration-300">
+              <div className="absolute -top-3 left-6 inline-flex items-center px-3 py-1 rounded-full bg-blue-500 text-white text-xs font-bold">
+                Step 1
+              </div>
+              <div className="w-12 h-12 bg-blue-500 bg-opacity-20 rounded-xl flex items-center justify-center mb-4 mt-2">
+                <Upload className="w-6 h-6 text-blue-400" aria-hidden="true" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Upload EIR Document</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                Upload your Exchange Information Requirements (PDF or DOCX). The AI parses the entire document and extracts structured JSON covering project info, standards, deliverables, and requirements.
+              </p>
+            </div>
+
+            {/* Step 2: Structured Extraction */}
+            <div className="relative bg-white bg-opacity-5 backdrop-blur-sm rounded-2xl p-6 lg:p-8 border border-white border-opacity-10 hover:border-opacity-20 transition-all duration-300">
+              <div className="absolute -top-3 left-6 inline-flex items-center px-3 py-1 rounded-full bg-yellow-500 text-white text-xs font-bold">
+                Step 2
+              </div>
+              <div className="w-12 h-12 bg-yellow-500 bg-opacity-20 rounded-xl flex items-center justify-center mb-4 mt-2">
+                <Zap className="w-6 h-6 text-yellow-400" aria-hidden="true" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">AI Extracts & Suggests</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                The extracted EIR data flows into every BEP field as tailored suggestions. Each section gets content pre-aligned to the client's specific requirements — no generic boilerplate.
+              </p>
+            </div>
+
+            {/* Step 3: Guided Authoring */}
+            <div className="relative bg-white bg-opacity-5 backdrop-blur-sm rounded-2xl p-6 lg:p-8 border border-white border-opacity-10 hover:border-opacity-20 transition-all duration-300">
+              <div className="absolute -top-3 left-6 inline-flex items-center px-3 py-1 rounded-full bg-green-500 text-white text-xs font-bold">
+                Step 3
+              </div>
+              <div className="w-12 h-12 bg-green-500 bg-opacity-20 rounded-xl flex items-center justify-center mb-4 mt-2">
+                <MessageSquareText className="w-6 h-6 text-green-400" aria-hidden="true" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Guided Q&A Authoring</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                Not sure what to write? Answer a few contextual questions and the AI composes professional, ISO 19650-aligned content from your responses. No BIM expertise required to get started.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 lg:mt-10 text-center">
+            <div className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-white bg-opacity-5 border border-white border-opacity-10">
+              <ShieldCheck className="w-5 h-5 text-green-400" aria-hidden="true" />
+              <span className="text-sm text-gray-300">
+                Powered by <span className="text-white font-semibold">Ollama</span> running locally — ideal for firms handling confidential bid documents and sensitive infrastructure projects.
+              </span>
+            </div>
           </div>
         </div>
       </div>
