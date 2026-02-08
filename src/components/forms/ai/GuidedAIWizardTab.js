@@ -20,7 +20,7 @@ import { markdownToTipTapHtml } from '../../../utils/markdownToHtml';
  *
  * Phases: loading → questions → generating → result → error
  */
-const GuidedAIWizardTab = ({ editor, fieldName, fieldType, onClose }) => {
+const GuidedAIWizardTab = ({ editor, fieldName, fieldType, helpContent, onClose }) => {
   const [phase, setPhase] = useState('loading');
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -39,7 +39,8 @@ const GuidedAIWizardTab = ({ editor, fieldName, fieldType, onClose }) => {
       const response = await axios.post('/api/ai/generate-questions', {
         field_type: fieldType || fieldName,
         field_label: fieldName,
-        field_context: null
+        field_context: null,
+        help_content: helpContent || null
       }, { timeout: 30000 });
 
       if (response.data.success && response.data.questions?.length > 0) {
@@ -62,7 +63,7 @@ const GuidedAIWizardTab = ({ editor, fieldName, fieldType, onClose }) => {
       }
       setPhase('error');
     }
-  }, [fieldType, fieldName]);
+  }, [fieldType, fieldName, helpContent]);
 
   useEffect(() => { fetchQuestions(); }, [fetchQuestions]);
 

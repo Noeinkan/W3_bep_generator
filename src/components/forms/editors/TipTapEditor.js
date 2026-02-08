@@ -40,6 +40,7 @@ const TipTapEditor = ({
   const [showFindReplace, setShowFindReplace] = useState(false);
 
   const editor = useEditor({
+    immediatelyRender: false, // Prevent duplicate extension warnings in React Strict Mode
     extensions: [
       StarterKit.configure({
         history: {
@@ -311,7 +312,7 @@ const TipTapEditor = ({
 
 
       {/* Custom Styles */}
-      <style jsx>{`
+      <style>{`
         .tiptap-editor {
           padding: ${compactMode ? '0.375rem 0.5rem' : '0.75rem'};
           min-height: ${minHeight};

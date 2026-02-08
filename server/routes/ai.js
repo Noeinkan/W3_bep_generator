@@ -349,7 +349,7 @@ router.post('/suggest-from-eir', async (req, res) => {
  */
 router.post('/generate-questions', async (req, res) => {
   try {
-    const { field_type, field_label, field_context } = req.body;
+    const { field_type, field_label, field_context, help_content } = req.body;
 
     // Validate request
     if (!field_type || typeof field_type !== 'string') {
@@ -368,13 +368,14 @@ router.post('/generate-questions', async (req, res) => {
       });
     }
 
-    console.log(`Guided AI: generating questions for field_type=${field_type}`);
+    console.log(`Guided AI: generating questions for field_type=${field_type}${help_content ? ' (with guidelines)' : ''}`);
 
     const mlClient = getMLClient();
     const response = await mlClient.post('/generate-questions', {
       field_type,
       field_label,
-      field_context: field_context || null
+      field_context: field_context || null,
+      help_content: help_content || null
     }, {
       timeout: 30000 // 30s for question generation
     });

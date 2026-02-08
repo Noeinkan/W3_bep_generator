@@ -408,6 +408,7 @@ class GenerateQuestionsRequest(BaseModel):
     field_type: str = Field(..., description="Type of BEP field")
     field_label: str = Field(..., description="Human-readable field label")
     field_context: Optional[FieldContext] = Field(None, description="Field context information")
+    help_content: Optional[Dict[str, Any]] = Field(None, description="Help content with ISO 19650, best practices, examples, and common mistakes")
 
 
 class QuestionItem(BaseModel):
@@ -464,13 +465,18 @@ async def generate_questions(request: GenerateQuestionsRequest):
         if request.field_context:
             field_context_dict = request.field_context.dict()
 
+        help_content_dict = None
+        if request.help_content:
+            help_content_dict = request.help_content
+
         questions = generator.generate_questions_for_field(
             field_type=request.field_type,
             field_label=request.field_label,
-            field_context=field_context_dict
+            field_context=field_context_dict,
+            help_content=help_content_dict
         )
 
-        logger.info(f"Generated {len(questions)} questions for field: {request.field_type}")
+        logger.info(f"Generated {len(questions)} questions for field: {request.field_type}{' (with guidelines)' if help_content_dict else ''}")
 
         return GenerateQuestionsResponse(
             success=True,

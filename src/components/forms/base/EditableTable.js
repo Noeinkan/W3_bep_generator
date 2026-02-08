@@ -283,7 +283,7 @@ const EditableTable = React.memo(({ field, value, onChange, error }) => {
   // Memoized to prevent unnecessary re-renders that cause typing issues
   const renderTableContent = useMemo(() => (
     <div className="border rounded-xl shadow-sm bg-white">
-      <style jsx>{`
+      <style>{`
         @keyframes slideIn {
           from {
             opacity: 0;

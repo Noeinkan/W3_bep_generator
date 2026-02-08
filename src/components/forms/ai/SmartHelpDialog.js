@@ -193,6 +193,7 @@ const SmartHelpDialog = ({
           fieldName={fieldName}
           fieldType={fieldType}
           fieldState={fieldState}
+          helpContent={helpContent}
           onClose={onClose}
           aiLoading={aiLoading}
           aiError={aiError}

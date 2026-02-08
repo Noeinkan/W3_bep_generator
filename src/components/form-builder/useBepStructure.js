@@ -7,8 +7,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL
-  || (typeof window !== 'undefined' ? window.location.origin : '');
+// In dev, use empty string for relative URLs (Vite proxy handles /api routes)
+// In prod, use full API URL or current origin
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 /**
  * useBepStructure

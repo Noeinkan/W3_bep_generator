@@ -1,5 +1,6 @@
 import React from 'react';
 import cn from '../../utils/cn';
+import { input, typography, fieldError } from '../../config/theme';
 
 /**
  * Shared Select component for consistent dropdown styling.
@@ -38,10 +39,10 @@ const Select = React.forwardRef(({
       {label && (
         <label
           htmlFor={id}
-          className="block text-sm font-medium text-gray-700 mb-1"
+          className={cn(typography.fieldLabel, 'mb-1')}
         >
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required && <span className={typography.required}>*</span>}
         </label>
       )}
       <select
@@ -52,9 +53,9 @@ const Select = React.forwardRef(({
         disabled={disabled}
         aria-required={required}
         className={cn(
-          'w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
-          disabled && 'bg-gray-100 cursor-not-allowed',
-          error && 'border-red-500',
+          input.base,
+          disabled && input.disabled,
+          error && input.error,
           className
         )}
         {...rest}
@@ -71,7 +72,7 @@ const Select = React.forwardRef(({
         })}
       </select>
       {error && (
-        <p className="text-red-500 text-sm mt-1">{error}</p>
+        <p className={fieldError.base}>{error}</p>
       )}
     </div>
   );

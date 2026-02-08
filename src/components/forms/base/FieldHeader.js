@@ -1,6 +1,7 @@
 import React from 'react';
 import FieldHelpTooltip from '../controls/FieldHelpTooltip';
 import { getHelpContent } from '../../../data/helpContent';
+import { typography } from '../../../config/theme';
 
 /**
  * Standardized field header component with label, number, required indicator, and help tooltip
@@ -23,7 +24,6 @@ const FieldHeader = ({
   label,
   number,
   required = false,
-  className = "block text-sm font-medium mb-2",
   htmlFor,
   asSectionHeader = false
 }) => {
@@ -34,12 +34,12 @@ const FieldHeader = ({
   // Section header style (for subsections like 9.2.1, 9.2.2, etc.)
   if (asSectionHeader) {
     return (
-      <div className="border-b border-gray-200 pb-3 mb-4">
+      <div className={typography.sectionHeaderWrapper}>
         <div className="flex items-center gap-2">
-          <h4 className="text-base font-semibold text-gray-900">
-            {number && <span className="text-blue-600">{number} </span>}
+          <h4 className={typography.sectionHeader}>
+            {number && <span className={typography.sectionHeaderNumber}>{number} </span>}
             {displayLabel}
-            {isRequired && <span className="text-red-500 ml-1">*</span>}
+            {isRequired && <span className={typography.required}>*</span>}
           </h4>
           {helpContent && (
             <FieldHelpTooltip fieldName={fieldName} helpContent={helpContent} />
@@ -51,9 +51,11 @@ const FieldHeader = ({
 
   // Standard field header style
   return (
-    <div className="flex items-center gap-2 mb-2">
-      <label htmlFor={htmlFor} className={className}>
-        {number ? `${number} ` : ''}{displayLabel} {isRequired && <span className="text-red-500">*</span>}
+    <div className={typography.fieldLabelWrapper}>
+      <label htmlFor={htmlFor} className={typography.fieldLabel}>
+        {number && <span className={typography.fieldLabelNumber}>{number} </span>}
+        {displayLabel}
+        {isRequired && <span className={typography.required}>*</span>}
       </label>
       {helpContent && (
         <FieldHelpTooltip fieldName={fieldName} helpContent={helpContent} />

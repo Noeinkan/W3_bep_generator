@@ -521,7 +521,8 @@ class OllamaGenerator:
         self,
         field_type: str,
         field_label: str,
-        field_context: Optional[dict] = None
+        field_context: Optional[dict] = None,
+        help_content: Optional[dict] = None
     ) -> list:
         """
         Generate 3-5 contextual questions to help the user write better content
@@ -532,6 +533,8 @@ class OllamaGenerator:
             field_label: Human-readable label (e.g., 'Project Description').
             field_context: Optional dict with step_name, step_number,
                           existing_fields, draft_id.
+            help_content: Optional dict with ISO 19650, best practices,
+                         examples, and common mistakes to guide question generation.
 
         Returns:
             List of question dicts: [{"id": "q1", "text": "...", "hint": "..."}, ...]
@@ -563,13 +566,46 @@ class OllamaGenerator:
         )
         if existing_summary:
             prompt += f"{existing_summary}\n"
+
+        # Add guidelines context if available
+        if help_content:
+            guidelines_context = "\nGuidelines to consider when creating questions:\n"
+
+            # ISO 19650 references
+            if 'iso19650' in help_content and help_content['iso19650']:
+                iso_text = str(help_content['iso19650']).strip()
+                if len(iso_text) > 200:
+                    iso_text = iso_text[:200] + '...'
+                guidelines_context += f"- ISO 19650 Context: {iso_text}\n"
+
+            # Best practices (limit to 3-4 most relevant)
+            if 'bestPractices' in help_content and help_content['bestPractices']:
+                practices = help_content['bestPractices']
+                if isinstance(practices, list) and len(practices) > 0:
+                    selected_practices = practices[:4]  # Take first 4
+                    guidelines_context += "- Best Practices:\n"
+                    for practice in selected_practices:
+                        guidelines_context += f"  • {practice}\n"
+
+            # Common mistakes to avoid (limit to 2-3)
+            if 'commonMistakes' in help_content and help_content['commonMistakes']:
+                mistakes = help_content['commonMistakes']
+                if isinstance(mistakes, list) and len(mistakes) > 0:
+                    selected_mistakes = mistakes[:3]  # Take first 3
+                    guidelines_context += "- Common Mistakes to Avoid:\n"
+                    for mistake in selected_mistakes:
+                        guidelines_context += f"  • {mistake}\n"
+
+            prompt += guidelines_context
+
         prompt += (
             "\nRequirements:\n"
             "1. Ask specific, actionable questions that will help generate better content\n"
             "2. Questions should be relevant to the field and ISO 19650 standards\n"
             "3. Keep questions clear and concise\n"
             "4. Each question should gather different information\n"
-            "5. Avoid yes/no questions - ask open-ended questions\n\n"
+            "5. Avoid yes/no questions - ask open-ended questions\n"
+            "6. Use the guidelines context above to create more targeted, relevant questions\n\n"
             "Format your response as a JSON array:\n"
             '[{"id": "q1", "text": "question text", "hint": "optional hint"}, ...]\n\n'
             "Output ONLY the JSON array, no other text."

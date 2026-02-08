@@ -27,6 +27,7 @@ const AIAssistantTab = ({
   fieldName,
   fieldType,
   fieldState,
+  helpContent,
   onClose,
   // Quick AI shared state from SmartHelpDialog
   aiLoading,
@@ -127,6 +128,7 @@ const AIAssistantTab = ({
           editor={editor}
           fieldName={fieldName}
           fieldType={fieldType}
+          helpContent={helpContent}
           onClose={onClose}
         />
       </div>

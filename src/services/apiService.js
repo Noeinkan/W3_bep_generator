@@ -788,42 +788,6 @@ class ApiService {
     }
   }
 
-  async getIMActivity(id) {
-    try {
-      const response = await apiClient.get(`/idrm/im-activities/${id}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to fetch IM activity ${id}`);
-    }
-  }
-
-  async createIMActivity(activityData) {
-    try {
-      const response = await apiClient.post('/idrm/im-activities', activityData);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to create IM activity');
-    }
-  }
-
-  async updateIMActivity(id, activityData) {
-    try {
-      const response = await apiClient.put(`/idrm/im-activities/${id}`, activityData);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to update IM activity ${id}`);
-    }
-  }
-
-  async deleteIMActivity(id) {
-    try {
-      const response = await apiClient.delete(`/idrm/im-activities/${id}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to delete IM activity ${id}`);
-    }
-  }
-
   // Deliverables
   async getAllDeliverables(projectId = null) {
     try {
@@ -832,42 +796,6 @@ class ApiService {
       return response.data;
     } catch (error) {
       throw this.handleError(error, 'Failed to fetch deliverables');
-    }
-  }
-
-  async getDeliverable(id) {
-    try {
-      const response = await apiClient.get(`/idrm/deliverables/${id}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to fetch deliverable ${id}`);
-    }
-  }
-
-  async createDeliverable(deliverableData) {
-    try {
-      const response = await apiClient.post('/idrm/deliverables', deliverableData);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to create deliverable');
-    }
-  }
-
-  async updateDeliverable(id, deliverableData) {
-    try {
-      const response = await apiClient.put(`/idrm/deliverables/${id}`, deliverableData);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to update deliverable ${id}`);
-    }
-  }
-
-  async deleteDeliverable(id) {
-    try {
-      const response = await apiClient.delete(`/idrm/deliverables/${id}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to delete deliverable ${id}`);
     }
   }
 

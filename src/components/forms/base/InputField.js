@@ -10,6 +10,7 @@
 import React, { Suspense } from 'react';
 import CONFIG from '../../../config/bepConfig';
 import { getFieldType } from '../../form-builder/FieldTypeRegistry';
+import { input } from '../../../config/theme';
 import FieldHeader from './FieldHeader';
 import FieldError from './FieldError';
 import BaseTextInput from './BaseTextInput';
@@ -31,7 +32,7 @@ const DIAGRAM_WRAPPER_TYPES = new Set([
 const InputField = React.memo(({ field, value, onChange, error, formData = {} }) => {
   const { name, label, number, type, required, rows, placeholder, options: fieldOptions } = field;
 
-  const baseClasses = 'w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+  const baseClasses = input.base;
 
   // ── Inline types (no lazy component needed) ────────────────
 
