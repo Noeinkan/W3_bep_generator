@@ -535,7 +535,7 @@ All resources will be tested for collaborative production capability before full
     ]
   },
   fileStructure: 'Organized by discipline and project phase with clear folder hierarchies, version control through file naming, and linked file management protocols.',
-  fileStructureDiagram: '📁 WIP (Work in Progress)\n📁 SHARED (Coordination)\n📁 PUBLISHED (Approved)',
+  // fileStructureDiagram: Removed to use the default ISO19650 structure from templateRegistry
   dataExchangeProtocols: [
     { 'Exchange Type': 'IFC Coordination', 'Format': 'IFC 4.0', 'Frequency': 'Weekly', 'Delivery Method': 'BIM 360 upload' },
     { 'Exchange Type': 'Issue Management', 'Format': 'BCF 2.1', 'Frequency': 'Daily as needed', 'Delivery Method': 'BCF workflow' },

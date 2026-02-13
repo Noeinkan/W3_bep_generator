@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { validateDraftName, sanitizeText, sanitizeFileName } from '../utils/validationUtils';
 import { draftStorageService } from '../services/draftStorageService';
 
-export const useDraftOperations = (user, currentFormData, bepType, onLoadDraft, onClose) => {
+export const useDraftOperations = (user, currentFormData, bepType, onLoadDraft, onClose, projectId = null) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -79,7 +79,8 @@ export const useDraftOperations = (user, currentFormData, bepType, onLoadDraft, 
         data: data,
         bepType: bepType || 'pre-appointment',
         lastModified: new Date().toISOString(),
-        projectName: sanitizedProjectName
+        projectName: sanitizedProjectName,
+        projectId: projectId || null
       };
 
       draftStorageService.saveDraft(user.id, draft);

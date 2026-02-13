@@ -13,14 +13,17 @@ class DraftApiService {
    * @param {string} userId - User ID
    * @returns {Promise<Array>} Array of draft objects
    */
-  async getAllDrafts(userId) {
+  async getAllDrafts(userId, projectId = null) {
     if (!userId) {
       throw new Error('User ID is required');
     }
 
     try {
+      const params = { userId };
+      if (projectId) params.projectId = projectId;
+
       const response = await axios.get(`${API_BASE_URL}/drafts`, {
-        params: { userId }
+        params
       });
 
       if (response.data.success) {

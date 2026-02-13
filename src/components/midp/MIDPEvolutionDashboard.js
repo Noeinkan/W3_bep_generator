@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { TrendingUp, Users, Clock, BarChart3, AlertTriangle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Users, Clock, BarChart3, AlertTriangle, Activity, Target } from 'lucide-react';
 import ApiService from '../../services/apiService';
 
 const MIDPEvolutionDashboard = ({ midpId, onClose }) => {
   const [evolution, setEvolution] = useState(null);
   const [deliverables, setDeliverables] = useState(null);
+  const [trends, setTrends] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState('overview');
   const [alerts, setAlerts] = useState([]);
@@ -12,14 +13,16 @@ const MIDPEvolutionDashboard = ({ midpId, onClose }) => {
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
-      const [evolutionData, deliverablesData, midpData] = await Promise.all([
+      const [evolutionData, deliverablesData, midpData, trendsData] = await Promise.all([
         ApiService.getMIDPEvolution(midpId),
         ApiService.getMIDPDeliverablesDashboard(midpId),
-        ApiService.getMIDP(midpId)
+        ApiService.getMIDP(midpId),
+        ApiService.getMIDPTrends(midpId).catch(() => ({ data: null }))
       ]);
 
       setEvolution(evolutionData.data);
       setDeliverables(deliverablesData.data);
+      setTrends(trendsData.data);
 
       // Check for delay alerts
       const midp = midpData.data;
@@ -168,6 +171,113 @@ const MIDPEvolutionDashboard = ({ midpId, onClose }) => {
     </div>
   );
 
+  const TrendsView = () => {
+    if (!trends) {
+      return (
+        <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+          <Activity className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+          <p>No trend data available yet. Trends require at least 2 evolution snapshots.</p>
+        </div>
+      );
+    }
+
+    const velocity = trends.velocity || {};
+    const hourDrift = trends.hourDrift || {};
+    const projection = trends.projection || {};
+
+    const driftDirection = hourDrift.driftPerDay > 0 ? 'increasing' : hourDrift.driftPerDay < 0 ? 'decreasing' : 'stable';
+
+    return (
+      <div className="space-y-6">
+        {/* Velocity Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-gray-500">Containers / Day</h3>
+              <Target className="w-5 h-5 text-blue-500" />
+            </div>
+            <p className="text-3xl font-bold text-blue-600">{velocity.containersPerDay?.toFixed(2) || '—'}</p>
+            <p className="text-xs text-gray-400 mt-1">Average velocity</p>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-gray-500">Containers / Week</h3>
+              <BarChart3 className="w-5 h-5 text-green-500" />
+            </div>
+            <p className="text-3xl font-bold text-green-600">{velocity.containersPerWeek?.toFixed(1) || '—'}</p>
+            <p className="text-xs text-gray-400 mt-1">Weekly pace</p>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-gray-500">Hour Drift</h3>
+              {driftDirection === 'increasing' ? (
+                <TrendingUp className="w-5 h-5 text-amber-500" />
+              ) : driftDirection === 'decreasing' ? (
+                <TrendingDown className="w-5 h-5 text-green-500" />
+              ) : (
+                <Activity className="w-5 h-5 text-gray-400" />
+              )}
+            </div>
+            <p className={`text-3xl font-bold ${driftDirection === 'increasing' ? 'text-amber-600' : driftDirection === 'decreasing' ? 'text-green-600' : 'text-gray-600'}`}>
+              {hourDrift.driftPerDay != null ? `${hourDrift.driftPerDay > 0 ? '+' : ''}${hourDrift.driftPerDay.toFixed(1)}` : '—'}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">Hours / day {driftDirection}</p>
+          </div>
+        </div>
+
+        {/* Projected Completion */}
+        {projection.projectedCompletionDate && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <Clock className="w-5 h-5 mr-2 text-purple-500" />
+              Projected Completion
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <p className="text-sm text-gray-500">Estimated Date</p>
+                <p className="text-xl font-bold text-purple-600">
+                  {new Date(projection.projectedCompletionDate).toLocaleDateString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Remaining Containers</p>
+                <p className="text-xl font-bold text-gray-900">{projection.remainingContainers ?? '—'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Days to Complete</p>
+                <p className="text-xl font-bold text-gray-900">{projection.daysToComplete ?? '—'}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Snapshot History */}
+        {trends.snapshotCount > 0 && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Snapshot History</h3>
+            <p className="text-sm text-gray-500 mb-4">{trends.snapshotCount} snapshots tracked</p>
+            <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
+              <div className="flex justify-between">
+                <span>Period Covered</span>
+                <span>{velocity.periodDays?.toFixed(0) || '—'} days</span>
+              </div>
+              <div className="flex justify-between mt-2">
+                <span>Container Growth</span>
+                <span>{velocity.totalContainerGrowth ?? '—'} containers</span>
+              </div>
+              <div className="flex justify-between mt-2">
+                <span>Hour Growth</span>
+                <span>{hourDrift.totalHourGrowth ?? '—'} hours</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const DeliverablesView = () => (
     <div className="bg-white rounded-lg shadow">
       <div className="p-6">
@@ -283,6 +393,7 @@ const MIDPEvolutionDashboard = ({ midpId, onClose }) => {
             <nav className="flex space-x-8">
               {[
                 { id: 'overview', label: 'Overview', icon: TrendingUp },
+                { id: 'trends', label: 'Trends', icon: Activity },
                 { id: 'deliverables', label: 'Deliverables', icon: BarChart3 }
               ].map(({ id, label, icon: Icon }) => (
                 <button
@@ -304,6 +415,7 @@ const MIDPEvolutionDashboard = ({ midpId, onClose }) => {
 
         <div className="p-6">
           {activeView === 'overview' && <OverviewView />}
+          {activeView === 'trends' && <TrendsView />}
           {activeView === 'deliverables' && <DeliverablesView />}
         </div>
       </div>

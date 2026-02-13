@@ -81,6 +81,18 @@ router.put('/:id', validateTIDPUpdate, async (req, res, next) => {
     const { id } = req.params;
     const updateData = req.body;
 
+    // Validate ISO 19650 suitability code transitions
+    if (updateData.containers) {
+      const suitabilityCheck = tidpService.validateContainerSuitabilityTransitions(id, updateData.containers);
+      if (!suitabilityCheck.valid) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid ISO 19650 suitability code transitions',
+          violations: suitabilityCheck.violations
+        });
+      }
+    }
+
     const updatedTidp = tidpService.updateTIDP(id, updateData);
 
     // After updating a TIDP, refresh any MIDPs that include this TIDP so the MIDP aggregation stays current
@@ -359,6 +371,21 @@ router.get('/template/excel', async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+/**
+ * GET /api/tidp/suitability-codes
+ * Get ISO 19650 suitability codes and valid transitions
+ */
+router.get('/suitability-codes', (req, res) => {
+  const TIDPService = tidpService.constructor;
+  res.json({
+    success: true,
+    data: {
+      codes: TIDPService.SUITABILITY_CODES,
+      transitions: TIDPService.VALID_TRANSITIONS
+    }
+  });
 });
 
 module.exports = router;

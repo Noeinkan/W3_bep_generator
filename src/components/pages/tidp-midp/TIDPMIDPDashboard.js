@@ -7,7 +7,12 @@ import {
   FileText,
   CheckCircle,
   Download,
-  Layers
+  Layers,
+  Shield,
+  Users,
+  ShieldCheck,
+  GitBranch,
+  AlertTriangle
 } from 'lucide-react';
 import ApiService from '../../../services/apiService';
 import toast, { Toaster } from 'react-hot-toast';
@@ -16,6 +21,8 @@ import MIDPEvolutionDashboard from '../../midp/MIDPEvolutionDashboard';
 import { useTIDPFilters } from '../../../hooks/useTIDPFilters';
 import { exportTidpCsvTemplate, exportTidpToCSV, exportMidpToCSV } from '../../../utils/tidpExport';
 import { checkMIDPCompliance, generateComplianceReport } from '../../../utils/complianceCheck';
+
+import { useProject } from '../../../contexts/ProjectContext';
 
 // Sub-components
 import StatisticsCards from './dashboard/StatisticsCards';
@@ -26,6 +33,7 @@ import HelpModal from './dashboard/HelpModal';
 
 const TIDPMIDPDashboard = () => {
   const navigate = useNavigate();
+  const { currentProject } = useProject();
 
   const [tidps, setTidps] = useState([]);
   const [midps, setMidps] = useState([]);
@@ -34,6 +42,8 @@ const TIDPMIDPDashboard = () => {
   const [showEvolutionDashboard, setShowEvolutionDashboard] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
   const [showMIDPDrawer, setShowMIDPDrawer] = useState(false);
+  const [showComplianceModal, setShowComplianceModal] = useState(false);
+  const [complianceResult, setComplianceResult] = useState(null);
 
   // Use custom hook for TIDP filtering
   const {
@@ -41,7 +51,17 @@ const TIDPMIDPDashboard = () => {
     setSearchTerm,
     filterDiscipline,
     setFilterDiscipline,
-    disciplines
+    filterStatus,
+    setFilterStatus,
+    filterMilestone,
+    setFilterMilestone,
+    filterDateFrom,
+    setFilterDateFrom,
+    filterDateTo,
+    setFilterDateTo,
+    disciplines,
+    statuses,
+    milestones
   } = useTIDPFilters(tidps);
 
   // Statistics
@@ -58,13 +78,14 @@ const TIDPMIDPDashboard = () => {
     mountedRef.current = true;
     loadData();
     return () => { mountedRef.current = false; };
-  }, []);
+  }, [currentProject?.id]);
 
   const loadData = async () => {
     setLoading(true);
     try {
+      const projectId = currentProject?.id || null;
       const [tidpData, midpData] = await Promise.all([
-        ApiService.getAllTIDPs(),
+        ApiService.getAllTIDPs(projectId),
         ApiService.getAllMIDPs()
       ]);
 
@@ -147,10 +168,18 @@ const TIDPMIDPDashboard = () => {
   const autoGenerateMIDP = async () => {
     setLoading(true);
     try {
-      await ApiService.autoGenerateMIDPAll({
-        projectName: `Auto-generated MIDP ${new Date().toLocaleDateString()}`,
-        description: 'Master Information Delivery Plan compiled from all TIDPs'
-      });
+      const projectId = currentProject?.id;
+      if (projectId) {
+        await ApiService.autoGenerateMIDP(projectId, {
+          projectName: `Auto-generated MIDP ${new Date().toLocaleDateString()}`,
+          description: 'Master Information Delivery Plan compiled from project TIDPs'
+        });
+      } else {
+        await ApiService.autoGenerateMIDPAll({
+          projectName: `Auto-generated MIDP ${new Date().toLocaleDateString()}`,
+          description: 'Master Information Delivery Plan compiled from all TIDPs'
+        });
+      }
 
       toast.success('MIDP auto-generated successfully');
       await loadData();
@@ -164,11 +193,8 @@ const TIDPMIDPDashboard = () => {
 
   const handleComplianceCheck = async () => {
     const result = checkMIDPCompliance(midps);
-    if (result.compliant) {
-      toast.success(result.message);
-    } else {
-      toast(result.message, { icon: '⚠️' });
-    }
+    setComplianceResult(result);
+    setShowComplianceModal(true);
   };
 
   const handleGenerateReport = async () => {
@@ -272,7 +298,17 @@ const TIDPMIDPDashboard = () => {
           onSearchChange={setSearchTerm}
           filterDiscipline={filterDiscipline}
           onFilterChange={setFilterDiscipline}
+          filterStatus={filterStatus}
+          onFilterStatusChange={setFilterStatus}
+          filterMilestone={filterMilestone}
+          onFilterMilestoneChange={setFilterMilestone}
+          filterDateFrom={filterDateFrom}
+          onFilterDateFromChange={setFilterDateFrom}
+          filterDateTo={filterDateTo}
+          onFilterDateToChange={setFilterDateTo}
           disciplines={disciplines}
+          statuses={statuses}
+          milestones={milestones}
           onCreateNew={() => navigate('/tidp-editor')}
           onDownloadTemplate={handleExportTidpCsvTemplate}
           onViewDetails={handleViewTidpDetails}
@@ -290,6 +326,59 @@ const TIDPMIDPDashboard = () => {
           }}
           onViewFullAnalytics={() => setShowMIDPDrawer(true)}
         />
+
+        {/* MIDP Analysis Quick Links */}
+        {midps.length > 0 && (
+          <div>
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">MIDP Analysis</h3>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <button
+                onClick={() => navigate(`/tidp-midp/risk-register/${midps[midps.length - 1].id}`)}
+                className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md hover:border-red-200 transition-all text-left group"
+              >
+                <Shield className="w-6 h-6 text-red-500 mb-2 group-hover:scale-110 transition-transform" />
+                <p className="font-medium text-gray-900 text-sm">Risk Register</p>
+                <p className="text-xs text-gray-500 mt-0.5">View identified risks & mitigations</p>
+              </button>
+
+              <button
+                onClick={() => navigate(`/tidp-midp/resource-plan/${midps[midps.length - 1].id}`)}
+                className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md hover:border-emerald-200 transition-all text-left group"
+              >
+                <Users className="w-6 h-6 text-emerald-500 mb-2 group-hover:scale-110 transition-transform" />
+                <p className="font-medium text-gray-900 text-sm">Resource Plan</p>
+                <p className="text-xs text-gray-500 mt-0.5">Discipline allocation & utilization</p>
+              </button>
+
+              <button
+                onClick={() => navigate(`/tidp-midp/quality-gates/${midps[midps.length - 1].id}`)}
+                className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md hover:border-violet-200 transition-all text-left group"
+              >
+                <ShieldCheck className="w-6 h-6 text-violet-500 mb-2 group-hover:scale-110 transition-transform" />
+                <p className="font-medium text-gray-900 text-sm">Quality Gates</p>
+                <p className="text-xs text-gray-500 mt-0.5">Milestone criteria & approvers</p>
+              </button>
+
+              <button
+                onClick={() => navigate(`/tidp-midp/dependency-matrix/${midps[midps.length - 1].id}`)}
+                className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md hover:border-cyan-200 transition-all text-left group"
+              >
+                <GitBranch className="w-6 h-6 text-cyan-500 mb-2 group-hover:scale-110 transition-transform" />
+                <p className="font-medium text-gray-900 text-sm">Dependencies</p>
+                <p className="text-xs text-gray-500 mt-0.5">Cross-team dependency matrix</p>
+              </button>
+
+              <button
+                onClick={() => navigate(`/tidp-midp/cascading-impact/${midps[midps.length - 1].id}`)}
+                className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md hover:border-rose-200 transition-all text-left group"
+              >
+                <AlertTriangle className="w-6 h-6 text-rose-500 mb-2 group-hover:scale-110 transition-transform" />
+                <p className="font-medium text-gray-900 text-sm">Cascading Impact</p>
+                <p className="text-xs text-gray-500 mt-0.5">Late deliverable downstream analysis</p>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Dialogs and Modals */}
@@ -319,6 +408,79 @@ const TIDPMIDPDashboard = () => {
       />
 
       <HelpModal show={showHelp} onClose={() => setShowHelp(false)} />
+
+      {/* Compliance Results Modal */}
+      {showComplianceModal && complianceResult && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden">
+            <div className={`px-6 py-4 border-b ${complianceResult.compliant ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">ISO 19650 Compliance Check</h2>
+                  <p className={`text-sm mt-0.5 ${complianceResult.compliant ? 'text-green-700' : 'text-red-700'}`}>
+                    {complianceResult.message}
+                  </p>
+                </div>
+                <button onClick={() => setShowComplianceModal(false)} className="text-gray-400 hover:text-gray-600 text-xl font-bold">✕</button>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[65vh] space-y-4">
+              {/* Score and Summary */}
+              <div className="grid grid-cols-4 gap-3">
+                <div className="bg-blue-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-blue-700">{complianceResult.score}%</p>
+                  <p className="text-xs text-blue-600">Score</p>
+                </div>
+                <div className="bg-red-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-red-700">{complianceResult.summary.errors}</p>
+                  <p className="text-xs text-red-600">Errors</p>
+                </div>
+                <div className="bg-yellow-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-yellow-700">{complianceResult.summary.warnings}</p>
+                  <p className="text-xs text-yellow-600">Warnings</p>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-blue-700">{complianceResult.summary.info}</p>
+                  <p className="text-xs text-blue-600">Info</p>
+                </div>
+              </div>
+
+              {/* Findings */}
+              {complianceResult.findings.length > 0 ? (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold text-gray-700">Findings</h3>
+                  {complianceResult.findings.map((finding, i) => (
+                    <div key={i} className={`p-3 rounded-lg border text-sm ${
+                      finding.severity === 'error' ? 'bg-red-50 border-red-200' :
+                      finding.severity === 'warning' ? 'bg-yellow-50 border-yellow-200' :
+                      'bg-blue-50 border-blue-200'
+                    }`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium text-gray-900">{finding.rule}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          finding.severity === 'error' ? 'bg-red-100 text-red-700' :
+                          finding.severity === 'warning' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-blue-100 text-blue-700'
+                        }`}>{finding.severity}</span>
+                      </div>
+                      <p className="text-gray-700">{finding.message}</p>
+                      {finding.container && (
+                        <p className="text-gray-500 text-xs mt-1">Container: {finding.container}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-green-600">
+                  <CheckCircle className="w-12 h-12 mx-auto mb-2" />
+                  <p className="font-medium">All checks passed!</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <Toaster position="top-right" />
     </div>

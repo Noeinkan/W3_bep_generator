@@ -120,7 +120,7 @@ const HomePage = () => {
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mb-8">
               <button
-                onClick={() => navigate('/bep-generator')}
+                onClick={() => navigate('/projects')}
                 className="group relative inline-flex items-center px-8 py-4 bg-white text-blue-600 font-bold rounded-xl hover:bg-blue-50 transform hover:scale-105 transition-all duration-300 ease-out shadow-xl hover:shadow-2xl will-change-transform text-lg animate-pulse-subtle"
                 aria-label="Launch BEP Generator to create BIM Execution Plans"
               >
@@ -248,7 +248,7 @@ const HomePage = () => {
               </div>
 
               <button
-                onClick={() => navigate('/bep-generator')}
+                onClick={() => navigate('/projects')}
                 className="group inline-flex items-center justify-center w-full px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-blue-800 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl will-change-transform"
                 aria-label="Navigate to BEP Generator"
               >
@@ -279,7 +279,7 @@ const HomePage = () => {
                 buttonHover: 'from-green-700 to-green-800'
               }}
               features={features.tidp}
-              route="/tidp-midp"
+              route="/projects"
               buttonText="Manage Information Delivery"
             />
           </div>
@@ -299,7 +299,7 @@ const HomePage = () => {
                 buttonHover: 'from-purple-700 to-purple-800'
               }}
               features={features.idrm}
-              route="/idrm-manager"
+              route="/projects"
               buttonText="Manage Responsibility Matrices"
             />
           </div>
@@ -506,7 +506,7 @@ const HomePage = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
-              onClick={() => navigate('/bep-generator')}
+              onClick={() => navigate('/projects')}
               className="inline-flex items-center px-6 py-3 bg-white text-blue-600 font-semibold rounded-xl hover:bg-blue-50 transform hover:scale-105 transition-all duration-200 shadow-lg will-change-transform"
               aria-label="Create new BIM Execution Plan"
             >
@@ -514,7 +514,7 @@ const HomePage = () => {
               Create BEP
             </button>
             <button
-              onClick={() => navigate('/tidp-midp')}
+              onClick={() => navigate('/projects')}
               className="inline-flex items-center px-6 py-3 border-2 border-white text-white font-semibold rounded-xl hover:bg-white hover:text-blue-600 transform hover:scale-105 transition-all duration-200 will-change-transform"
               aria-label="Manage TIDP and MIDP information delivery plans"
             >
@@ -522,7 +522,7 @@ const HomePage = () => {
               Manage TIDP/MIDP
             </button>
             <button
-              onClick={() => navigate('/idrm-manager')}
+              onClick={() => navigate('/projects')}
               className="inline-flex items-center px-6 py-3 border-2 border-white text-white font-semibold rounded-xl hover:bg-white hover:text-blue-600 transform hover:scale-105 transition-all duration-200 will-change-transform"
               aria-label="Manage responsibility matrices"
             >

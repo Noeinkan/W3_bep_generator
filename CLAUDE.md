@@ -1,82 +1,22 @@
 # CLAUDE.md — BEP Generator
+React 19 + Express + SQLite for BEP documents. Windows/PowerShell environment.
 
-## Project Overview
-BEP Generator — React 19 + Express + SQLite tool for building/exporting BEP documents.
+## Workflow
+- Describe approach first, wait for approval
+- Break changes >3 files into smaller tasks
+- Bug fixes: write failing test first
+- Run `npm test` after code changes
 
-## Environment
-This is a Windows development environment. For bash commands, use PowerShell-compatible syntax and handle output display issues by using explicit print/echo statements or alternative verification methods.
+## Layout
+- Frontend: `src/` (React 19, CRA)
+- Backend: `server/` (Express, better-sqlite3)
+- ML: `ml-service/` (Python + Ollama)
+- Start all: `npm start`
 
-## Workflow rules
+## Conventions
+Forms: React Hook Form + Zod (`src/schemas/`). State: Context only. API: `src/services/`. Styles: Tailwind. Tests: Jest.
 
-- **Describe approach first.** Before writing any code, outline the plan and wait for approval. If requirements are ambiguous, ask clarifying questions before touching a file.
-- **Break large tasks into small ones.** If a change touches more than 3 files, stop and break it into smaller, sequential tasks before starting.
-- **After writing code, flag risks.** List what could break and suggest tests to cover it.
-- **Bug workflow: test first.** When fixing a bug, start by writing (or identifying) a test that reproduces it, then fix until it passes.
-- **Learn from corrections.** Whenever a correction is made, add a new rule here so the same mistake doesn't repeat.
-- **After code changes,** run `npm test` before considering done.
-- **Stay focused.** Do not perform additional unrequested work like installing packages, creating extra documentation, or expanding scope without explicit user approval.
-
-## Workflow Preferences
-- Before starting implementation, briefly confirm the approach with the user rather than diving into extensive codebase exploration. Keep initial exploration focused and minimal.
-
-## Project layout
-
-- Frontend: `src/` — React 19 + CRA (`react-scripts`). Feature folders inside `src/components/`.
-- Backend: `server/` — Express + better-sqlite3. Routes in `server/routes/`, business logic in `server/services/`.
-- ML service: `ml-service/` — Python + Ollama. Separate process.
-- All three start together via `npm start` (concurrently).
-
-## Key conventions
-
-- **Forms:** React Hook Form + Zod schemas (schemas live in `src/schemas/`).
-- **State:** React Context + local state. No global store (no Redux/Zustand).
-- **API calls:** Service layer in `src/services/` wraps fetch/axios calls.
-- **Styles:** Tailwind CSS. No custom CSS files unless necessary.
-- **Tests:** Jest. Frontend tests in `src/__tests__/`. Run with `npm test`.
-- **DB:** SQLite via better-sqlite3 (synchronous). DB files in `server/db/`.
-
-## Things to watch out for
-
-- **FormBuilderProvider scope.** `useFormBuilder()` only works inside `<FormBuilderProvider>`. If a layout or wrapper component needs `isEditMode`, `steps`, or any editor state, it must be defined *inside* the provider in the JSX tree — you can't read that context from a parent above it. Pattern: define an inner component inside the provider's children.
-- **form-builder barrel exports.** Sub-modules have their own barrels: import from `form-builder/field-editor`, `form-builder/step-editor`, etc. The top-level `form-builder/index.js` re-exports `FormBuilderProvider`, `useFormBuilder`, and `BepStructureMap`.
-- better-sqlite3 is synchronous — don't accidentally introduce async patterns around DB calls.
-- Puppeteer (PDF export) is heavy; avoid pulling it into frontend bundles.
-- Security middleware (Helmet, rate-limit) exists but some is commented out in dev — don't remove it.
-- CRA (react-scripts) constrains webpack config; don't try to eject or override without good reason.
-- The ML service is a separate Python process — changes there need a separate restart.
-
-## Token optimization
-
-- **Target searches.** Use Grep/Glob with specific paths (`src/components/`, `server/routes/`) rather than scanning the whole repo.
-- **Known locations first.** Before exploring:
-  - Forms/schemas → `src/schemas/`
-  - API calls → `src/services/`
-  - Routes → `server/routes/`
-  - DB logic → `server/services/`
-
-## Quick reference
-
-| Task | Command |
-|------|---------|
-| Start all | `npm start` |
-| Tests | `npm test` |
-| Frontend only | `npm run start:client` |
-| Backend only | `npm run start:server` |
-
-## Common patterns
-
-- **New API endpoint:** Route in `server/routes/` → Service in `server/services/` → Frontend call in `src/services/apiService.js`
-- **New form:** Schema in `src/schemas/` → Component uses `useForm` with `zodResolver`
-- **New page:** Add to `src/components/pages/` → Register route in `App.js`
-
-## Known gotchas
-
-- "Cannot read context" → Component is outside provider (see FormBuilderProvider scope)
-- CORS errors in dev → Check proxy config in `package.json`
-- ML service 500 → Restart Python process separately
-
-## Session Management
-When hitting usage limits mid-task, always save progress by:
-1. Documenting what's been completed
-2. Listing specific next steps
-3. Noting any files with partial edits that need attention
+## Gotchas
+- `useFormBuilder()` only works inside `<FormBuilderProvider>`
+- better-sqlite3 is sync—no async patterns
+- Puppeteer stays server-side only

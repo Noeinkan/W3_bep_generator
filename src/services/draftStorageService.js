@@ -123,6 +123,45 @@ class DraftStorageService {
     }
   }
 
+  migrateOrphanedDrafts(userId, projectId) {
+    if (!userId || !projectId) return 0;
+
+    try {
+      const allDrafts = this.loadDrafts(userId);
+      let migrated = 0;
+
+      Object.keys(allDrafts).forEach(key => {
+        if (!allDrafts[key].projectId) {
+          allDrafts[key].projectId = projectId;
+          migrated++;
+        }
+      });
+
+      if (migrated > 0) {
+        const draftsKey = this.getDraftsKey(userId);
+        localStorage.setItem(draftsKey, JSON.stringify(allDrafts));
+      }
+
+      return migrated;
+    } catch (error) {
+      console.error('Error migrating orphaned drafts:', error);
+      return 0;
+    }
+  }
+
+  loadDraftsByProject(userId, projectId) {
+    const allDrafts = this.loadDrafts(userId);
+    if (!projectId) return allDrafts;
+
+    const filtered = {};
+    Object.keys(allDrafts).forEach(key => {
+      if (allDrafts[key].projectId === projectId) {
+        filtered[key] = allDrafts[key];
+      }
+    });
+    return filtered;
+  }
+
   getAllDrafts(userId) {
     const drafts = this.loadDrafts(userId);
     return Object.values(drafts);

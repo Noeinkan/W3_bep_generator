@@ -10,7 +10,7 @@ const bepStructureService = require('../services/bepStructureService');
  */
 router.get('/', async (req, res) => {
   try {
-    const { userId } = req.query;
+    const { userId, projectId } = req.query;
 
     if (!userId) {
       return res.status(400).json({
@@ -19,11 +19,20 @@ router.get('/', async (req, res) => {
       });
     }
 
-    const drafts = db.prepare(`
-      SELECT * FROM drafts
-      WHERE user_id = ? AND is_deleted = 0
-      ORDER BY updated_at DESC
-    `).all(userId);
+    let drafts;
+    if (projectId) {
+      drafts = db.prepare(`
+        SELECT * FROM drafts
+        WHERE user_id = ? AND project_id = ? AND is_deleted = 0
+        ORDER BY updated_at DESC
+      `).all(userId, projectId);
+    } else {
+      drafts = db.prepare(`
+        SELECT * FROM drafts
+        WHERE user_id = ? AND is_deleted = 0
+        ORDER BY updated_at DESC
+      `).all(userId);
+    }
 
     // Parse JSON data field for each draft
     const parsedDrafts = drafts.map(draft => ({

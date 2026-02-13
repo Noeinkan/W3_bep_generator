@@ -21,7 +21,21 @@ const containerSchema = Joi.object({
   'Format/Type': Joi.string().required(),
   'Purpose': Joi.string().required().min(1).max(200),
   'Acceptance Criteria': Joi.string().required().min(1).max(500),
-  'Review and Authorization Process': Joi.string().required(),
+  'Review and Authorization Process': Joi.string().valid(
+    'S0 - Work in Progress',
+    'S1 - Work in progress',
+    'S1 - Fit for coordination',
+    'S2 - Shared for coordination',
+    'S2 - Fit for information',
+    'S3 - Issue for comment',
+    'S3 - Fit for review & comment',
+    'S4 - Issue for approval',
+    'S4 - Fit for stage approval',
+    'S5 - Issue for construction',
+    'S5 - Fit for construction',
+    'S6 - Fit for PIM authorization',
+    'S7 - Fit for AIM authorization'
+  ).required(),
   'Status': Joi.string().valid('Planned', 'In Progress', 'Under Review', 'Approved', 'Completed', 'Delayed').required()
 });
 

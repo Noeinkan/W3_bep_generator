@@ -413,22 +413,191 @@ class TIDPService {
     return `${parts[0]}.${parts[1]}.${patch}`;
   }
 
+  /**
+   * Detect circular dependencies using DFS cycle detection.
+   * When called from validateDependencies with a single dependency object,
+   * builds the full container dependency graph and checks for cycles.
+   * @param {Object|null} dependency - Optional single dependency to check context for
+   * @returns {boolean} True if a circular dependency exists
+   */
   hasCircularDependency(dependency) {
-    // Simplified circular dependency check
-    // In a real implementation, this would be more sophisticated
+    // Build adjacency list from all containers in the database
+    const allTidps = this.getAllTIDPs();
+    const adjacency = new Map(); // containerId -> [dependsOn containerIds]
+
+    allTidps.forEach(tidp => {
+      if (tidp.containers) {
+        tidp.containers.forEach(container => {
+          const deps = container.dependencies || [];
+          adjacency.set(container.id, deps);
+        });
+      }
+    });
+
+    // DFS cycle detection
+    const WHITE = 0, GRAY = 1, BLACK = 2;
+    const color = new Map();
+    adjacency.forEach((_, id) => color.set(id, WHITE));
+
+    const hasCycle = (nodeId) => {
+      color.set(nodeId, GRAY);
+      const neighbors = adjacency.get(nodeId) || [];
+      for (const neighbor of neighbors) {
+        if (!color.has(neighbor)) continue; // external dependency, skip
+        if (color.get(neighbor) === GRAY) return true; // back edge = cycle
+        if (color.get(neighbor) === WHITE && hasCycle(neighbor)) return true;
+      }
+      color.set(nodeId, BLACK);
+      return false;
+    };
+
+    for (const [nodeId, c] of color) {
+      if (c === WHITE && hasCycle(nodeId)) return true;
+    }
+
     return false;
   }
 
+  /**
+   * Check if a dependency edge is on the critical path.
+   * @param {string} fromTidpId - Source TIDP ID
+   * @param {string} toTidpId - Target TIDP ID
+   * @param {Array} allTidps - All TIDPs in the project
+   * @returns {boolean} True if this edge is on the critical path
+   */
   isOnCriticalPath(fromTidpId, toTidpId, allTidps) {
-    // Simplified critical path calculation
-    // In a real implementation, this would use proper CPM algorithms
-    return false;
+    const cpResult = this.calculateCriticalPath(allTidps);
+    const cpIds = new Set(cpResult.map(item => item.id));
+    return cpIds.has(fromTidpId) && cpIds.has(toTidpId);
   }
 
+  /**
+   * Calculate the critical path using the Critical Path Method (CPM).
+   * Forward pass: compute earliest start (ES) and earliest finish (EF).
+   * Backward pass: compute latest start (LS) and latest finish (LF).
+   * Critical path = containers with zero total float (LF - EF = 0).
+   * @param {Array} tidps - Array of TIDP objects
+   * @returns {Array} Array of container objects on the critical path
+   */
   calculateCriticalPath(tidps) {
-    // Simplified critical path calculation
-    // Return array of TIDP IDs on critical path
-    return [];
+    // Flatten all containers with their TIDP context
+    const containers = [];
+    const containerMap = new Map();
+
+    tidps.forEach(tidp => {
+      if (tidp.containers) {
+        tidp.containers.forEach(container => {
+          const duration = this.parseTimeToHours(
+            container['Est. Time'] || container.estimatedProductionTime || '0'
+          );
+          const node = {
+            id: container.id,
+            name: container['Container Name'] || container.name,
+            tidpId: tidp.id,
+            tidpName: tidp.teamName,
+            discipline: tidp.discipline,
+            duration,
+            dependencies: container.dependencies || [],
+            dueDate: container['Due Date'] || container.dueDate,
+            es: 0, ef: 0, ls: Infinity, lf: Infinity, totalFloat: 0
+          };
+          containers.push(node);
+          containerMap.set(container.id, node);
+        });
+      }
+    });
+
+    if (containers.length === 0) return [];
+
+    // Topological sort using Kahn's algorithm
+    const inDegree = new Map();
+    const adjList = new Map(); // containerId -> [containers that depend on it]
+
+    containers.forEach(c => {
+      inDegree.set(c.id, 0);
+      adjList.set(c.id, []);
+    });
+
+    containers.forEach(c => {
+      c.dependencies.forEach(depId => {
+        if (containerMap.has(depId)) {
+          adjList.get(depId).push(c.id);
+          inDegree.set(c.id, (inDegree.get(c.id) || 0) + 1);
+        }
+      });
+    });
+
+    // Kahn's algorithm for topological order
+    const queue = [];
+    containers.forEach(c => {
+      if (inDegree.get(c.id) === 0) queue.push(c.id);
+    });
+
+    const topoOrder = [];
+    while (queue.length > 0) {
+      const nodeId = queue.shift();
+      topoOrder.push(nodeId);
+      (adjList.get(nodeId) || []).forEach(neighborId => {
+        inDegree.set(neighborId, inDegree.get(neighborId) - 1);
+        if (inDegree.get(neighborId) === 0) queue.push(neighborId);
+      });
+    }
+
+    // If not all nodes are in topoOrder, there's a cycle — return empty
+    if (topoOrder.length !== containers.length) return [];
+
+    // Forward pass: ES and EF
+    topoOrder.forEach(nodeId => {
+      const node = containerMap.get(nodeId);
+      node.dependencies.forEach(depId => {
+        const dep = containerMap.get(depId);
+        if (dep && dep.ef > node.es) {
+          node.es = dep.ef;
+        }
+      });
+      node.ef = node.es + node.duration;
+    });
+
+    // Find project duration (max EF)
+    const projectDuration = Math.max(...containers.map(c => c.ef), 0);
+
+    // Backward pass: LF and LS
+    // Initialize all LF to projectDuration
+    containers.forEach(c => { c.lf = projectDuration; });
+
+    // Process in reverse topological order
+    for (let i = topoOrder.length - 1; i >= 0; i--) {
+      const nodeId = topoOrder[i];
+      const node = containerMap.get(nodeId);
+
+      // Update LF based on successors
+      (adjList.get(nodeId) || []).forEach(successorId => {
+        const successor = containerMap.get(successorId);
+        if (successor && successor.ls < node.lf) {
+          node.lf = successor.ls;
+        }
+      });
+
+      node.ls = node.lf - node.duration;
+      node.totalFloat = node.lf - node.ef;
+    }
+
+    // Critical path = nodes with zero total float
+    return containers
+      .filter(c => c.totalFloat === 0 && c.duration > 0)
+      .map(c => ({
+        id: c.id,
+        name: c.name,
+        tidpId: c.tidpId,
+        tidpName: c.tidpName,
+        discipline: c.discipline,
+        duration: c.duration,
+        es: c.es,
+        ef: c.ef,
+        ls: c.ls,
+        lf: c.lf,
+        totalFloat: c.totalFloat
+      }));
   }
 
   parseTimeToHours(timeString) {
@@ -661,6 +830,112 @@ class TIDPService {
       source: 'server',
       createdVia: 'api'
     });
+  }
+
+  // ── ISO 19650 Suitability Code Transition Validation ──────────────────
+  // Valid suitability codes per ISO 19650-1 Annex A
+  static SUITABILITY_CODES = {
+    'S0': { label: 'Work in Progress', order: 0 },
+    'S1': { label: 'Fit for coordination', order: 1 },
+    'S2': { label: 'Fit for information', order: 2 },
+    'S3': { label: 'Fit for review & comment', order: 3 },
+    'S4': { label: 'Fit for stage approval', order: 4 },
+    'S5': { label: 'Fit for construction', order: 5 },
+    'S6': { label: 'Fit for PIM authorization', order: 6 },
+    'S7': { label: 'Fit for AIM authorization', order: 7 }
+  };
+
+  // Allowed transitions: generally forward progression, S0 can restart from any
+  static VALID_TRANSITIONS = {
+    'S0': ['S1', 'S2', 'S3'],
+    'S1': ['S0', 'S2', 'S3'],
+    'S2': ['S0', 'S3', 'S4'],
+    'S3': ['S0', 'S4', 'S5'],
+    'S4': ['S0', 'S5', 'S6'],
+    'S5': ['S0', 'S6', 'S7'],
+    'S6': ['S0', 'S7'],
+    'S7': ['S0']
+  };
+
+  /**
+   * Validate an ISO 19650 suitability code transition
+   * @param {string} currentCode - Current suitability code (e.g. 'S1')
+   * @param {string} newCode - Proposed new suitability code
+   * @returns {{ valid: boolean, reason?: string }}
+   */
+  validateSuitabilityTransition(currentCode, newCode) {
+    // Extract code prefix (S0-S7) from full review process string
+    const extractCode = (str) => {
+      if (!str) return null;
+      const match = str.match(/^S(\d)/);
+      return match ? `S${match[1]}` : null;
+    };
+
+    const current = extractCode(currentCode);
+    const next = extractCode(newCode);
+
+    if (!next || !TIDPService.SUITABILITY_CODES[next]) {
+      return { valid: false, reason: `Invalid suitability code: ${newCode}` };
+    }
+
+    // If no current code, any valid code is allowed
+    if (!current) {
+      return { valid: true };
+    }
+
+    if (!TIDPService.SUITABILITY_CODES[current]) {
+      return { valid: true }; // Unknown current code, allow transition
+    }
+
+    const allowed = TIDPService.VALID_TRANSITIONS[current] || [];
+    if (current === next) {
+      return { valid: true }; // Same code is always valid
+    }
+
+    if (!allowed.includes(next)) {
+      return {
+        valid: false,
+        reason: `Invalid transition from ${current} (${TIDPService.SUITABILITY_CODES[current].label}) to ${next} (${TIDPService.SUITABILITY_CODES[next].label}). Allowed: ${allowed.join(', ')}`
+      };
+    }
+
+    return { valid: true };
+  }
+
+  /**
+   * Validate suitability transitions for all containers in a TIDP update
+   * @param {string} tidpId - TIDP ID
+   * @param {Array} newContainers - Updated containers
+   * @returns {{ valid: boolean, violations: Array }}
+   */
+  validateContainerSuitabilityTransitions(tidpId, newContainers) {
+    const existing = this.getTIDP(tidpId);
+    const existingMap = new Map();
+    (existing.containers || []).forEach(c => {
+      existingMap.set(c['Information Container ID'] || c.id, c['Review and Authorization Process']);
+    });
+
+    const violations = [];
+    (newContainers || []).forEach(container => {
+      const key = container['Information Container ID'] || container.id;
+      const currentCode = existingMap.get(key);
+      const newCode = container['Review and Authorization Process'];
+
+      if (currentCode && newCode && currentCode !== newCode) {
+        const result = this.validateSuitabilityTransition(currentCode, newCode);
+        if (!result.valid) {
+          violations.push({
+            containerId: key,
+            containerName: container['Information Container Name/Title'] || key,
+            currentCode,
+            newCode,
+            reason: result.reason
+          });
+        }
+      }
+    });
+
+    return { valid: violations.length === 0, violations };
   }
 }
 

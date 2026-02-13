@@ -3,14 +3,16 @@ import { Upload, Download, FileText, AlertCircle, CheckCircle } from 'lucide-rea
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import ApiService from '../../services/apiService';
+import { useProject } from '../../contexts/ProjectContext';
 import { Modal, Button } from '../common';
 
 const TIDPImportDialog = ({ open, onClose, onImportComplete }) => {
+  const { currentProject } = useProject();
   const [importType, setImportType] = useState('excel');
   const [loading, setLoading] = useState(false);
   const [template, setTemplate] = useState(null);
   const [importResults, setImportResults] = useState(null);
-  const [projectId, setProjectId] = useState('imported-project');
+  const [projectId, setProjectId] = useState(currentProject?.id || 'imported-project');
   const fileInputRef = useRef(null);
 
   const loadTemplate = async () => {

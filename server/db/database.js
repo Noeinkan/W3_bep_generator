@@ -59,14 +59,14 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS midps (
     id TEXT PRIMARY KEY,
     projectName TEXT NOT NULL,
-    modelUse TEXT NOT NULL,
-    discipline TEXT NOT NULL,
-    responsible TEXT,
-    lod TEXT,
-    milestone TEXT,
-    dueDate TEXT,
+    aggregated_data TEXT NOT NULL,
+    delivery_schedule TEXT NOT NULL,
+    included_tidps TEXT,
+    risk_register TEXT,
+    dependency_matrix TEXT,
+    resource_plan TEXT,
     description TEXT,
-    acceptanceCriteria TEXT,
+    quality_gates TEXT,
     projectId TEXT,
     createdAt TEXT NOT NULL,
     updatedAt TEXT NOT NULL,
@@ -232,6 +232,49 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_documents_draft_id ON client_documents(draft_id);
   CREATE INDEX IF NOT EXISTS idx_documents_user_id ON client_documents(user_id);
   CREATE INDEX IF NOT EXISTS idx_documents_status ON client_documents(status);
+
+  -- Users: Authentication and user management
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    name TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    last_login TEXT,
+    is_active INTEGER DEFAULT 1,
+    email_verified INTEGER DEFAULT 0
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+  -- Email Verification Tokens: For verifying new user emails
+  CREATE TABLE IF NOT EXISTS email_verification_tokens (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    token TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    uses INTEGER DEFAULT 0,
+    max_uses INTEGER DEFAULT 5,
+    used INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_token ON email_verification_tokens(token);
+
+  -- Password Reset Tokens: For password recovery
+  CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    token TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    used INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_reset_tokens_token ON password_reset_tokens(token);
 `);
 
 // Migration: Add draft_id columns if they don't exist (for existing databases)
@@ -248,9 +291,70 @@ if (!fieldHasDraftId) {
   db.exec('ALTER TABLE bep_field_configs ADD COLUMN draft_id TEXT');
 }
 
+// Migration: add email_verified to users table if missing
+const userColumns = db.prepare("PRAGMA table_info(users)").all();
+const hasEmailVerified = userColumns.some(col => col.name === 'email_verified');
+if (!hasEmailVerified) {
+  try {
+    db.exec('ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0');
+    console.log('Migration: added email_verified column to users');
+    // Per migration policy, mark existing users as verified to avoid locking them out
+    db.exec('UPDATE users SET email_verified = 1 WHERE email_verified IS NULL OR email_verified = 0');
+  } catch (err) {
+    console.error('Could not add email_verified column:', err.message);
+  }
+}
+
 // Create indexes for draft_id (safe to run even if they exist)
 db.exec('CREATE INDEX IF NOT EXISTS idx_step_configs_draft ON bep_step_configs(draft_id)');
 db.exec('CREATE INDEX IF NOT EXISTS idx_field_configs_draft ON bep_field_configs(draft_id)');
+
+// Create evolution_snapshots table for real historical tracking
+db.exec(`
+  CREATE TABLE IF NOT EXISTS evolution_snapshots (
+    id TEXT PRIMARY KEY,
+    midp_id TEXT NOT NULL,
+    snapshot_data TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (midp_id) REFERENCES midps(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_evolution_snapshots_midp_id ON evolution_snapshots(midp_id);
+`);
+
+// Migration: Rename MIDP columns from misleading names to correct ones
+const midpColumns = db.prepare("PRAGMA table_info(midps)").all();
+const hasOldColumns = midpColumns.some(col => col.name === 'modelUse');
+
+if (hasOldColumns) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS midps_v2 (
+      id TEXT PRIMARY KEY,
+      projectName TEXT NOT NULL,
+      aggregated_data TEXT NOT NULL,
+      delivery_schedule TEXT NOT NULL,
+      included_tidps TEXT,
+      risk_register TEXT,
+      dependency_matrix TEXT,
+      resource_plan TEXT,
+      description TEXT,
+      quality_gates TEXT,
+      projectId TEXT,
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL,
+      version TEXT DEFAULT '1.0',
+      status TEXT DEFAULT 'Draft'
+    );
+
+    INSERT OR IGNORE INTO midps_v2 (id, projectName, aggregated_data, delivery_schedule, included_tidps, risk_register, dependency_matrix, resource_plan, description, quality_gates, projectId, createdAt, updatedAt, version, status)
+    SELECT id, projectName, modelUse, discipline, responsible, lod, milestone, dueDate, description, acceptanceCriteria, projectId, createdAt, updatedAt, version, status
+    FROM midps;
+
+    DROP TABLE midps;
+    ALTER TABLE midps_v2 RENAME TO midps;
+    CREATE INDEX IF NOT EXISTS idx_midps_projectId ON midps(projectId);
+  `);
+  console.log('Migration: MIDP columns renamed to correct names');
+}
 
 console.log('Database initialized at:', dbPath);
 

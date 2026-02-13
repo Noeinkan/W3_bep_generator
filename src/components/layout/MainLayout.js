@@ -1,15 +1,25 @@
 import { useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, Navigate } from 'react-router-dom';
 import { FileText, BarChart3, Grid3x3 } from 'lucide-react';
 import Sidebar from './Sidebar';
 import UserDropdown from './UserDropdown';
+import { useProject } from '../../contexts/ProjectContext';
+
+const UNGUARDED_PATHS = ['/home', '/projects', '/profile', '/settings'];
 
 const MainLayout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
+  const { currentProject, loading } = useProject();
 
-  // Hide sidebar on home page
-  const isHomePage = location.pathname === '/home';
+  // Hide sidebar on home page and projects page
+  const isChromelessPage = location.pathname === '/home' || location.pathname === '/projects';
+
+  // Redirect to /projects if no active project on guarded routes
+  const isGuarded = !UNGUARDED_PATHS.some(p => location.pathname.startsWith(p));
+  if (!loading && !currentProject && isGuarded) {
+    return <Navigate to="/projects" replace />;
+  }
 
   const navigation = [
     {
@@ -31,8 +41,8 @@ const MainLayout = () => {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar - Hidden on home page */}
-      {!isHomePage && (
+      {/* Sidebar - Hidden on chromeless pages */}
+      {!isChromelessPage && (
         <>
           <Sidebar
             isCollapsed={isCollapsed}
@@ -49,7 +59,7 @@ const MainLayout = () => {
 
       {/* Main Content Area */}
       <main
-        className={`flex-1 transition-all duration-300 ${!isHomePage ? (isCollapsed ? 'ml-16' : 'ml-64') : ''}`}
+        className={`flex-1 transition-all duration-300 ${!isChromelessPage ? (isCollapsed ? 'ml-16' : 'ml-64') : ''}`}
         role="main"
       >
         <Outlet />

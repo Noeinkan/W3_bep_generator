@@ -2,6 +2,65 @@ import EMPTY_BEP_DATA from './emptyBepData';
 import COMMERCIAL_OFFICE_TEMPLATE from './templates/commercialOfficeTemplate';
 
 /**
+ * Default ISO19650 CDE Folder Structure Diagram
+ * Used as fallback when templates don't specify a custom fileStructureDiagram
+ * Format: 4-space indentation per level, parsed by FolderStructureDiagram component
+ */
+const DEFAULT_FILE_STRUCTURE_DIAGRAM = `WIP (Work in Progress)
+    Architecture
+        Models
+        Drawings
+        Specifications
+        Reports
+    Structure
+        Models
+        Drawings
+        Calculations
+    MEP
+        Mechanical
+        Electrical
+        Plumbing
+        Fire Protection
+    Surveys
+    Clash Detection
+SHARED (Coordination)
+    Architecture
+        Models
+        Drawings
+        Specifications
+    Structure
+        Models
+        Drawings
+        Calculations
+    MEP
+        Mechanical
+        Electrical
+        Plumbing
+    Federated Models
+    Coordination Reports
+PUBLISHED (Approved)
+    Documentation
+        Contract Documents
+        Construction Drawings
+        Technical Specifications
+        BOQ (Bill of Quantities)
+    Models
+        As Designed
+        Construction Issue
+    Compliance
+        Building Regulations
+        Health & Safety
+        Sustainability
+    Handover
+        As-Built Drawings
+        O&M Manuals
+        Asset Data
+ARCHIVE
+    Superseded
+    Reference Material
+`;
+
+/**
  * Template Registry
  * Defines all available BEP templates with metadata
  */
@@ -68,10 +127,17 @@ export const getTemplateById = (templateId) => {
   }
 
   // Merge template data with empty base to ensure all fields exist
-  return {
+  const mergedData = {
     ...EMPTY_BEP_DATA,
     ...template.data
   };
+
+  // Fall back to default ISO19650 folder structure if not specified
+  if (!mergedData.fileStructureDiagram || mergedData.fileStructureDiagram.trim() === '') {
+    mergedData.fileStructureDiagram = DEFAULT_FILE_STRUCTURE_DIAGRAM;
+  }
+
+  return mergedData;
 };
 
 /**

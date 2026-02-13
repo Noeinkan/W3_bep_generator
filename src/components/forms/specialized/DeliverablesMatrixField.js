@@ -22,7 +22,6 @@ const DeliverablesMatrixField = ({ field, value, onChange, error, formData }) =>
       {showMatrixManager ? (
         <React.Suspense fallback={<div>Loading...</div>}>
           <ResponsibilityMatrixManager
-            projectId={formData.projectName || 'current'}
             onClose={() => setShowMatrixManager(false)}
           />
         </React.Suspense>

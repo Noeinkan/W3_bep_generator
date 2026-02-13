@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import apiService from '../services/apiService';
 
 const AuthContext = createContext();
 
@@ -15,89 +16,39 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const autoLogin = async () => {
+    const checkAuth = async () => {
       try {
-        // Check if user is already logged in
-        const storedUser = localStorage.getItem('currentUser');
-        if (storedUser) {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-          localStorage.setItem('authToken', parsedUser.id);
+        const token = localStorage.getItem('authToken');
+        if (!token) {
           setLoading(false);
           return;
         }
 
-        // Auto-login with default credentials
-        const email = 'nome.cognome@libero.it';
-        const password = 'Password1234';
-        const name = 'Demo User';
-
-        const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
-        let user = existingUsers.find(u => u.email === email);
-
-        // If user doesn't exist, create it
-        if (!user) {
-          user = {
-            id: Date.now().toString(),
-            email,
-            name,
-            password,
-            createdAt: new Date().toISOString(),
-            projects: []
-          };
-          const updatedUsers = [...existingUsers, user];
-          localStorage.setItem('users', JSON.stringify(updatedUsers));
-        }
-
-        // Check password and login
-        if (user.password === password) {
-          const userForStorage = { ...user };
-          delete userForStorage.password;
-
-          setUser(userForStorage);
-          localStorage.setItem('currentUser', JSON.stringify(userForStorage));
-          localStorage.setItem('authToken', userForStorage.id);
+        // Verify token with backend
+        const response = await apiService.getCurrentUser();
+        if (response.user) {
+          setUser(response.user);
         }
       } catch (error) {
-        console.error('Auto-login failed:', error);
+        console.error('Auth check failed:', error);
+        // Token is invalid or expired
+        localStorage.removeItem('authToken');
+        setUser(null);
       } finally {
         setLoading(false);
       }
     };
 
-    autoLogin();
+    checkAuth();
   }, []);
 
   const register = async (userData) => {
     try {
       const { email, password, name } = userData;
+      const response = await apiService.register(email, password, name);
 
-      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
-
-      if (existingUsers.find(u => u.email === email)) {
-        throw new Error('User with this email already exists');
-      }
-
-      const newUser = {
-        id: Date.now().toString(),
-        email,
-        name,
-        password,
-        createdAt: new Date().toISOString(),
-        projects: []
-      };
-
-      const updatedUsers = [...existingUsers, newUser];
-      localStorage.setItem('users', JSON.stringify(updatedUsers));
-
-      const userForStorage = { ...newUser };
-      delete userForStorage.password;
-
-      setUser(userForStorage);
-      localStorage.setItem('currentUser', JSON.stringify(userForStorage));
-      localStorage.setItem('authToken', userForStorage.id);
-
-      return { success: true, user: userForStorage };
+      // Server no longer returns a token — verification required
+      return { success: true, verificationRequired: true, email };
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -106,96 +57,43 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       const { email, password } = credentials;
-      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      const response = await apiService.login(email, password);
 
-      const user = existingUsers.find(u => u.email === email);
-
-      if (!user || user.password !== password) {
-        throw new Error('Invalid email or password');
+      if (response.user) {
+        setUser(response.user);
       }
 
-      const userForStorage = { ...user };
-      delete userForStorage.password;
+      return { success: true, user: response.user };
+    } catch (error) {
+      // Surface "Email not verified" distinctly so LoginPage can react
+      const msg = error.message || '';
+      return { success: false, error: msg, emailNotVerified: msg === 'Email not verified', email: credentials.email };
+    }
+  };
 
-      setUser(userForStorage);
-      localStorage.setItem('currentUser', JSON.stringify(userForStorage));
-      localStorage.setItem('authToken', userForStorage.id);
+  const logout = async () => {
+    try {
+      await apiService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+    }
+  };
 
-      return { success: true, user: userForStorage };
+  const forgotPassword = async (email) => {
+    try {
+      const response = await apiService.forgotPassword(email);
+      return { success: true, message: response.message, resetUrl: response.resetUrl };
     } catch (error) {
       return { success: false, error: error.message };
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('authToken');
-  };
-
-  const updateUserProjects = (projects) => {
-    if (!user) return;
-
-    const updatedUser = { ...user, projects };
-    setUser(updatedUser);
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-
-    const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
-    const updatedUsers = existingUsers.map(u =>
-      u.id === user.id ? { ...u, projects } : u
-    );
-    localStorage.setItem('users', JSON.stringify(updatedUsers));
-  };
-
-  const resetPassword = async (email) => {
+  const resetPassword = async (token, password) => {
     try {
-      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
-      const user = existingUsers.find(u => u.email === email);
-
-      if (!user) {
-        throw new Error('No account found with that email address');
-      }
-
-      // Generate a temporary password
-      const tempPassword = Math.random().toString(36).substring(2, 10);
-
-      // Update user's password
-      const updatedUsers = existingUsers.map(u =>
-        u.email === email ? { ...u, password: tempPassword, passwordResetRequired: true } : u
-      );
-      localStorage.setItem('users', JSON.stringify(updatedUsers));
-
-      // In a real app, this would send an email. For demo purposes, we'll show the temp password
-      return {
-        success: true,
-        message: `Password reset successful! Your temporary password is: ${tempPassword}`,
-        tempPassword
-      };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  };
-
-  const changePassword = async (currentPassword, newPassword) => {
-    try {
-      if (!user) {
-        throw new Error('You must be logged in to change your password');
-      }
-
-      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
-      const currentUser = existingUsers.find(u => u.id === user.id);
-
-      if (!currentUser || currentUser.password !== currentPassword) {
-        throw new Error('Current password is incorrect');
-      }
-
-      // Update password
-      const updatedUsers = existingUsers.map(u =>
-        u.id === user.id ? { ...u, password: newPassword, passwordResetRequired: false } : u
-      );
-      localStorage.setItem('users', JSON.stringify(updatedUsers));
-
-      return { success: true, message: 'Password changed successfully!' };
+      const response = await apiService.resetPassword(token, password);
+      return { success: true, message: response.message };
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -207,9 +105,8 @@ export const AuthProvider = ({ children }) => {
     register,
     login,
     logout,
-    updateUserProjects,
+    forgotPassword,
     resetPassword,
-    changePassword,
     isAuthenticated: !!user
   };
 

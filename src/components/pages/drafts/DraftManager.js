@@ -10,17 +10,20 @@ import { useDrafts } from '../../../hooks/useDrafts';
 import { useDraftFilters } from '../../../hooks/useDraftFilters';
 import { useDraftOperations } from '../../../hooks/useDraftOperations';
 import { validateDraftName } from '../../../utils/validationUtils';
+import { useProject } from '../../../contexts/ProjectContext';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import toast, { Toaster } from 'react-hot-toast';
 
 const DraftManager = ({ user, currentFormData, onLoadDraft, onClose, bepType }) => {
   const navigate = useNavigate();
-  // Load and validate drafts
-  const { rawDrafts, isLoading: loadingDrafts, error: draftsError, isValidComponent, refreshDrafts } = useDrafts(user, currentFormData, onLoadDraft, onClose);
+  const { currentProject } = useProject();
+  const activeProjectId = currentProject?.id || null;
+  // Load and validate drafts (filtered by project)
+  const { rawDrafts, isLoading: loadingDrafts, error: draftsError, isValidComponent, refreshDrafts } = useDrafts(user, currentFormData, onLoadDraft, onClose, activeProjectId);
   // Filtering, searching, sorting
   const filterHook = useDraftFilters(rawDrafts);
-  // Draft operations
-  const operations = useDraftOperations(user, currentFormData, bepType, onLoadDraft, onClose);
+  // Draft operations (stamps projectId on saved drafts)
+  const operations = useDraftOperations(user, currentFormData, bepType, onLoadDraft, onClose, activeProjectId);
 
   // State for dialogs and editing
   const [showSaveDialog, setShowSaveDialog] = useState(false);

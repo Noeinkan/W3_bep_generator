@@ -20,7 +20,7 @@ const TIDPForm = ({ tidpForm, onTidpFormChange, onSubmit, onCancel, createLoadin
       'Format/Type': 'IFC 4.0',
       'Purpose': '',
       'Acceptance Criteria': '',
-      'Review and Authorization Process': 'S1 - Work in progress',
+      'Review and Authorization Process': 'S0 - Work in Progress',
       'Status': 'Planned'
     };
     onTidpFormChange({
@@ -346,11 +346,14 @@ const TIDPForm = ({ tidpForm, onTidpFormChange, onSubmit, onCancel, createLoadin
                           onChange={(e) => updateContainer(index, 'Review and Authorization Process', e.target.value)}
                           className="w-full px-1 py-0.5 text-xs border border-gray-300 rounded"
                         >
-                          <option value="S1 - Work in progress">S1 - Work in progress</option>
-                          <option value="S2 - Shared for coordination">S2 - Shared for coordination</option>
-                          <option value="S3 - Issue for comment">S3 - Issue for comment</option>
-                          <option value="S4 - Issue for approval">S4 - Issue for approval</option>
-                          <option value="S5 - Issue for construction">S5 - Issue for construction</option>
+                          <option value="S0 - Work in Progress">S0 – Work in Progress</option>
+                          <option value="S1 - Fit for coordination">S1 – Fit for coordination</option>
+                          <option value="S2 - Fit for information">S2 – Fit for information</option>
+                          <option value="S3 - Fit for review & comment">S3 – Fit for review & comment</option>
+                          <option value="S4 - Fit for stage approval">S4 – Fit for stage approval</option>
+                          <option value="S5 - Fit for construction">S5 – Fit for construction</option>
+                          <option value="S6 - Fit for PIM authorization">S6 – Fit for PIM authorization</option>
+                          <option value="S7 - Fit for AIM authorization">S7 – Fit for AIM authorization</option>
                         </select>
                       </td>
                       <td className="px-1 py-1 border-r border-gray-300">

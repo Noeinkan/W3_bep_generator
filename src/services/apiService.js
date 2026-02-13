@@ -356,6 +356,24 @@ class ApiService {
     }
   }
 
+  async getMIDPCascadingImpact(id) {
+    try {
+      const response = await apiClient.get(`/midp/${id}/cascading-impact`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, `Failed to get cascading impact for MIDP ${id}`);
+    }
+  }
+
+  async getMIDPTrends(id) {
+    try {
+      const response = await apiClient.get(`/midp/${id}/trends`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, `Failed to get trends for MIDP ${id}`);
+    }
+  }
+
   // ======================
   // Responsibility Matrix Services
   // ======================
@@ -1001,6 +1019,96 @@ class ApiService {
 
   updateConfig(config) {
     Object.assign(apiClient.defaults, config);
+  }
+
+  // ======================
+  // Authentication Services
+  // ======================
+
+  async register(email, password, name) {
+    try {
+      const response = await apiClient.post('/auth/register', { email, password, name });
+
+      // No token is returned anymore — user must verify email first
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to register');
+    }
+  }
+
+  async login(email, password) {
+    try {
+      const response = await apiClient.post('/auth/login', { email, password });
+
+      // Store token
+      if (response.data.token) {
+        localStorage.setItem('authToken', response.data.token);
+      }
+
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to login');
+    }
+  }
+
+  async logout() {
+    try {
+      await apiClient.post('/auth/logout');
+
+      // Remove token
+      localStorage.removeItem('authToken');
+
+      return { success: true };
+    } catch (error) {
+      // Even if the API call fails, remove the token locally
+      localStorage.removeItem('authToken');
+      throw this.handleError(error, 'Failed to logout');
+    }
+  }
+
+  async getCurrentUser() {
+    try {
+      const response = await apiClient.get('/auth/me');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to get current user');
+    }
+  }
+
+  async forgotPassword(email) {
+    try {
+      const response = await apiClient.post('/auth/forgot-password', { email });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to request password reset');
+    }
+  }
+
+  async resetPassword(token, password) {
+    try {
+      const response = await apiClient.post('/auth/reset-password', { token, password });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to reset password');
+    }
+  }
+
+  async verifyEmail(token) {
+    try {
+      const response = await apiClient.post('/auth/verify-email', { token });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to verify email');
+    }
+  }
+
+  async resendVerification(email) {
+    try {
+      const response = await apiClient.post('/auth/resend-verification', { email });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to resend verification email');
+    }
   }
 }
 

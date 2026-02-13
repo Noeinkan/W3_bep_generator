@@ -68,7 +68,7 @@ class MIDPService {
 
     // Insert MIDP into database
     const insertMidp = db.prepare(`
-      INSERT INTO midps (id, projectName, modelUse, discipline, responsible, lod, milestone, dueDate, description, acceptanceCriteria, projectId, createdAt, updatedAt, version, status)
+      INSERT INTO midps (id, projectName, aggregated_data, delivery_schedule, included_tidps, risk_register, dependency_matrix, resource_plan, description, quality_gates, projectId, createdAt, updatedAt, version, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
@@ -89,6 +89,9 @@ class MIDPService {
       midp.version,
       midp.status
     );
+
+    // Persist evolution snapshot
+    this.persistEvolutionSnapshot(midp.id, midp.evolutionHistory);
 
     return midp;
   }
@@ -130,7 +133,7 @@ class MIDPService {
 
     // Insert MIDP into database
     const insertMidp = db.prepare(`
-      INSERT INTO midps (id, projectName, modelUse, discipline, responsible, lod, milestone, dueDate, description, acceptanceCriteria, projectId, createdAt, updatedAt, version, status)
+      INSERT INTO midps (id, projectName, aggregated_data, delivery_schedule, included_tidps, risk_register, dependency_matrix, resource_plan, description, quality_gates, projectId, createdAt, updatedAt, version, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
@@ -151,6 +154,9 @@ class MIDPService {
       midp.version,
       midp.status
     );
+
+    // Persist evolution snapshot
+    this.persistEvolutionSnapshot(midp.id, midp.evolutionHistory);
 
     return midp;
   }
@@ -183,7 +189,7 @@ class MIDPService {
 
     // Insert MIDP into database
     const insertMidp = db.prepare(`
-      INSERT INTO midps (id, projectName, modelUse, discipline, responsible, lod, milestone, dueDate, description, acceptanceCriteria, projectId, createdAt, updatedAt, version, status)
+      INSERT INTO midps (id, projectName, aggregated_data, delivery_schedule, included_tidps, risk_register, dependency_matrix, resource_plan, description, quality_gates, projectId, createdAt, updatedAt, version, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
@@ -204,6 +210,9 @@ class MIDPService {
       midp.version,
       midp.status
     );
+
+    // Persist evolution snapshot
+    this.persistEvolutionSnapshot(midp.id, midp.evolutionHistory);
 
     return midp;
   }
@@ -234,7 +243,7 @@ class MIDPService {
     // Update MIDP
     const updateStmt = db.prepare(`
       UPDATE midps
-      SET modelUse = ?, discipline = ?, responsible = ?, lod = ?, milestone = ?, dueDate = ?, updatedAt = ?, version = ?
+      SET aggregated_data = ?, delivery_schedule = ?, included_tidps = ?, risk_register = ?, dependency_matrix = ?, resource_plan = ?, updatedAt = ?, version = ?
       WHERE id = ?
     `);
 
@@ -249,6 +258,10 @@ class MIDPService {
       version,
       midpId
     );
+
+    // Persist evolution snapshot on update
+    const snapshot = this.createEvolutionSnapshot(tidps);
+    this.persistEvolutionSnapshot(midpId, snapshot);
 
     return this.getMIDP(midpId);
   }
@@ -469,6 +482,87 @@ class MIDPService {
               });
             }
           }
+
+          // Rule 3: Overdue deliverables - due date in the past and not completed/approved
+          const dueDate = container['Due Date'] || container.dueDate;
+          const containerStatus = (container.Status || container.status || '').toLowerCase();
+          if (dueDate && isValidDate(dueDate)) {
+            const due = new Date(dueDate);
+            if (due < new Date() && !['completed', 'approved'].includes(containerStatus)) {
+              risks.push({
+                id: uuidv4(),
+                description: `Overdue deliverable: ${container['Container Name'] || container.name} was due ${dueDate}`,
+                impact: 'High',
+                probability: 'High',
+                category: 'Schedule',
+                mitigation: 'Escalate to project manager, reallocate resources or renegotiate deadline',
+                source: `Auto-detected from ${tidp.teamName}`,
+                affectedContainer: container.id
+              });
+            }
+          }
+
+          // Rule 4: Missing Level of Information Need
+          const loi = container['LOI Level'] || container['Level of Information Need (LOIN)'] || container.loin;
+          if (!loi || loi.trim() === '') {
+            risks.push({
+              id: uuidv4(),
+              description: `Missing Level of Information Need for ${container['Container Name'] || container.name}`,
+              impact: 'Medium',
+              probability: 'High',
+              category: 'Compliance',
+              mitigation: 'Define LOI/LOD level per ISO 19650 requirements before production begins',
+              source: `Auto-detected from ${tidp.teamName}`,
+              affectedContainer: container.id
+            });
+          }
+
+          // Rule 6: Cross-discipline dependency (check if dependencies span different disciplines)
+          if (container.dependencies && container.dependencies.length > 0) {
+            container.dependencies.forEach(depId => {
+              const depTidp = tidps.find(t =>
+                t.containers && t.containers.some(c => c.id === depId)
+              );
+              if (depTidp && depTidp.discipline !== tidp.discipline) {
+                risks.push({
+                  id: uuidv4(),
+                  description: `Cross-discipline dependency: ${container['Container Name'] || container.name} (${tidp.discipline}) depends on ${depTidp.teamName} (${depTidp.discipline})`,
+                  impact: 'Medium',
+                  probability: 'Medium',
+                  category: 'Coordination',
+                  mitigation: 'Establish formal coordination protocol between disciplines, assign liaison contact',
+                  source: `Auto-detected from ${tidp.teamName}`,
+                  affectedContainer: container.id
+                });
+              }
+            });
+          }
+        });
+      }
+    });
+
+    // Rule 5: Milestone congestion - >10 containers targeting the same milestone
+    const milestoneCount = new Map();
+    tidps.forEach(tidp => {
+      if (tidp.containers) {
+        tidp.containers.forEach(container => {
+          const milestone = container.Milestone || container.deliveryMilestone || container['Delivery Milestone'];
+          if (milestone) {
+            milestoneCount.set(milestone, (milestoneCount.get(milestone) || 0) + 1);
+          }
+        });
+      }
+    });
+    milestoneCount.forEach((count, milestone) => {
+      if (count > 10) {
+        risks.push({
+          id: uuidv4(),
+          description: `Milestone congestion: ${count} containers target "${milestone}" milestone`,
+          impact: 'High',
+          probability: 'Medium',
+          category: 'Schedule',
+          mitigation: 'Stagger deliverable due dates, add buffer time before milestone, or split into sub-milestones',
+          source: 'Auto-detected from aggregated analysis'
         });
       }
     });
@@ -680,11 +774,23 @@ class MIDPService {
   }
 
   identifyCriticalPath(containers) {
-    // Simplified critical path identification
-    // In production, implement proper CPM algorithm
-    return containers
-      .filter(c => c.dependencies && c.dependencies.length > 0)
-      .map(c => c.id);
+    // Delegate to tidpService's real CPM algorithm
+    // Build pseudo-TIDP array from flat containers for the CPM input
+    const pseudoTidp = {
+      id: 'midp-aggregate',
+      teamName: 'Aggregate',
+      discipline: 'All',
+      containers: containers.map(c => ({
+        id: c.id,
+        'Container Name': c['Container Name'] || c.name,
+        'Est. Time': c['Est. Time'] || c.estimatedProductionTime || '0',
+        dependencies: c.dependencies || [],
+        'Due Date': c['Due Date'] || c.dueDate
+      }))
+    };
+
+    const cpResult = tidpService.calculateCriticalPath([pseudoTidp]);
+    return cpResult.map(c => c.id);
   }
 
   analyzeBuffers(containers) {
@@ -809,14 +915,14 @@ class MIDPService {
     return {
       id: midp.id,
       projectName: midp.projectName,
-      aggregatedData: JSON.parse(midp.modelUse || '{}'),
-      deliverySchedule: JSON.parse(midp.discipline || '{}'),
-      includedTIDPs: JSON.parse(midp.responsible || '[]'),
-      riskRegister: JSON.parse(midp.lod || '{}'),
-      dependencyMatrix: JSON.parse(midp.milestone || '{}'),
-      resourcePlan: JSON.parse(midp.dueDate || '{}'),
+      aggregatedData: JSON.parse(midp.aggregated_data || '{}'),
+      deliverySchedule: JSON.parse(midp.delivery_schedule || '{}'),
+      includedTIDPs: JSON.parse(midp.included_tidps || '[]'),
+      riskRegister: JSON.parse(midp.risk_register || '{}'),
+      dependencyMatrix: JSON.parse(midp.dependency_matrix || '{}'),
+      resourcePlan: JSON.parse(midp.resource_plan || '{}'),
       description: midp.description,
-      qualityGates: JSON.parse(midp.acceptanceCriteria || '[]'),
+      qualityGates: JSON.parse(midp.quality_gates || '[]'),
       projectId: midp.projectId,
       createdAt: midp.createdAt,
       updatedAt: midp.updatedAt,
@@ -910,32 +1016,62 @@ class MIDPService {
   }
 
   /**
-   * Get MIDP evolution over time
+   * Persist an evolution snapshot to the database
+   * @param {string} midpId - MIDP ID
+   * @param {Object} snapshotData - Snapshot data to persist
+   */
+  persistEvolutionSnapshot(midpId, snapshotData) {
+    try {
+      const insertSnapshot = db.prepare(`
+        INSERT INTO evolution_snapshots (id, midp_id, snapshot_data, created_at)
+        VALUES (?, ?, ?, ?)
+      `);
+      insertSnapshot.run(
+        uuidv4(),
+        midpId,
+        JSON.stringify(snapshotData || {}),
+        new Date().toISOString()
+      );
+    } catch (err) {
+      console.warn('Failed to persist evolution snapshot:', err.message);
+    }
+  }
+
+  /**
+   * Get MIDP evolution over time using real persisted snapshots
    * @param {string} midpId - MIDP ID
    * @returns {Object} Evolution data for dashboard
    */
   getMIDPEvolution(midpId) {
     const midp = this.getMIDP(midpId);
 
-    // In a real implementation, this would fetch historical snapshots from database
-    // For now, we return current state with placeholder historical data
+    // Fetch real historical snapshots from database
+    const snapshots = db.prepare(
+
+      'SELECT * FROM evolution_snapshots WHERE midp_id = ? ORDER BY created_at ASC'
+    ).all(midpId);
+
+    const historical = snapshots.map(s => {
+      const data = JSON.parse(s.snapshot_data || '{}');
+      return {
+        timestamp: s.created_at,
+        tidpCount: data.tidpCount || 0,
+        totalContainers: data.totalContainers || 0,
+        totalEstimatedHours: data.totalEstimatedHours || 0,
+        completionStatus: data.completionStatus || {},
+        deliverablesByMilestone: data.deliverablesByMilestone || {},
+        teamsByDiscipline: data.teamsByDiscipline || {}
+      };
+    });
+
+    // Current state is the latest snapshot, or compute from current MIDP data
+    const current = historical.length > 0
+      ? historical[historical.length - 1]
+      : (midp.evolutionHistory || this.createEvolutionSnapshot([]));
+
     return {
-      current: midp.evolutionHistory || this.createEvolutionSnapshot([]),
-      historical: [
-        // This would be populated from actual historical data
-        {
-          timestamp: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
-          tidpCount: Math.max(1, (midp.includedTIDPs?.length || 1) - 2),
-          totalContainers: Math.max(1, (midp.aggregatedData?.totalContainers || 1) - 5),
-          totalEstimatedHours: Math.max(100, (midp.aggregatedData?.totalEstimatedHours || 100) - 200)
-        },
-        {
-          timestamp: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), // 15 days ago
-          tidpCount: Math.max(1, (midp.includedTIDPs?.length || 1) - 1),
-          totalContainers: Math.max(1, (midp.aggregatedData?.totalContainers || 1) - 2),
-          totalEstimatedHours: Math.max(100, (midp.aggregatedData?.totalEstimatedHours || 100) - 100)
-        }
-      ]
+      current,
+      historical
     };
   }
 
@@ -1014,6 +1150,228 @@ class MIDPService {
       if (!isValidDate(container.dueDate) || !isValidDate(milestone.latestDate)) return false;
       return new Date(container.dueDate) > new Date(milestone.latestDate);
     });
+  }
+
+  /**
+   * Calculate cascading impact of late deliverables.
+   * Traces downstream dependencies from overdue containers, calculates propagated delay,
+   * auto-elevates risk severity, and suggests recovery actions.
+   * @param {string} midpId - MIDP ID
+   * @returns {Object} Cascading impact analysis
+   */
+  calculateCascadingImpact(midpId) {
+    const midp = this.getMIDP(midpId);
+    const tidps = (midp.includedTIDPs || []).map(id => {
+      try { return tidpService.getTIDP(id); } catch { return null; }
+    }).filter(Boolean);
+
+    // Build container graph
+    const containerMap = new Map();
+    const adjList = new Map(); // containerId -> [downstream containerIds]
+
+    tidps.forEach(tidp => {
+      if (tidp.containers) {
+        tidp.containers.forEach(container => {
+          containerMap.set(container.id, {
+            ...container,
+            tidpId: tidp.id,
+            tidpName: tidp.teamName,
+            discipline: tidp.discipline
+          });
+          if (!adjList.has(container.id)) adjList.set(container.id, []);
+        });
+      }
+    });
+
+    // Build reverse adjacency (container -> downstream dependents)
+    tidps.forEach(tidp => {
+      if (tidp.containers) {
+        tidp.containers.forEach(container => {
+          const deps = container.dependencies || [];
+          deps.forEach(depId => {
+            if (adjList.has(depId)) {
+              adjList.get(depId).push(container.id);
+            }
+          });
+        });
+      }
+    });
+
+    // Find late containers
+    const now = new Date();
+    const lateContainers = [];
+
+    containerMap.forEach((container, id) => {
+      const dueDate = container['Due Date'] || container.dueDate;
+      const status = (container.Status || container.status || '').toLowerCase();
+      if (dueDate && isValidDate(dueDate)) {
+        const due = new Date(dueDate);
+        if (due < now && !['completed', 'approved'].includes(status)) {
+          const delayDays = Math.ceil((now - due) / (1000 * 60 * 60 * 24));
+          lateContainers.push({
+            id,
+            name: container['Container Name'] || container.name,
+            tidpName: container.tidpName,
+            discipline: container.discipline,
+            dueDate,
+            delayDays,
+            status: container.Status || container.status || 'Unknown'
+          });
+        }
+      }
+    });
+
+    // Trace cascading impact for each late container using BFS
+    const impacts = lateContainers.map(lateContainer => {
+      const cascade = [];
+      const visited = new Set();
+      const queue = [{ id: lateContainer.id, propagatedDelay: lateContainer.delayDays, depth: 0 }];
+      visited.add(lateContainer.id);
+
+      while (queue.length > 0) {
+        const { id, propagatedDelay, depth } = queue.shift();
+        const downstream = adjList.get(id) || [];
+
+        downstream.forEach(downstreamId => {
+          if (!visited.has(downstreamId) && containerMap.has(downstreamId)) {
+            visited.add(downstreamId);
+            const downstreamContainer = containerMap.get(downstreamId);
+            const downstreamDuration = this.parseTimeToHours(
+              downstreamContainer['Est. Time'] || downstreamContainer.estimatedProductionTime || '0'
+            );
+            // Propagated delay carries through but can be absorbed by buffer
+            const effectiveDelay = Math.max(0, propagatedDelay);
+
+            cascade.push({
+              containerId: downstreamId,
+              containerName: downstreamContainer['Container Name'] || downstreamContainer.name,
+              tidpName: downstreamContainer.tidpName,
+              discipline: downstreamContainer.discipline,
+              propagatedDelay: effectiveDelay,
+              depth: depth + 1,
+              estimatedHours: downstreamDuration,
+              dueDate: downstreamContainer['Due Date'] || downstreamContainer.dueDate
+            });
+
+            queue.push({ id: downstreamId, propagatedDelay: effectiveDelay, depth: depth + 1 });
+          }
+        });
+      }
+
+      // Determine impact severity
+      const severity = cascade.length > 5 ? 'Critical'
+        : cascade.length > 2 ? 'High'
+        : cascade.length > 0 ? 'Medium' : 'Low';
+
+      // Generate recovery suggestions
+      const suggestions = [];
+      if (lateContainer.delayDays > 14) {
+        suggestions.push('Escalate to project director — delay exceeds 2 weeks');
+      }
+      if (cascade.length > 3) {
+        suggestions.push('Assign additional resources to accelerate downstream deliverables');
+      }
+      if (cascade.some(c => c.discipline !== lateContainer.discipline)) {
+        suggestions.push('Coordinate cross-discipline recovery plan with affected teams');
+      }
+      suggestions.push('Review and negotiate revised deadlines with appointing party');
+
+      return {
+        lateContainer,
+        cascade,
+        severity,
+        affectedContainers: cascade.length,
+        affectedDisciplines: [...new Set(cascade.map(c => c.discipline))],
+        maxPropagatedDelay: cascade.length > 0 ? Math.max(...cascade.map(c => c.propagatedDelay)) : 0,
+        suggestions
+      };
+    });
+
+    return {
+      analysisDate: now.toISOString(),
+      lateContainerCount: lateContainers.length,
+      totalAffected: impacts.reduce((sum, i) => sum + i.affectedContainers, 0),
+      impacts: impacts.sort((a, b) => b.affectedContainers - a.affectedContainers),
+      overallSeverity: impacts.some(i => i.severity === 'Critical') ? 'Critical'
+        : impacts.some(i => i.severity === 'High') ? 'High'
+        : impacts.length > 0 ? 'Medium' : 'Low'
+    };
+  }
+
+  /**
+   * Calculate trend analysis from real evolution snapshots.
+   * Computes velocity (containers added/completed per period), drift, and projected completion.
+   * @param {Array} snapshots - Array of historical snapshot objects
+   * @returns {Object} Trend analysis data
+   */
+  calculateTrends(snapshots) {
+    if (!snapshots || snapshots.length < 2) {
+      return {
+        velocity: null,
+        drift: null,
+        projectedCompletion: null,
+        dataPoints: snapshots?.length || 0,
+        message: 'Insufficient data for trend analysis (need at least 2 snapshots)'
+      };
+    }
+
+    const sorted = [...snapshots].sort((a, b) =>
+      new Date(a.timestamp) - new Date(b.timestamp)
+    );
+
+    // Calculate velocity: containers added per period
+    const velocities = [];
+    const hourDrifts = [];
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = sorted[i - 1];
+      const curr = sorted[i];
+      const daysBetween = Math.max(1, (new Date(curr.timestamp) - new Date(prev.timestamp)) / (1000 * 60 * 60 * 24));
+
+      const containersAdded = (curr.totalContainers || 0) - (prev.totalContainers || 0);
+      velocities.push(containersAdded / daysBetween);
+
+      const hoursDrift = (curr.totalEstimatedHours || 0) - (prev.totalEstimatedHours || 0);
+      hourDrifts.push(hoursDrift);
+    }
+
+    const avgVelocity = velocities.reduce((s, v) => s + v, 0) / velocities.length;
+    const avgHourDrift = hourDrifts.reduce((s, d) => s + d, 0) / hourDrifts.length;
+
+    // Calculate completion status trends
+    const latestSnapshot = sorted[sorted.length - 1];
+    const completedCount = latestSnapshot.completionStatus?.completed || 0;
+    const totalContainers = latestSnapshot.totalContainers || 1;
+    const completionRate = completedCount / totalContainers;
+
+    // Project completion date based on current velocity
+    let projectedCompletion = null;
+    if (avgVelocity > 0 && completionRate < 1) {
+      const remainingContainers = totalContainers - completedCount;
+      const daysToComplete = remainingContainers / avgVelocity;
+      const projected = new Date();
+      projected.setDate(projected.getDate() + Math.ceil(daysToComplete));
+      projectedCompletion = projected.toISOString().split('T')[0];
+    }
+
+    return {
+      velocity: {
+        containersPerDay: Math.round(avgVelocity * 100) / 100,
+        containersPerWeek: Math.round(avgVelocity * 7 * 100) / 100,
+        trend: avgVelocity > 0 ? 'increasing' : avgVelocity < 0 ? 'decreasing' : 'stable'
+      },
+      drift: {
+        avgHoursPerPeriod: Math.round(avgHourDrift * 100) / 100,
+        direction: avgHourDrift > 0 ? 'scope_increasing' : avgHourDrift < 0 ? 'scope_decreasing' : 'stable'
+      },
+      completion: {
+        rate: Math.round(completionRate * 100),
+        completed: completedCount,
+        total: totalContainers
+      },
+      projectedCompletion,
+      dataPoints: sorted.length,
+      periodsCovered: sorted.length - 1
+    };
   }
 }
 

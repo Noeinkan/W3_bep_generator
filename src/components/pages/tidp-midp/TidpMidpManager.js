@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useTidpData } from '../../../hooks/useTidpData';
 import { useMidpData } from '../../../hooks/useMidpData';
 import { useExport } from '../../../hooks/useExport';
+import { useProject } from '../../../contexts/ProjectContext';
 import { getDefaultContainer } from '../../../utils/csvHelpers';
 import toast, { Toaster } from 'react-hot-toast';
 import TIDPImportDialog from '../../tidp/TIDPImportDialog';
@@ -39,7 +40,8 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
   };
 
   // Custom hooks
-  const { tidps, loading: tidpLoading, loadTidps, createTidp, updateTidp, deleteTidp, bulkUpdateTidps } = useTidpData();
+  const { currentProject } = useProject();
+  const { tidps, loading: tidpLoading, loadTidps, createTidp, updateTidp, deleteTidp, bulkUpdateTidps } = useTidpData(currentProject?.id);
   const { midps, loading: midpLoading, loadMidps, createMidp } = useMidpData();
   const {
     templates,

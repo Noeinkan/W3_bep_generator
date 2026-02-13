@@ -477,4 +477,53 @@ router.get('/:id/deliverables-dashboard', async (req, res, next) => {
   }
 });
 
+/**
+ * GET /api/midp/:id/cascading-impact
+ * Calculate cascading impact of late deliverables
+ */
+router.get('/:id/cascading-impact', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const impact = midpService.calculateCascadingImpact(id);
+
+    res.json({
+      success: true,
+      data: impact
+    });
+  } catch (error) {
+    if (error.message.includes('not found')) {
+      return res.status(404).json({
+        success: false,
+        error: error.message
+      });
+    }
+    next(error);
+  }
+});
+
+/**
+ * GET /api/midp/:id/trends
+ * Get trend analysis from evolution snapshots
+ */
+router.get('/:id/trends', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const evolution = midpService.getMIDPEvolution(id);
+    const trends = midpService.calculateTrends(evolution.historical);
+
+    res.json({
+      success: true,
+      data: trends
+    });
+  } catch (error) {
+    if (error.message.includes('not found')) {
+      return res.status(404).json({
+        success: false,
+        error: error.message
+      });
+    }
+    next(error);
+  }
+});
+
 module.exports = router;

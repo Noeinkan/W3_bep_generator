@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import ApiService from '../services/apiService';
 
-export const useTidpData = () => {
+export const useTidpData = (projectId = null) => {
   const [tidps, setTidps] = useState([]);
   const [loading, setLoading] = useState(false);
   const mountedRef = useRef(true);
@@ -14,7 +14,7 @@ export const useTidpData = () => {
   const loadTidps = useCallback(async () => {
     setLoading(true);
     try {
-      const tidpData = await ApiService.getAllTIDPs();
+      const tidpData = await ApiService.getAllTIDPs(projectId);
       if (!mountedRef.current) return;
       setTidps(tidpData.tidps || []);
     } catch (error) {
@@ -22,7 +22,7 @@ export const useTidpData = () => {
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, []);
+  }, [projectId]);
 
   const createTidp = async (tidpData) => {
     const payload = {
@@ -33,6 +33,7 @@ export const useTidpData = () => {
       responsibilities: tidpData.description || 'TBD',
       description: tidpData.description,
       containers: tidpData.containers,
+      projectId: projectId || tidpData.projectId || null,
   // When creating from the UI, treat the action as publishing the TIDP so it can be included in MIDP flows
   // Server accepts: Draft, Under Review, Approved, Active, Completed — use 'Active'
   status: 'Active'

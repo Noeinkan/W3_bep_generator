@@ -3,7 +3,7 @@ import { draftStorageService } from '../services/draftStorageService';
 import { validateUser, validateFormData, validateCallbacks } from '../utils/validationUtils';
 import { useDraftFilters } from './useDraftFilters';
 
-export const useDrafts = (user, currentFormData, onLoadDraft, onClose) => {
+export const useDrafts = (user, currentFormData, onLoadDraft, onClose, projectId = null) => {
   const [rawDrafts, setRawDrafts] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -34,7 +34,9 @@ export const useDrafts = (user, currentFormData, onLoadDraft, onClose) => {
     setError(null);
 
     try {
-      const validDrafts = draftStorageService.loadDrafts(safeUserId);
+      const validDrafts = projectId
+        ? draftStorageService.loadDraftsByProject(safeUserId, projectId)
+        : draftStorageService.loadDrafts(safeUserId);
       setRawDrafts(validDrafts);
     } catch (error) {
       console.error('Error loading drafts:', error);
@@ -43,7 +45,7 @@ export const useDrafts = (user, currentFormData, onLoadDraft, onClose) => {
     } finally {
       setIsLoading(false);
     }
-  }, [safeUserId]);
+  }, [safeUserId, projectId]);
 
   // Load drafts on component mount and when user changes
   useEffect(() => {

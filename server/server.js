@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 
 // Import routes
+const authRoutes = require('./routes/auth');
 const tidpRoutes = require('./routes/tidp');
 const midpRoutes = require('./routes/midp');
 const exportRoutes = require('./routes/export');
@@ -14,6 +15,7 @@ const validationRoutes = require('./routes/validation');
 const aiRoutes = require('./routes/ai');
 const draftsRoutes = require('./routes/drafts');
 const documentsRoutes = require('./routes/documents');
+const projectsRoutes = require('./routes/projects');
 
 // Import services
 const puppeteerPdfService = require('./services/puppeteerPdfService');
@@ -60,6 +62,7 @@ app.get('/tidp-midp-manager', (req, res) => {
 
 // API routes
 const migrateRoutes = require('./routes/migrate');
+app.use('/api/auth', authRoutes);
 app.use('/api/tidp', tidpRoutes);
 app.use('/api/midp', midpRoutes);
 app.use('/api/export', exportRoutes);
@@ -68,6 +71,7 @@ app.use('/api/migrate', migrateRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/drafts', draftsRoutes);
 app.use('/api/documents', documentsRoutes);
+app.use('/api/projects', projectsRoutes);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {

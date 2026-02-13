@@ -11,6 +11,7 @@ import {
   Plus
 } from 'lucide-react';
 import ApiService from '../../../services/apiService';
+import { useProject } from '../../../contexts/ProjectContext';
 import toast, { Toaster } from 'react-hot-toast';
 
 // Sub-components
@@ -24,6 +25,7 @@ import HelpModal from './dashboard/HelpModal';
 const IDRMDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { currentProject } = useProject();
 
   // Parse current view from URL
   const getCurrentView = () => {
@@ -55,7 +57,7 @@ const IDRMDashboard = () => {
     mountedRef.current = true;
     loadData();
     return () => { mountedRef.current = false; };
-  }, []);
+  }, [currentProject?.id]);
 
   useEffect(() => {
     // Update URL when view changes using React Router
@@ -68,9 +70,10 @@ const IDRMDashboard = () => {
   const loadData = async () => {
     setLoading(true);
     try {
+      const projectId = currentProject?.id || null;
       const [imActivitiesData, deliverablesData, templatesData] = await Promise.all([
-        ApiService.getAllIMActivities(),
-        ApiService.getAllDeliverables(),
+        ApiService.getAllIMActivities(projectId),
+        ApiService.getAllDeliverables(projectId),
         ApiService.getAllIDRMTemplates()
       ]);
 

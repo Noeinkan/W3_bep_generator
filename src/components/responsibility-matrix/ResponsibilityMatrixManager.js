@@ -3,6 +3,7 @@ import { AlertCircle, CheckCircle, Settings, Info } from 'lucide-react';
 import useResponsibilityMatrix from '../../hooks/useResponsibilityMatrix';
 import { createDefaultActivitiesForProject } from '../../constants/iso19650ActivitiesTemplate';
 import ApiService from '../../services/apiService';
+import { useProject } from '../../contexts/ProjectContext';
 
 // Import all child components
 import MatrixSelector from './MatrixSelector';
@@ -17,7 +18,10 @@ import MatrixExportPanel from './MatrixExportPanel';
  * Responsibility Matrix Manager
  * Main container for managing both ISO 19650 responsibility matrices
  */
-const ResponsibilityMatrixManager = ({ projectId, onClose }) => {
+const ResponsibilityMatrixManager = ({ projectId: projectIdProp, onClose }) => {
+  const { currentProject } = useProject();
+  const projectId = projectIdProp || currentProject?.id || null;
+
   // State management
   const [activeMatrix, setActiveMatrix] = useState('im-activities');
   const [showImActivitiesForm, setShowImActivitiesForm] = useState(false);

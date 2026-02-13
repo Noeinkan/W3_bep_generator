@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Download, Search, Users } from 'lucide-react';
+import { Plus, Download, Search, Users, Calendar } from 'lucide-react';
 
 const TIDPsView = ({
   tidps,
@@ -8,7 +8,17 @@ const TIDPsView = ({
   onSearchChange,
   filterDiscipline,
   onFilterChange,
+  filterStatus,
+  onFilterStatusChange,
+  filterMilestone,
+  onFilterMilestoneChange,
+  filterDateFrom,
+  onFilterDateFromChange,
+  filterDateTo,
+  onFilterDateToChange,
   disciplines,
+  statuses,
+  milestones,
   onCreateNew,
   onDownloadTemplate,
   onViewDetails,
@@ -18,11 +28,33 @@ const TIDPsView = ({
     const matchesSearch = !searchTerm ||
       tidp.teamName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       tidp.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tidp.discipline?.toLowerCase().includes(searchTerm.toLowerCase());
+      tidp.discipline?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      tidp.leader?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      tidp.company?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesDiscipline = filterDiscipline === 'all' || tidp.discipline === filterDiscipline;
 
-    return matchesSearch && matchesDiscipline;
+    const matchesStatus = !filterStatus || filterStatus === 'all' || tidp.status === filterStatus;
+
+    const matchesMilestone = !filterMilestone || filterMilestone === 'all' || tidp.containers?.some(c => {
+      const m = c.Milestone || c.deliveryMilestone || c['Delivery Milestone'];
+      return m === filterMilestone;
+    });
+
+    let matchesDateRange = true;
+    if (filterDateFrom || filterDateTo) {
+      const containerDates = tidp.containers?.map(c => c['Due Date'] || c.dueDate).filter(Boolean) || [];
+      if (containerDates.length > 0) {
+        const from = filterDateFrom ? new Date(filterDateFrom) : new Date('1900-01-01');
+        const to = filterDateTo ? new Date(filterDateTo) : new Date('9999-12-31');
+        matchesDateRange = containerDates.some(d => {
+          const date = new Date(d);
+          return !isNaN(date.getTime()) && date >= from && date <= to;
+        });
+      }
+    }
+
+    return matchesSearch && matchesDiscipline && matchesStatus && matchesMilestone && matchesDateRange;
   });
 
   return (
@@ -56,7 +88,7 @@ const TIDPsView = ({
             </div>
           </div>
 
-          <div className="flex items-end gap-3">
+          <div className="flex items-end gap-3 flex-wrap">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">Discipline</label>
               <select
@@ -69,6 +101,55 @@ const TIDPsView = ({
                   <option key={discipline} value={discipline}>{discipline}</option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Status</label>
+              <select
+                value={filterStatus || 'all'}
+                onChange={(e) => onFilterStatusChange?.(e.target.value)}
+                className="border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 text-sm min-w-32 transition-all duration-200"
+              >
+                <option value="all">All Statuses</option>
+                {(statuses || []).map(status => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Milestone</label>
+              <select
+                value={filterMilestone || 'all'}
+                onChange={(e) => onFilterMilestoneChange?.(e.target.value)}
+                className="border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 text-sm min-w-36 transition-all duration-200"
+              >
+                <option value="all">All Milestones</option>
+                {(milestones || []).map(milestone => (
+                  <option key={milestone} value={milestone}>{milestone}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Due Date Range</label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="date"
+                  value={filterDateFrom || ''}
+                  onChange={(e) => onFilterDateFromChange?.(e.target.value)}
+                  className="border border-slate-200 rounded-lg px-2.5 py-2 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 text-sm transition-all duration-200"
+                  aria-label="Due date from"
+                />
+                <Calendar className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                <input
+                  type="date"
+                  value={filterDateTo || ''}
+                  onChange={(e) => onFilterDateToChange?.(e.target.value)}
+                  className="border border-slate-200 rounded-lg px-2.5 py-2 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 text-sm transition-all duration-200"
+                  aria-label="Due date to"
+                />
+              </div>
             </div>
 
             <button
