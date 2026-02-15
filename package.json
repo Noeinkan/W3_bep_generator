@@ -68,6 +68,7 @@
     "start:3000": "cross-env NODE_OPTIONS=--max-old-space-size=8192 react-scripts start",
     "build": "cross-env NODE_OPTIONS=--max-old-space-size=8192 react-scripts build",
     "test": "react-scripts test",
+    "report:help-migration": "node scripts/generate-help-content-migration-report.js",
     "eject": "react-scripts eject",
     "verify:ollama": "cd ml-service && venv\\Scripts\\python.exe verify_ollama.py"
   },

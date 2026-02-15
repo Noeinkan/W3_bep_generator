@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import FieldHelpTooltip from '../controls/FieldHelpTooltip';
 import { getHelpContent } from '../../../data/helpContent';
 
@@ -27,7 +27,35 @@ const FieldHeader = ({
   htmlFor,
   asSectionHeader = false
 }) => {
-  const helpContent = getHelpContent(fieldName);
+  const [helpContent, setHelpContent] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!fieldName) {
+      setHelpContent(null);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    getHelpContent(fieldName)
+      .then((content) => {
+        if (isMounted) {
+          setHelpContent(content || null);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setHelpContent(null);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [fieldName]);
+
   const displayLabel = normalizeLabel(label, fieldName, number);
   const isRequired = Boolean(required);
 

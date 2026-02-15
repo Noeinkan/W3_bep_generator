@@ -366,5 +366,216 @@ The confirmed budget must demonstrate adequate resource allocation for the infor
     ],
 
     relatedFields: ['estimatedBudget', 'valueProposition', 'softwareTools', 'trainingRequirements']
+  },
+
+  projectDescription: {
+    description: `Provide a comprehensive project overview including scope, scale, complexity, and key objectives. This should give readers a clear understanding of what the project entails, its unique characteristics, and why BIM is essential for its delivery.
+
+Include:
+• Project type and primary use
+• Physical scale (area, height, number of buildings)
+• Project value/budget range
+• Key sustainability or certification targets (LEED, BREEAM, WELL, etc.)
+• Unique technical or design challenges
+• Main stakeholder requirements and expectations
+• Site constraints or existing conditions that impact delivery`,
+
+    iso19650: `ISO 19650-2:2018 Section 5.1.2 - Project Information
+
+The standard requires clear project definition including information about the appointing party's requirements, project objectives, constraints, and any specific information management requirements. This helps all parties understand the context for information delivery.`,
+
+    bestPractices: [
+      'Start with project type and scale to set context immediately',
+      'Quantify wherever possible (area, capacity, budget range, timeline)',
+      'Explicitly mention sustainability targets (BREEAM, LEED, WELL, PassivHaus)',
+      'Highlight complexity factors that justify the BIM approach',
+      'Reference the client\'s strategic objectives when known',
+      'Include site context if it impacts design or construction approach',
+      'Mention number of disciplines for complex multi-disciplinary projects',
+      'Keep it concise but comprehensive (200-400 words is ideal)'
+    ],
+
+    examples: {
+      'Commercial Building': `A modern 15-storey Grade A office complex with retail on the ground floor, located in central Manchester. The 45,000m² development will accommodate 800+ office workers with flexible workspace layouts, integrated smart building technologies, and targeting BREEAM Excellent certification.
+
+The project includes basement parking for 150 vehicles, rooftop plant areas, and a double-height reception atrium. Key challenges include integration with adjacent heritage buildings, complex MEP systems for smart building features, and achieving net-zero operational carbon. Budget: £65M. Timeline: 32 months (Design to Handover).`,
+
+      'Infrastructure': `A 12km dual-carriageway bypass including three major grade-separated junctions, two river crossings, and associated drainage infrastructure serving the town of Westfield. The scheme will relieve congestion in the town centre and support planned residential development of 5,000 new homes.
+
+Key technical challenges include environmentally sensitive river crossings, complex utilities diversions, and coordination with operational rail infrastructure. The project requires extensive stakeholder engagement with Network Rail, Environment Agency, and local communities. Budget: £180M. Programme: 48 months including 18-month design phase.`,
+
+      'Healthcare': `Extension and refurbishment of St. Mary's District Hospital adding 200-bed capacity across a new 5-storey clinical block. The development includes 4 operating theatres, diagnostic imaging suite, intensive care unit, and supporting clinical facilities, all requiring integration with existing operational hospital systems.
+
+Critical requirements include stringent infection control (HBN 04-01 compliance), complex MEP systems for medical gases and critical ventilation, maintaining hospital operations throughout construction, and achieving BREEAM Healthcare Excellent. Budget: £85M. Phased delivery over 36 months with operational hospital constraints.`,
+
+      'Residential': `Mixed-use development of 280 residential units across two towers (18 and 22 storeys) with ground floor retail and 2 levels of basement parking. Located on a brownfield site in East London, targeting 35% affordable housing and BREEAM Communities Excellent.
+
+The scheme includes a mix of 1, 2, and 3-bed apartments, communal amenity spaces, and landscaped courtyard. Technical challenges include ground conditions requiring piled foundations, tall building regulations compliance, and complex MEP distribution in high-rise residential. Budget: £92M. Programme: 30 months.`,
+
+      'Education': `New-build secondary academy for 1,200 students (11-18 years) on a greenfield site including sports facilities, performing arts centre, and science laboratories. The school is designed to PassivHaus standards with natural ventilation strategy, achieving net-zero carbon in operation.
+
+Facilities include 60 teaching spaces, assembly hall for 400, double sports hall, 3G sports pitch, and extensive STEM facilities. The project must achieve BREEAM Excellent and meet strict DfE output specifications. Budget: £35M. Programme: 24 months including summer handover for September opening.`
+    },
+
+    commonMistakes: [
+      'Being too vague or generic - "A large office building" tells readers nothing useful',
+      'Omitting key project metrics (size, value, timeline) that provide context',
+      'No mention of sustainability targets or environmental certifications',
+      'Failing to highlight what makes the project complex or challenging',
+      'Not connecting project characteristics to BIM requirements',
+      'Too much unnecessary detail about architectural aesthetics',
+      'Missing stakeholder context or client strategic objectives',
+      'Not mentioning site constraints that impact delivery approach'
+    ],
+
+    aiPrompt: {
+      system: 'You are a BIM project planning expert. Generate comprehensive project descriptions that establish clear context for BIM execution.',
+      instructions: 'Generate content similar to the examples above. Include project type, quantified metrics (area in m², budget, timeline), sustainability targets (BREEAM/LEED), key technical challenges, and site constraints. Use structured paragraphs covering scope, scale, complexity, and stakeholder requirements. Maximum 150 words.',
+      style: 'comprehensive, quantified metrics, sustainability-focused, structured paragraphs, specific technical challenges'
+    },
+
+    relatedFields: ['projectType', 'estimatedBudget', 'confirmedBudget', 'proposedTimeline', 'confirmedTimeline']
+  },
+
+  tenderApproach: {
+    description: `Describe your proposed approach to delivering this project during the tender/pre-appointment phase. Explain your methodology, key strategies, and how you will meet the client's requirements.
+
+Cover:
+• Overall delivery philosophy and approach
+• Key strategies (collaboration, early engagement, risk mitigation, etc.)
+• How you will meet the client's specific requirements
+• Phased delivery or staging approach if applicable
+• Value engineering and optimization strategies
+• Risk management approach
+• Stakeholder engagement strategy
+• Quality assurance processes
+
+This is your chance to differentiate your approach from competitors.`,
+
+    iso19650: `ISO 19650-2:2018 Section 5.1 - Appointment
+
+The proposed approach should demonstrate understanding of the appointing party's requirements, project constraints, and information management expectations. It should show how the delivery team will establish capability and capacity.`,
+
+    bestPractices: [
+      'Lead with your core delivery philosophy (collaboration, innovation, quality, etc.)',
+      'Emphasize early engagement and proactive coordination',
+      'Highlight BIM as enabler for risk reduction and value delivery',
+      'Mention phased approach aligned with RIBA stages or project phases',
+      'Reference continuous value engineering throughout design',
+      'Include stakeholder engagement and communication strategy',
+      'Mention quality assurance and ISO 19650 compliance',
+      'Address project-specific challenges or constraints',
+      'Keep it client-focused - emphasize benefits to them'
+    ],
+
+    examples: {
+      'Commercial Building': `Our approach emphasizes collaborative design coordination through advanced BIM workflows, early stakeholder engagement, and integrated sustainability analysis from the outset.
+
+We propose a phased delivery strategy aligned with RIBA stages, with intensive coordination during Stage 3 to eliminate design conflicts before Stage 4 technical design. Continuous value engineering through 5D integration will identify cost savings opportunities while maintaining design quality and sustainability targets.
+
+Our BIM-first approach enables early clash detection, reducing construction risks and ensuring predictable delivery. Weekly coordination meetings with all disciplines using federated models will maintain design quality and buildability. We will engage the contractor early (Stage 3) to validate constructability and optimize sequencing.
+
+Risk management is embedded in our process through proactive clash detection, regular design reviews, and continuous stakeholder engagement. Quality is assured through ISO 19650-2:2018 compliance, automated model validation, and structured review gates at each RIBA stage milestone.`,
+
+      'Infrastructure': `Our approach prioritizes early 3D design coordination to eliminate clashes between highway, structures, drainage, and utilities before detailed design, reducing construction risk and protecting the programme.
+
+We will implement a staged delivery approach: Stage 1 - Options design with preliminary 3D models for stakeholder engagement; Stage 2 - Concept design with full 3D coordination; Stage 3 - Detailed design with clash-free construction documentation.
+
+4D planning will be used from concept stage to optimize construction programme, traffic management, and stakeholder impacts. Early engagement with statutory undertakers will ensure utilities coordination is resolved during design, not on site.
+
+Risk management focuses on early identification through 3D coordination, environmental analysis for sensitive areas, and stakeholder engagement for planning consent. Value engineering will be continuous through design development, supported by accurate quantity extraction from coordinated models.`
+    },
+
+    commonMistakes: [
+      'Generic approach that could apply to any project',
+      'Not addressing project-specific challenges or constraints',
+      'Missing BIM integration in the delivery approach',
+      'No mention of stakeholder engagement or communication',
+      'Failing to connect approach to client\'s stated requirements',
+      'Too much focus on process, not enough on value and outcomes',
+      'Not explaining how risks will be managed',
+      'Missing quality assurance and compliance commitments'
+    ],
+
+    aiPrompt: {
+      system: 'You are a BIM delivery strategy consultant. Generate compelling tender proposals that differentiate the team\'s approach and demonstrate value.',
+      instructions: 'Generate content similar to the examples above. Include delivery philosophy, phased strategy (RIBA stages), BIM-enabled value engineering, early stakeholder engagement, risk management through clash detection, and quality assurance. Use structured paragraphs with specific methodologies. Maximum 150 words.',
+      style: 'strategic, value-focused, differentiated approach, structured methodology, client-benefit emphasis'
+    },
+
+    relatedFields: ['bimStrategy', 'deliveryApproach', 'keyCommitments']
+  },
+
+  deliveryApproach: {
+    description: `Describe your confirmed approach to delivering this project during the post-appointment phase. Explain how you will execute the project, manage information, and deliver against the agreed commitments.
+
+Cover:
+• Delivery methodology and execution strategy
+• Information management and CDE implementation
+• Coordination processes and schedules
+• Quality assurance and validation procedures
+• Risk management and mitigation strategies
+• Stakeholder engagement and communication protocols
+• Phased delivery aligned with project programme
+• Compliance with ISO 19650 and standards
+
+Use confident, confirmed language - "We will..." not "We propose..."`,
+
+    iso19650: `ISO 19650-2:2018 Section 5.2 - Mobilization
+
+The delivery approach should confirm how information management capability will be mobilized, processes established, and information delivered throughout the appointment. It demonstrates readiness to execute against the agreed plan.`,
+
+    bestPractices: [
+      'Use confirmed language - "We will..." "Our team will..." "Implementation will..."',
+      'Emphasize proven processes and established workflows',
+      'Reference specific coordination schedules (weekly, bi-weekly)',
+      'Mention CDE implementation and information management protocols',
+      'Include quality gates and validation processes',
+      'Address risk management and continuous improvement',
+      'Reference ISO 19650 compliance and audit processes',
+      'Explain phased delivery aligned with project programme',
+      'Keep focus on execution, delivery, and outcomes'
+    ],
+
+    examples: {
+      'Commercial Building': `Our delivery approach implements collaborative design coordination through established BIM workflows, stakeholder integration at defined milestones, and continuous value engineering throughout all project stages.
+
+We will execute a phased delivery strategy aligned with RIBA stages and the agreed project programme. Stage 3 will focus on design development with bi-weekly coordination meetings, achieving 95% clash-free models before Stage 4. Stage 4 will deliver detailed technical design to LOD 350 with full MEP coordination and buildability validation.
+
+BIM 360 CDE will be implemented within 2 weeks of appointment with role-based access, structured folders, and audit trails. Weekly clash detection will run throughout design with < 24hr resolution SLA for critical clashes. Monthly model quality validation using Solibri will ensure compliance with project standards.
+
+Risk management is embedded through proactive clash detection, regular design reviews at each milestone, and continuous stakeholder engagement. Quality gates at Stage 3 and Stage 4 completion will ensure all deliverables meet ISO 19650-2:2018 requirements before progression.
+
+Proactive risk management through early identification and mitigation will ensure on-time, on-budget completion. Our integrated sustainability analysis will validate net-zero carbon targets throughout design development.`,
+
+      'Healthcare': `Our delivery approach for this hospital extension implements rigorous coordination processes tailored to the complexity of live hospital operations, stringent infection control requirements, and integration with existing building systems.
+
+We will implement phased coordination models aligned with the construction programme, with room-by-room LOD 350 coordination for all clinical spaces. Weekly coordination meetings will focus on medical gases, critical ventilation, and ceiling void coordination, achieving zero clashes in critical clinical areas.
+
+The CDE will be implemented using BIM 360 with the Trust's IT security requirements and NHS data standards. All clinical areas will undergo additional quality validation for HBN 04-01 compliance, including airflow analysis and room pressure validation.
+
+4D models will be developed in coordination with the Trust's operational constraints, ensuring minimal disruption to clinical services. Construction sequencing will be validated with the Trust's clinical teams before any enabling works commence.
+
+All information deliverables will be structured for integration with the Trust's CAFM system, with COBie data prepared progressively throughout design and validated before handover. O&M information will be linked to model components for immediate use by the FM team.`
+    },
+
+    commonMistakes: [
+      'Using tentative language - "We propose..." instead of "We will..."',
+      'Generic delivery approach not tailored to project specifics',
+      'No mention of specific coordination schedules or frequencies',
+      'Missing CDE implementation details',
+      'No quality validation or compliance checking processes',
+      'Failing to address project-specific constraints or challenges',
+      'Not explaining phased delivery aligned with programme',
+      'Missing risk management and continuous improvement processes'
+    ],
+
+    aiPrompt: {
+      system: 'You are a BIM execution planning expert. Generate confident, execution-focused delivery plans with confirmed processes and timelines.',
+      instructions: 'Generate content similar to the examples above. Use confident language ("We will..."). Include phased delivery (RIBA stages), specific coordination schedules (weekly/bi-weekly), CDE implementation timeline, quality gates, clash resolution SLAs, and ISO 19650 compliance. Use structured paragraphs with actionable commitments. Maximum 150 words.',
+      style: 'confident tone, execution-focused, specific schedules, quality gates, actionable commitments'
+    },
+
+    relatedFields: ['bimStrategy', 'tenderApproach', 'keyCommitments', 'informationManagementResponsibilities']
   }
 };

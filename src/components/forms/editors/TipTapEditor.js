@@ -38,6 +38,7 @@ const TipTapEditor = ({
 }) => {
   const [zoom, setZoom] = useState(100);
   const [showFindReplace, setShowFindReplace] = useState(false);
+  const [helpContent, setHelpContent] = useState(null);
 
   const editor = useEditor({
     extensions: [
@@ -264,7 +265,33 @@ const TipTapEditor = ({
   }, [editor]);
 
   const stats = getStats();
-  const helpContent = fieldName ? getHelpContent(fieldName) : null;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!fieldName) {
+      setHelpContent(null);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    getHelpContent(fieldName)
+      .then((content) => {
+        if (isMounted) {
+          setHelpContent(content || null);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setHelpContent(null);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [fieldName]);
 
   if (!editor) {
     return null;

@@ -1,4 +1,12 @@
-// Empty BEP data structure - used as base for new BEPs
+/** Column schemas for resource allocation tables */
+export const RESOURCE_COLUMNS_PRE = ['Role', 'Proposed Personnel', 'Key Competencies/Experience', 'Anticipated Weekly Allocation (Hours)', 'Software/Hardware Requirements', 'Notes'];
+export const RESOURCE_COLUMNS_POST = ['Role', 'Assigned Personnel', 'Key Competencies/Experience', 'Weekly Allocation (Hours)', 'Software/Hardware Requirements', 'Notes'];
+
+/**
+ * Empty BEP data structure — used as base for new BEPs and merged with templates.
+ * Clone via `getEmptyBepData()` in templateRegistry.js before mutating.
+ * @type {Object}
+ */
 const EMPTY_BEP_DATA = {
   // Common fields for both BEP types
   projectName: '',
@@ -27,7 +35,7 @@ const EMPTY_BEP_DATA = {
   proposedTeamLeaders: [],
   teamCapabilities: '',
   proposedResourceAllocation: {
-    columns: ['Role', 'Proposed Personnel', 'Key Competencies/Experience', 'Anticipated Weekly Allocation (Hours)', 'Software/Hardware Requirements', 'Notes'],
+    columns: RESOURCE_COLUMNS_PRE,
     data: []
   },
   proposedMobilizationPlan: '',
@@ -49,7 +57,7 @@ const EMPTY_BEP_DATA = {
   assignedTeamLeaders: [],
   finalizedParties: [],
   resourceAllocationTable: {
-    columns: ['Role', 'Assigned Personnel', 'Key Competencies/Experience', 'Weekly Allocation (Hours)', 'Software/Hardware Requirements', 'Notes'],
+    columns: RESOURCE_COLUMNS_POST,
     data: []
   },
   mobilizationPlan: '',

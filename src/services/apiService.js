@@ -3,9 +3,16 @@ import axios from 'axios';
 // Use relative URL to leverage proxy configuration
 // The proxy in package.json forwards requests to http://localhost:3001
 const BASE_URL = '/api';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+const debugLog = (...args) => {
+  if (!IS_PRODUCTION) {
+    console.log(...args);
+  }
+};
 
 // Create axios instance with default configuration
-const apiClient = axios.create({
+export const apiClient = axios.create({
   baseURL: BASE_URL,
   timeout: 30000, // 30 seconds
   headers: {
@@ -24,7 +31,7 @@ apiClient.interceptors.request.use(
 
     // Add request timestamp for debugging
     config.metadata = { startTime: new Date() };
-    console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    debugLog(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
 
     return config;
   },
@@ -38,7 +45,7 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => {
     const duration = new Date() - response.config.metadata.startTime;
-    console.log(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url} (${duration}ms)`);
+    debugLog(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url} (${duration}ms)`);
     return response;
   },
   (error) => {
@@ -58,320 +65,195 @@ apiClient.interceptors.response.use(
 
 class ApiService {
   // ======================
+  // Internal helpers
+  // ======================
+
+  async _request(fn, errorMsg) {
+    try {
+      return await fn();
+    } catch (error) {
+      throw this.handleError(error, errorMsg);
+    }
+  }
+
+  _get(url, errorMsg, config) {
+    return this._request(async () => {
+      const response = await apiClient.get(url, config);
+      return response.data;
+    }, errorMsg);
+  }
+
+  _post(url, data, errorMsg, config) {
+    return this._request(async () => {
+      const response = await apiClient.post(url, data, config);
+      return response.data;
+    }, errorMsg);
+  }
+
+  _put(url, data, errorMsg) {
+    return this._request(async () => {
+      const response = await apiClient.put(url, data);
+      return response.data;
+    }, errorMsg);
+  }
+
+  _delete(url, errorMsg) {
+    return this._request(async () => {
+      const response = await apiClient.delete(url);
+      return response.data;
+    }, errorMsg);
+  }
+
+  _postBlob(url, data, errorMsg, filename) {
+    return this._request(async () => {
+      const response = await apiClient.post(url, data, { responseType: 'blob' });
+      return this.downloadFile(response, filename);
+    }, errorMsg);
+  }
+
+  // ======================
   // TIDP Services
   // ======================
 
-  async getAllTIDPs(projectId = null) {
-    try {
-      const params = projectId ? { projectId } : {};
-      const response = await apiClient.get('/tidp', { params });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to fetch TIDPs');
-    }
+  getAllTIDPs(projectId = null) {
+    const params = projectId ? { projectId } : {};
+    return this._get('/tidp', 'Failed to fetch TIDPs', { params });
   }
 
-  async getTIDP(id) {
-    try {
-      const response = await apiClient.get(`/tidp/${id}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to fetch TIDP ${id}`);
-    }
+  getTIDP(id) {
+    return this._get(`/tidp/${id}`, `Failed to fetch TIDP ${id}`);
   }
 
-  async createTIDP(tidpData) {
-    try {
-      const response = await apiClient.post('/tidp', tidpData);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to create TIDP');
-    }
+  createTIDP(tidpData) {
+    return this._post('/tidp', tidpData, 'Failed to create TIDP');
   }
 
-  // New TIDP import methods
-  async importTIDPsFromExcel(excelData, projectId) {
-    try {
-      const response = await apiClient.post('/tidp/import/excel', { data: excelData, projectId });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to import TIDPs from Excel');
-    }
+  importTIDPsFromExcel(excelData, projectId) {
+    return this._post('/tidp/import/excel', { data: excelData, projectId }, 'Failed to import TIDPs from Excel');
   }
 
-  async importTIDPsFromCSV(csvData, projectId) {
-    try {
-      const response = await apiClient.post('/tidp/import/csv', { data: csvData, projectId });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to import TIDPs from CSV');
-    }
+  importTIDPsFromCSV(csvData, projectId) {
+    return this._post('/tidp/import/csv', { data: csvData, projectId }, 'Failed to import TIDPs from CSV');
   }
 
-  async getTIDPImportTemplate() {
-    try {
-      const response = await apiClient.get('/tidp/template/excel');
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to fetch TIDP import template');
-    }
+  getTIDPImportTemplate() {
+    return this._get('/tidp/template/excel', 'Failed to fetch TIDP import template');
   }
 
-  async updateTIDP(id, updateData) {
-    try {
-      const response = await apiClient.put(`/tidp/${id}`, updateData);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to update TIDP ${id}`);
-    }
+  updateTIDP(id, updateData) {
+    return this._put(`/tidp/${id}`, updateData, `Failed to update TIDP ${id}`);
   }
 
-  async deleteTIDP(id) {
-    try {
-      const response = await apiClient.delete(`/tidp/${id}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to delete TIDP ${id}`);
-    }
+  deleteTIDP(id) {
+    return this._delete(`/tidp/${id}`, `Failed to delete TIDP ${id}`);
   }
 
-  async validateTIDPDependencies(id) {
-    try {
-      const response = await apiClient.post(`/tidp/${id}/validate-dependencies`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to validate TIDP dependencies for ${id}`);
-    }
+  validateTIDPDependencies(id) {
+    return this._post(`/tidp/${id}/validate-dependencies`, undefined, `Failed to validate TIDP dependencies for ${id}`);
   }
 
-  async getTIDPSummary(id) {
-    try {
-      const response = await apiClient.get(`/tidp/${id}/summary`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to get TIDP summary for ${id}`);
-    }
+  getTIDPSummary(id) {
+    return this._get(`/tidp/${id}/summary`, `Failed to get TIDP summary for ${id}`);
   }
 
-  async generateDependencyMatrix(projectId) {
-    try {
-      const response = await apiClient.get(`/tidp/project/${projectId}/dependency-matrix`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to generate dependency matrix for project ${projectId}`);
-    }
+  generateDependencyMatrix(projectId) {
+    return this._get(`/tidp/project/${projectId}/dependency-matrix`, `Failed to generate dependency matrix for project ${projectId}`);
   }
 
-  async getResourceAllocation(projectId) {
-    try {
-      const response = await apiClient.get(`/tidp/project/${projectId}/resource-allocation`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to get resource allocation for project ${projectId}`);
-    }
+  getResourceAllocation(projectId) {
+    return this._get(`/tidp/project/${projectId}/resource-allocation`, `Failed to get resource allocation for project ${projectId}`);
   }
 
-  async createTIDPBatch(tidps) {
-    try {
-      const response = await apiClient.post('/tidp/batch', { tidps });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to create TIDPs in batch');
-    }
+  createTIDPBatch(tidps) {
+    return this._post('/tidp/batch', { tidps }, 'Failed to create TIDPs in batch');
   }
 
-  async updateTIDPBatch(updates) {
-    try {
-      const response = await apiClient.put('/tidp/batch', { updates });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to update TIDPs in batch');
-    }
+  updateTIDPBatch(updates) {
+    return this._put('/tidp/batch', { updates }, 'Failed to update TIDPs in batch');
   }
 
   // ======================
   // MIDP Services
   // ======================
 
-  async getAllMIDPs() {
-    try {
-      const response = await apiClient.get('/midp');
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to fetch MIDPs');
-    }
+  getAllMIDPs() {
+    return this._get('/midp', 'Failed to fetch MIDPs');
   }
 
-  async getMIDP(id) {
-    try {
-      const response = await apiClient.get(`/midp/${id}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to fetch MIDP ${id}`);
-    }
+  getMIDP(id) {
+    return this._get(`/midp/${id}`, `Failed to fetch MIDP ${id}`);
   }
 
-  async createMIDPFromTIDPs(midpData, tidpIds) {
-    try {
-      const response = await apiClient.post('/midp/from-tidps', { midpData, tidpIds });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to create MIDP from TIDPs');
-    }
+  createMIDPFromTIDPs(midpData, tidpIds) {
+    return this._post('/midp/from-tidps', { midpData, tidpIds }, 'Failed to create MIDP from TIDPs');
   }
 
-  // New MIDP methods
-  async autoGenerateMIDP(projectId, midpData = {}) {
-    try {
-      const response = await apiClient.post(`/midp/auto-generate/${projectId}`, midpData);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to auto-generate MIDP');
-    }
+  autoGenerateMIDP(projectId, midpData = {}) {
+    return this._post(`/midp/auto-generate/${projectId}`, midpData, 'Failed to auto-generate MIDP');
   }
 
-  async autoGenerateMIDPAll(midpData = {}) {
-    try {
-      const response = await apiClient.post('/midp/auto-generate', midpData);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to auto-generate MIDP from all TIDPs');
-    }
+  autoGenerateMIDPAll(midpData = {}) {
+    return this._post('/midp/auto-generate', midpData, 'Failed to auto-generate MIDP from all TIDPs');
   }
 
-  async getMIDPEvolution(id) {
-    try {
-      const response = await apiClient.get(`/midp/${id}/evolution`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to fetch MIDP evolution');
-    }
+  getMIDPEvolution(id) {
+    return this._get(`/midp/${id}/evolution`, 'Failed to fetch MIDP evolution');
   }
 
-  async getMIDPDeliverablesDashboard(id) {
-    try {
-      const response = await apiClient.get(`/midp/${id}/deliverables-dashboard`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to fetch MIDP deliverables dashboard');
-    }
+  getMIDPDeliverablesDashboard(id) {
+    return this._get(`/midp/${id}/deliverables-dashboard`, 'Failed to fetch MIDP deliverables dashboard');
   }
 
-  async updateMIDPFromTIDPs(id, tidpIds) {
-    try {
-      const response = await apiClient.put(`/midp/${id}/update-from-tidps`, { tidpIds });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to update MIDP ${id} from TIDPs`);
-    }
+  updateMIDPFromTIDPs(id, tidpIds) {
+    return this._put(`/midp/${id}/update-from-tidps`, { tidpIds }, `Failed to update MIDP ${id} from TIDPs`);
   }
 
-  async deleteMIDP(id) {
-    try {
-      const response = await apiClient.delete(`/midp/${id}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to delete MIDP ${id}`);
-    }
+  deleteMIDP(id) {
+    return this._delete(`/midp/${id}`, `Failed to delete MIDP ${id}`);
   }
 
-  async getMIDPDeliverySchedule(id) {
-    try {
-      const response = await apiClient.get(`/midp/${id}/delivery-schedule`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to get delivery schedule for MIDP ${id}`);
-    }
+  getMIDPDeliverySchedule(id) {
+    return this._get(`/midp/${id}/delivery-schedule`, `Failed to get delivery schedule for MIDP ${id}`);
   }
 
-  async getMIDPRiskRegister(id) {
-    try {
-      const response = await apiClient.get(`/midp/${id}/risk-register`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to get risk register for MIDP ${id}`);
-    }
+  getMIDPRiskRegister(id) {
+    return this._get(`/midp/${id}/risk-register`, `Failed to get risk register for MIDP ${id}`);
   }
 
-  async getMIDPDependencyMatrix(id) {
-    try {
-      const response = await apiClient.get(`/midp/${id}/dependency-matrix`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to get dependency matrix for MIDP ${id}`);
-    }
+  getMIDPDependencyMatrix(id) {
+    return this._get(`/midp/${id}/dependency-matrix`, `Failed to get dependency matrix for MIDP ${id}`);
   }
 
-  async getMIDPResourcePlan(id) {
-    try {
-      const response = await apiClient.get(`/midp/${id}/resource-plan`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to get resource plan for MIDP ${id}`);
-    }
+  getMIDPResourcePlan(id) {
+    return this._get(`/midp/${id}/resource-plan`, `Failed to get resource plan for MIDP ${id}`);
   }
 
-  async getMIDPAggregatedData(id) {
-    try {
-      const response = await apiClient.get(`/midp/${id}/aggregated-data`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to get aggregated data for MIDP ${id}`);
-    }
+  getMIDPAggregatedData(id) {
+    return this._get(`/midp/${id}/aggregated-data`, `Failed to get aggregated data for MIDP ${id}`);
   }
 
-  async getMIDPQualityGates(id) {
-    try {
-      const response = await apiClient.get(`/midp/${id}/quality-gates`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to get quality gates for MIDP ${id}`);
-    }
+  getMIDPQualityGates(id) {
+    return this._get(`/midp/${id}/quality-gates`, `Failed to get quality gates for MIDP ${id}`);
   }
 
-  async getMIDPMilestones(id) {
-    try {
-      const response = await apiClient.get(`/midp/${id}/milestones`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to get milestones for MIDP ${id}`);
-    }
+  getMIDPMilestones(id) {
+    return this._get(`/midp/${id}/milestones`, `Failed to get milestones for MIDP ${id}`);
   }
 
-  async refreshMIDP(id) {
-    try {
-      const response = await apiClient.post(`/midp/${id}/refresh`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to refresh MIDP ${id}`);
-    }
+  refreshMIDP(id) {
+    return this._post(`/midp/${id}/refresh`, undefined, `Failed to refresh MIDP ${id}`);
   }
 
-  async getMIDPDashboard(id) {
-    try {
-      const response = await apiClient.get(`/midp/${id}/dashboard`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to get dashboard for MIDP ${id}`);
-    }
+  getMIDPDashboard(id) {
+    return this._get(`/midp/${id}/dashboard`, `Failed to get dashboard for MIDP ${id}`);
   }
 
-  async getMIDPCascadingImpact(id) {
-    try {
-      const response = await apiClient.get(`/midp/${id}/cascading-impact`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to get cascading impact for MIDP ${id}`);
-    }
+  getMIDPCascadingImpact(id) {
+    return this._get(`/midp/${id}/cascading-impact`, `Failed to get cascading impact for MIDP ${id}`);
   }
 
-  async getMIDPTrends(id) {
-    try {
-      const response = await apiClient.get(`/midp/${id}/trends`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to get trends for MIDP ${id}`);
-    }
+  getMIDPTrends(id) {
+    return this._get(`/midp/${id}/trends`, `Failed to get trends for MIDP ${id}`);
   }
 
   // ======================
@@ -379,348 +261,147 @@ class ApiService {
   // ======================
 
   // IM Activities (Matrix 1)
-  async getIMActivities(projectId) {
-    try {
-      const response = await apiClient.get('/responsibility-matrix/im-activities', {
-        params: { projectId }
-      });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to fetch IM activities');
-    }
+  getIMActivities(projectId) {
+    return this._get('/responsibility-matrix/im-activities', 'Failed to fetch IM activities', { params: { projectId } });
   }
 
-  async getIMActivity(id) {
-    try {
-      const response = await apiClient.get(`/responsibility-matrix/im-activities/${id}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to fetch IM activity ${id}`);
-    }
+  getIMActivity(id) {
+    return this._get(`/responsibility-matrix/im-activities/${id}`, `Failed to fetch IM activity ${id}`);
   }
 
-  async createIMActivity(activityData) {
-    try {
-      const response = await apiClient.post('/responsibility-matrix/im-activities', activityData);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to create IM activity');
-    }
+  createIMActivity(activityData) {
+    return this._post('/responsibility-matrix/im-activities', activityData, 'Failed to create IM activity');
   }
 
-  async updateIMActivity(id, updates) {
-    try {
-      const response = await apiClient.put(`/responsibility-matrix/im-activities/${id}`, updates);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to update IM activity ${id}`);
-    }
+  updateIMActivity(id, updates) {
+    return this._put(`/responsibility-matrix/im-activities/${id}`, updates, `Failed to update IM activity ${id}`);
   }
 
-  async deleteIMActivity(id) {
-    try {
-      const response = await apiClient.delete(`/responsibility-matrix/im-activities/${id}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to delete IM activity ${id}`);
-    }
+  deleteIMActivity(id) {
+    return this._delete(`/responsibility-matrix/im-activities/${id}`, `Failed to delete IM activity ${id}`);
   }
 
-  async bulkCreateIMActivities(activities) {
-    try {
-      const response = await apiClient.post('/responsibility-matrix/im-activities/bulk', {
-        activities
-      });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to bulk create IM activities');
-    }
+  bulkCreateIMActivities(activities) {
+    return this._post('/responsibility-matrix/im-activities/bulk', { activities }, 'Failed to bulk create IM activities');
   }
 
   // Information Deliverables (Matrix 2)
-  async getDeliverables(projectId, filters = {}) {
-    try {
-      const response = await apiClient.get('/responsibility-matrix/deliverables', {
-        params: { projectId, ...filters }
-      });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to fetch deliverables');
-    }
+  getDeliverables(projectId, filters = {}) {
+    return this._get('/responsibility-matrix/deliverables', 'Failed to fetch deliverables', { params: { projectId, ...filters } });
   }
 
-  async getDeliverablesGroupedByStage(projectId) {
-    try {
-      const response = await apiClient.get('/responsibility-matrix/deliverables/grouped-by-stage', {
-        params: { projectId }
-      });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to fetch grouped deliverables');
-    }
+  getDeliverablesGroupedByStage(projectId) {
+    return this._get('/responsibility-matrix/deliverables/grouped-by-stage', 'Failed to fetch grouped deliverables', { params: { projectId } });
   }
 
-  async getDeliverablesByTIDP(tidpId) {
-    try {
-      const response = await apiClient.get(`/responsibility-matrix/deliverables/by-tidp/${tidpId}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to fetch deliverables for TIDP ${tidpId}`);
-    }
+  getDeliverablesByTIDP(tidpId) {
+    return this._get(`/responsibility-matrix/deliverables/by-tidp/${tidpId}`, `Failed to fetch deliverables for TIDP ${tidpId}`);
   }
 
-  async getDeliverable(id) {
-    try {
-      const response = await apiClient.get(`/responsibility-matrix/deliverables/${id}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to fetch deliverable ${id}`);
-    }
+  getDeliverable(id) {
+    return this._get(`/responsibility-matrix/deliverables/${id}`, `Failed to fetch deliverable ${id}`);
   }
 
-  async createDeliverable(deliverableData) {
-    try {
-      const response = await apiClient.post('/responsibility-matrix/deliverables', deliverableData);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to create deliverable');
-    }
+  createDeliverable(deliverableData) {
+    return this._post('/responsibility-matrix/deliverables', deliverableData, 'Failed to create deliverable');
   }
 
-  async updateDeliverable(id, updates) {
-    try {
-      const response = await apiClient.put(`/responsibility-matrix/deliverables/${id}`, updates);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to update deliverable ${id}`);
-    }
+  updateDeliverable(id, updates) {
+    return this._put(`/responsibility-matrix/deliverables/${id}`, updates, `Failed to update deliverable ${id}`);
   }
 
-  async deleteDeliverable(id) {
-    try {
-      const response = await apiClient.delete(`/responsibility-matrix/deliverables/${id}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to delete deliverable ${id}`);
-    }
+  deleteDeliverable(id) {
+    return this._delete(`/responsibility-matrix/deliverables/${id}`, `Failed to delete deliverable ${id}`);
   }
 
   // TIDP Synchronization
-  async syncTIDPs(projectId, options = {}) {
-    try {
-      const response = await apiClient.post('/responsibility-matrix/sync-tidps', {
-        projectId,
-        ...options
-      });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to sync TIDPs');
-    }
+  syncTIDPs(projectId, options = {}) {
+    return this._post('/responsibility-matrix/sync-tidps', { projectId, ...options }, 'Failed to sync TIDPs');
   }
 
-  async syncSingleTIDP(tidpId, projectId, options = {}) {
-    try {
-      const response = await apiClient.post(`/responsibility-matrix/sync-tidps/${tidpId}`, {
-        projectId,
-        ...options
-      });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to sync TIDP ${tidpId}`);
-    }
+  syncSingleTIDP(tidpId, projectId, options = {}) {
+    return this._post(`/responsibility-matrix/sync-tidps/${tidpId}`, { projectId, ...options }, `Failed to sync TIDP ${tidpId}`);
   }
 
-  async getSyncStatus(projectId) {
-    try {
-      const response = await apiClient.get('/responsibility-matrix/sync-status', {
-        params: { projectId }
-      });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to get sync status');
-    }
+  getSyncStatus(projectId) {
+    return this._get('/responsibility-matrix/sync-status', 'Failed to get sync status', { params: { projectId } });
   }
 
-  async unsyncTIDP(tidpId) {
-    try {
-      const response = await apiClient.delete(`/responsibility-matrix/sync-tidps/${tidpId}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to unsync TIDP ${tidpId}`);
-    }
+  unsyncTIDP(tidpId) {
+    return this._delete(`/responsibility-matrix/sync-tidps/${tidpId}`, `Failed to unsync TIDP ${tidpId}`);
   }
 
   // Responsibility Matrix Exports
-  async exportResponsibilityMatricesExcel(projectId, projectName, options = {}) {
-    try {
-      const response = await apiClient.post('/export/responsibility-matrix/excel', {
-        projectId,
-        projectName,
-        options
-      }, {
-        responseType: 'blob'
-      });
-      return this.downloadFile(response, `Responsibility_Matrices_${projectName?.replace(/\s+/g, '_') || 'Project'}.xlsx`);
-    } catch (error) {
-      throw this.handleError(error, 'Failed to export responsibility matrices to Excel');
-    }
+  exportResponsibilityMatricesExcel(projectId, projectName, options = {}) {
+    const filename = `Responsibility_Matrices_${projectName?.replace(/\s+/g, '_') || 'Project'}.xlsx`;
+    return this._postBlob('/export/responsibility-matrix/excel', { projectId, projectName, options }, 'Failed to export responsibility matrices to Excel', filename);
   }
 
-  async exportResponsibilityMatricesPDF(projectId, projectName, options = {}) {
-    try {
-      const response = await apiClient.post('/export/responsibility-matrix/pdf', {
-        projectId,
-        projectName,
-        options
-      }, {
-        responseType: 'blob'
-      });
-      return this.downloadFile(response, `Responsibility_Matrices_${projectName?.replace(/\s+/g, '_') || 'Project'}.pdf`);
-    } catch (error) {
-      throw this.handleError(error, 'Failed to export responsibility matrices to PDF');
-    }
+  exportResponsibilityMatricesPDF(projectId, projectName, options = {}) {
+    const filename = `Responsibility_Matrices_${projectName?.replace(/\s+/g, '_') || 'Project'}.pdf`;
+    return this._postBlob('/export/responsibility-matrix/pdf', { projectId, projectName, options }, 'Failed to export responsibility matrices to PDF', filename);
   }
 
   // ======================
   // Export Services
   // ======================
 
-  async exportTIDPToExcel(id, template = null) {
-    try {
-      const body = template ? { template } : {};
-      const response = await apiClient.post(`/export/tidp/${id}/excel`, body, {
-        responseType: 'blob'
-      });
-      return this.downloadFile(response, `TIDP_${id}.xlsx`);
-    } catch (error) {
-      throw this.handleError(error, `Failed to export TIDP ${id} to Excel`);
-    }
+  exportTIDPToExcel(id, template = null) {
+    return this._postBlob(`/export/tidp/${id}/excel`, template ? { template } : {}, `Failed to export TIDP ${id} to Excel`, `TIDP_${id}.xlsx`);
   }
 
-  async exportTIDPToPDF(id, template = null) {
-    try {
-      const body = template ? { template } : {};
-      const response = await apiClient.post(`/export/tidp/${id}/pdf`, body, {
-        responseType: 'blob'
-      });
-      return this.downloadFile(response, `TIDP_${id}.pdf`);
-    } catch (error) {
-      throw this.handleError(error, `Failed to export TIDP ${id} to PDF`);
-    }
+  exportTIDPToPDF(id, template = null) {
+    return this._postBlob(`/export/tidp/${id}/pdf`, template ? { template } : {}, `Failed to export TIDP ${id} to PDF`, `TIDP_${id}.pdf`);
   }
 
-  async exportMIDPToExcel(id, template = null) {
-    try {
-      const body = template ? { template } : {};
-      const response = await apiClient.post(`/export/midp/${id}/excel`, body, {
-        responseType: 'blob'
-      });
-      return this.downloadFile(response, `MIDP_${id}.xlsx`);
-    } catch (error) {
-      throw this.handleError(error, `Failed to export MIDP ${id} to Excel`);
-    }
+  exportMIDPToExcel(id, template = null) {
+    return this._postBlob(`/export/midp/${id}/excel`, template ? { template } : {}, `Failed to export MIDP ${id} to Excel`, `MIDP_${id}.xlsx`);
   }
 
-  async exportMIDPToPDF(id, template = null) {
-    try {
-      const body = template ? { template } : {};
-      const response = await apiClient.post(`/export/midp/${id}/pdf`, body, {
-        responseType: 'blob'
-      });
-      return this.downloadFile(response, `MIDP_${id}.pdf`);
-    } catch (error) {
-      throw this.handleError(error, `Failed to export MIDP ${id} to PDF`);
-    }
+  exportMIDPToPDF(id, template = null) {
+    return this._postBlob(`/export/midp/${id}/pdf`, template ? { template } : {}, `Failed to export MIDP ${id} to PDF`, `MIDP_${id}.pdf`);
   }
 
-  async exportConsolidatedProject(projectId, midpId) {
-    try {
-      const response = await apiClient.post(`/export/project/${projectId}/consolidated-excel`,
-        { midpId },
-        { responseType: 'blob' }
-      );
-      return this.downloadFile(response, `Project_${projectId}_Consolidated.xlsx`);
-    } catch (error) {
-      throw this.handleError(error, `Failed to export consolidated project ${projectId}`);
-    }
+  exportConsolidatedProject(projectId, midpId) {
+    return this._postBlob(`/export/project/${projectId}/consolidated-excel`, { midpId }, `Failed to export consolidated project ${projectId}`, `Project_${projectId}_Consolidated.xlsx`);
   }
 
-  async getExportFormats() {
-    try {
-      const response = await apiClient.get('/export/formats');
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to get export formats');
-    }
+  getExportFormats() {
+    return this._get('/export/formats', 'Failed to get export formats');
   }
 
-  async getExportTemplates() {
-    try {
-      const response = await apiClient.get('/export/templates');
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to get export templates');
-    }
+  getExportTemplates() {
+    return this._get('/export/templates', 'Failed to get export templates');
   }
 
-  async getTIDPExportPreview(id, format, template = null) {
-    try {
-      const body = template ? { format, template } : { format };
-      const response = await apiClient.post(`/export/preview/tidp/${id}`, body);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to get TIDP ${id} export preview`);
-    }
+  getTIDPExportPreview(id, format, template = null) {
+    const body = template ? { format, template } : { format };
+    return this._post(`/export/preview/tidp/${id}`, body, `Failed to get TIDP ${id} export preview`);
   }
 
-  async getMIDPExportPreview(id, format, template = null) {
-    try {
-      const body = template ? { format, template } : { format };
-      const response = await apiClient.post(`/export/preview/midp/${id}`, body);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to get MIDP ${id} export preview`);
-    }
+  getMIDPExportPreview(id, format, template = null) {
+    const body = template ? { format, template } : { format };
+    return this._post(`/export/preview/midp/${id}`, body, `Failed to get MIDP ${id} export preview`);
   }
 
   // ======================
   // Validation Services
   // ======================
 
-  async validateTIDP(id) {
-    try {
-      const response = await apiClient.post(`/validation/tidp/${id}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to validate TIDP ${id}`);
-    }
+  validateTIDP(id) {
+    return this._post(`/validation/tidp/${id}`, undefined, `Failed to validate TIDP ${id}`);
   }
 
-  async validateMIDP(id) {
-    try {
-      const response = await apiClient.post(`/validation/midp/${id}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to validate MIDP ${id}`);
-    }
+  validateMIDP(id) {
+    return this._post(`/validation/midp/${id}`, undefined, `Failed to validate MIDP ${id}`);
   }
 
-  async validateProjectComprehensive(projectId, midpId) {
-    try {
-      const response = await apiClient.post(`/validation/project/${projectId}/comprehensive`, { midpId });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to validate project ${projectId} comprehensively`);
-    }
+  validateProjectComprehensive(projectId, midpId) {
+    return this._post(`/validation/project/${projectId}/comprehensive`, { midpId }, `Failed to validate project ${projectId} comprehensively`);
   }
 
-  async getISO19650Standards() {
-    try {
-      const response = await apiClient.get('/validation/standards/iso19650');
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to get ISO 19650 standards');
-    }
+  getISO19650Standards() {
+    return this._get('/validation/standards/iso19650', 'Failed to get ISO 19650 standards');
   }
 
   // ======================
@@ -778,7 +459,6 @@ class ApiService {
 
     // Network errors (no response)
     if (error.request && !error.response) {
-      // axios sets error.code for certain errors (e.g., ECONNREFUSED) and error.message for 'Network Error'
       const code = error.code ? ` (${error.code})` : '';
       return new Error(`${defaultMessage}: Network error${code} - unable to reach server at ${BASE_URL}`);
     }
@@ -796,182 +476,95 @@ class ApiService {
   // ======================
 
   // IM Activities
-  async getAllIMActivities(projectId = null) {
-    try {
-      const params = projectId ? { projectId } : {};
-      const response = await apiClient.get('/idrm/im-activities', { params });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to fetch IM activities');
-    }
+  getAllIMActivities(projectId = null) {
+    const params = projectId ? { projectId } : {};
+    return this._get('/idrm/im-activities', 'Failed to fetch IM activities', { params });
   }
 
-  async getIMActivity(id) {
-    try {
-      const response = await apiClient.get(`/idrm/im-activities/${id}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to fetch IM activity ${id}`);
-    }
+  getIDRMIMActivity(id) {
+    return this._get(`/idrm/im-activities/${id}`, `Failed to fetch IM activity ${id}`);
   }
 
-  async createIMActivity(activityData) {
-    try {
-      const response = await apiClient.post('/idrm/im-activities', activityData);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to create IM activity');
-    }
+  createIDRMIMActivity(activityData) {
+    return this._post('/idrm/im-activities', activityData, 'Failed to create IM activity');
   }
 
-  async updateIMActivity(id, activityData) {
-    try {
-      const response = await apiClient.put(`/idrm/im-activities/${id}`, activityData);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to update IM activity ${id}`);
-    }
+  updateIDRMIMActivity(id, activityData) {
+    return this._put(`/idrm/im-activities/${id}`, activityData, `Failed to update IM activity ${id}`);
   }
 
-  async deleteIMActivity(id) {
-    try {
-      const response = await apiClient.delete(`/idrm/im-activities/${id}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to delete IM activity ${id}`);
-    }
+  deleteIDRMIMActivity(id) {
+    return this._delete(`/idrm/im-activities/${id}`, `Failed to delete IM activity ${id}`);
   }
 
   // Deliverables
-  async getAllDeliverables(projectId = null) {
-    try {
-      const params = projectId ? { projectId } : {};
-      const response = await apiClient.get('/idrm/deliverables', { params });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to fetch deliverables');
-    }
+  getAllDeliverables(projectId = null) {
+    const params = projectId ? { projectId } : {};
+    return this._get('/idrm/deliverables', 'Failed to fetch deliverables', { params });
   }
 
-  async getDeliverable(id) {
-    try {
-      const response = await apiClient.get(`/idrm/deliverables/${id}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to fetch deliverable ${id}`);
-    }
+  getIDRMDeliverable(id) {
+    return this._get(`/idrm/deliverables/${id}`, `Failed to fetch deliverable ${id}`);
   }
 
-  async createDeliverable(deliverableData) {
-    try {
-      const response = await apiClient.post('/idrm/deliverables', deliverableData);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to create deliverable');
-    }
+  createIDRMDeliverable(deliverableData) {
+    return this._post('/idrm/deliverables', deliverableData, 'Failed to create deliverable');
   }
 
-  async updateDeliverable(id, deliverableData) {
-    try {
-      const response = await apiClient.put(`/idrm/deliverables/${id}`, deliverableData);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to update deliverable ${id}`);
-    }
+  updateIDRMDeliverable(id, deliverableData) {
+    return this._put(`/idrm/deliverables/${id}`, deliverableData, `Failed to update deliverable ${id}`);
   }
 
-  async deleteDeliverable(id) {
-    try {
-      const response = await apiClient.delete(`/idrm/deliverables/${id}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to delete deliverable ${id}`);
-    }
+  deleteIDRMDeliverable(id) {
+    return this._delete(`/idrm/deliverables/${id}`, `Failed to delete deliverable ${id}`);
   }
 
   // Templates
-  async getAllIDRMTemplates() {
-    try {
-      const response = await apiClient.get('/idrm/templates');
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to fetch IDRM templates');
-    }
+  getAllIDRMTemplates() {
+    return this._get('/idrm/templates', 'Failed to fetch IDRM templates');
   }
 
-  async getIDRMTemplate(id) {
-    try {
-      const response = await apiClient.get(`/idrm/templates/${id}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to fetch IDRM template ${id}`);
-    }
+  getIDRMTemplate(id) {
+    return this._get(`/idrm/templates/${id}`, `Failed to fetch IDRM template ${id}`);
   }
 
-  async createIDRMTemplate(templateData) {
-    try {
-      const response = await apiClient.post('/idrm/templates', templateData);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to create IDRM template');
-    }
+  createIDRMTemplate(templateData) {
+    return this._post('/idrm/templates', templateData, 'Failed to create IDRM template');
   }
 
-  async updateIDRMTemplate(id, templateData) {
-    try {
-      const response = await apiClient.put(`/idrm/templates/${id}`, templateData);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to update IDRM template ${id}`);
-    }
+  updateIDRMTemplate(id, templateData) {
+    return this._put(`/idrm/templates/${id}`, templateData, `Failed to update IDRM template ${id}`);
   }
 
-  async deleteIDRMTemplate(id) {
-    try {
-      const response = await apiClient.delete(`/idrm/templates/${id}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, `Failed to delete IDRM template ${id}`);
-    }
+  deleteIDRMTemplate(id) {
+    return this._delete(`/idrm/templates/${id}`, `Failed to delete IDRM template ${id}`);
   }
 
   // Export
-  async exportIDRMMatrix(type = 'all', projectId = null) {
-    try {
-      const params = { type };
-      if (projectId) params.projectId = projectId;
-      const response = await apiClient.get('/idrm/export', { params, responseType: 'blob' });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to export IDRM matrix');
-    }
+  exportIDRMMatrix(type = 'all', projectId = null) {
+    const params = { type };
+    if (projectId) params.projectId = projectId;
+    return this._get('/idrm/export', 'Failed to export IDRM matrix', { params, responseType: 'blob' });
   }
 
   // ======================
   // Migration
   // ======================
 
-  async migrateTIDPsToDatabase(tidps) {
-    try {
-      const response = await apiClient.post('/migrate/tidps', { tidps });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to migrate TIDPs to database');
-    }
+  migrateTIDPsToDatabase(tidps) {
+    return this._post('/migrate/tidps', { tidps }, 'Failed to migrate TIDPs to database');
   }
 
   // ======================
   // Health Check
   // ======================
 
-  async healthCheck() {
-    try {
+  healthCheck() {
+    return this._request(async () => {
       // Health endpoint is at root (not /api)
       const response = await axios.get('/health', { timeout: 5000 });
       return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Health check failed');
-    }
+    }, 'Health check failed');
   }
 
   // ======================
@@ -979,21 +572,43 @@ class ApiService {
   // ======================
 
   async batchOperation(operations) {
-    try {
+    return this._request(async () => {
+      if (!Array.isArray(operations)) {
+        throw new Error('Operations must be an array');
+      }
+
+      const allowedMethods = new Set([
+        'createTIDPBatch',
+        'updateTIDPBatch',
+        'bulkCreateIMActivities',
+        'syncTIDPs',
+        'syncSingleTIDP',
+        'unsyncTIDP'
+      ]);
+
       const promises = operations.map(async (operation) => {
         try {
-          const result = await this[operation.method](...operation.args);
-          return { success: true, operation: operation.id, result };
+          const method = operation?.method;
+          const args = Array.isArray(operation?.args) ? operation.args : [];
+
+          if (!allowedMethods.has(method)) {
+            return { success: false, operation: operation?.id, error: `Operation method is not allowed: ${method}` };
+          }
+
+          const methodFn = this[method];
+          if (typeof methodFn !== 'function') {
+            return { success: false, operation: operation?.id, error: `Operation method is unavailable: ${method}` };
+          }
+
+          const result = await methodFn.apply(this, args);
+          return { success: true, operation: operation?.id, result };
         } catch (error) {
-          return { success: false, operation: operation.id, error: error.message };
+          return { success: false, operation: operation?.id, error: error.message };
         }
       });
 
-      const results = await Promise.allSettled(promises);
-      return results.map(result => result.value || { success: false, error: result.reason });
-    } catch (error) {
-      throw this.handleError(error, 'Batch operation failed');
-    }
+      return await Promise.all(promises);
+    }, 'Batch operation failed');
   }
 
   // ======================
@@ -1025,19 +640,12 @@ class ApiService {
   // Authentication Services
   // ======================
 
-  async register(email, password, name) {
-    try {
-      const response = await apiClient.post('/auth/register', { email, password, name });
-
-      // No token is returned anymore — user must verify email first
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to register');
-    }
+  register(email, password, name) {
+    return this._post('/auth/register', { email, password, name }, 'Failed to register');
   }
 
   async login(email, password) {
-    try {
+    return this._request(async () => {
       const response = await apiClient.post('/auth/login', { email, password });
 
       // Store token
@@ -1046,18 +654,13 @@ class ApiService {
       }
 
       return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to login');
-    }
+    }, 'Failed to login');
   }
 
   async logout() {
     try {
       await apiClient.post('/auth/logout');
-
-      // Remove token
       localStorage.removeItem('authToken');
-
       return { success: true };
     } catch (error) {
       // Even if the API call fails, remove the token locally
@@ -1066,49 +669,24 @@ class ApiService {
     }
   }
 
-  async getCurrentUser() {
-    try {
-      const response = await apiClient.get('/auth/me');
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to get current user');
-    }
+  getCurrentUser() {
+    return this._get('/auth/me', 'Failed to get current user');
   }
 
-  async forgotPassword(email) {
-    try {
-      const response = await apiClient.post('/auth/forgot-password', { email });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to request password reset');
-    }
+  forgotPassword(email) {
+    return this._post('/auth/forgot-password', { email }, 'Failed to request password reset');
   }
 
-  async resetPassword(token, password) {
-    try {
-      const response = await apiClient.post('/auth/reset-password', { token, password });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to reset password');
-    }
+  resetPassword(token, password) {
+    return this._post('/auth/reset-password', { token, password }, 'Failed to reset password');
   }
 
-  async verifyEmail(token) {
-    try {
-      const response = await apiClient.post('/auth/verify-email', { token });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to verify email');
-    }
+  verifyEmail(token) {
+    return this._post('/auth/verify-email', { token }, 'Failed to verify email');
   }
 
-  async resendVerification(email) {
-    try {
-      const response = await apiClient.post('/auth/resend-verification', { email });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to resend verification email');
-    }
+  resendVerification(email) {
+    return this._post('/auth/resend-verification', { email }, 'Failed to resend verification email');
   }
 }
 

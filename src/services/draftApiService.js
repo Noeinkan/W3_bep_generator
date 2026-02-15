@@ -1,7 +1,4 @@
-import axios from 'axios';
-
-// Use relative URL to leverage proxy configuration
-const API_BASE_URL = '/api';
+import { apiClient } from './apiService';
 
 /**
  * API-based Draft Service
@@ -22,7 +19,7 @@ class DraftApiService {
       const params = { userId };
       if (projectId) params.projectId = projectId;
 
-      const response = await axios.get(`${API_BASE_URL}/drafts`, {
+      const response = await apiClient.get('/drafts', {
         params
       });
 
@@ -49,7 +46,7 @@ class DraftApiService {
     }
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/drafts/${draftId}`, {
+      const response = await apiClient.get(`/drafts/${draftId}`, {
         params: { userId }
       });
 
@@ -83,7 +80,7 @@ class DraftApiService {
     }
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/drafts`, {
+      const response = await apiClient.post('/drafts', {
         userId,
         title,
         type,
@@ -115,7 +112,7 @@ class DraftApiService {
     }
 
     try {
-      const response = await axios.put(`${API_BASE_URL}/drafts/${draftId}`, {
+      const response = await apiClient.put(`/drafts/${draftId}`, {
         userId,
         ...updates
       });
@@ -143,7 +140,7 @@ class DraftApiService {
     }
 
     try {
-      const response = await axios.delete(`${API_BASE_URL}/drafts/${draftId}`, {
+      const response = await apiClient.delete(`/drafts/${draftId}`, {
         params: { userId }
       });
 
@@ -170,7 +167,7 @@ class DraftApiService {
     }
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/drafts/migrate`, {
+      const response = await apiClient.post('/drafts/migrate', {
         userId,
         drafts: localStorageDrafts
       });

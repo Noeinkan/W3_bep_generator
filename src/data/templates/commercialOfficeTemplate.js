@@ -1,3 +1,5 @@
+import { RESOURCE_COLUMNS_PRE, RESOURCE_COLUMNS_POST } from '../emptyBepData';
+
 // Commercial Office BEP Template
 // Contains pre-filled data for a typical commercial office project
 const COMMERCIAL_OFFICE_TEMPLATE = {
@@ -46,7 +48,7 @@ const COMMERCIAL_OFFICE_TEMPLATE = {
   ],
   teamCapabilities: 'Our multidisciplinary team brings 15+ years of BIM implementation experience across £500M+ of commercial projects. Key capabilities include: ISO 19650 certified information management, advanced parametric design using Revit/Grasshopper, integrated MEP coordination, 4D/5D modeling expertise, and digital twin development. Recent projects include the award-winning Tech Hub (£25M) and Riverside Commercial Center (£18M).',
   proposedResourceAllocation: {
-    columns: ['Role', 'Proposed Personnel', 'Key Competencies/Experience', 'Anticipated Weekly Allocation (Hours)', 'Software/Hardware Requirements', 'Notes'],
+    columns: RESOURCE_COLUMNS_PRE,
     data: [
       { 
         'Role': 'Senior BIM Coordinator', 
@@ -142,7 +144,7 @@ const COMMERCIAL_OFFICE_TEMPLATE = {
     { 'Role/Service': 'Specialist Facades', 'Company Name': 'Curtain Wall Experts Ltd.', 'Lead Contact': 'David Wilson - d.wilson@cwe.com', 'Contract Value': '£4.5M' }
   ],
   resourceAllocationTable: {
-    columns: ['Role', 'Assigned Personnel', 'Key Competencies/Experience', 'Weekly Allocation (Hours)', 'Software/Hardware Requirements', 'Notes'],
+    columns: RESOURCE_COLUMNS_POST,
     data: [
       { 
         'Role': 'Senior BIM Coordinator', 

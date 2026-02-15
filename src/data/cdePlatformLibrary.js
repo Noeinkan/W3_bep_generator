@@ -4,7 +4,10 @@
  * for the Multi-Platform CDE Strategy builder (Section 7.1)
  */
 
-// Platform vendor icons (using lucide-react compatible names)
+/**
+ * Platform vendor → lucide-react icon name mapping
+ * @type {Object<string, string>}
+ */
 export const VENDOR_ICONS = {
   autodesk: 'Box',
   bentley: 'Hexagon',
@@ -18,7 +21,21 @@ export const VENDOR_ICONS = {
 };
 
 /**
+ * @typedef {Object} CDEPlatform
+ * @property {string} id - Unique platform identifier
+ * @property {string} name - Display name
+ * @property {string} vendor - Vendor name
+ * @property {string} icon - Key into VENDOR_ICONS
+ * @property {string} color - Hex color code
+ * @property {string} defaultRole - Default functional role key
+ * @property {string[]} capabilities - Platform capabilities
+ * @property {string[]} supportedFormats - Supported file format codes
+ * @property {string} description - Short platform description
+ */
+
+/**
  * Pre-defined CDE platforms with metadata
+ * @type {Object<string, CDEPlatform>}
  */
 export const PLATFORM_LIBRARY = {
   // Autodesk Ecosystem
@@ -252,7 +269,21 @@ export const PLATFORM_LIBRARY = {
 };
 
 /**
+ * @typedef {Object} PlatformRole
+ * @property {string} id - Role identifier
+ * @property {string} label - Full display label
+ * @property {string} shortLabel - Abbreviated label
+ * @property {string} description - Role description
+ * @property {string} color - Hex text color
+ * @property {string} bgColor - Hex background color
+ * @property {string} borderColor - Hex border color
+ * @property {string[]} workflowStates - ISO 19650 workflow states
+ * @property {number} order - Display sort order
+ */
+
+/**
  * Functional roles for CDE platforms
+ * @type {Object<string, PlatformRole>}
  */
 export const PLATFORM_ROLES = {
   authoring: {
@@ -512,7 +543,7 @@ export const getDataFormatList = () => {
 /**
  * Helper: Get template by ID
  */
-export const getTemplateById = (id) => {
+export const getEcosystemTemplateById = (id) => {
   return ECOSYSTEM_TEMPLATES[id] || null;
 };
 

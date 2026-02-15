@@ -1,6 +1,14 @@
 import EMPTY_BEP_DATA from './emptyBepData';
 import COMMERCIAL_OFFICE_TEMPLATE from './templates/commercialOfficeTemplate';
 
+const deepClone = (value) => {
+  if (typeof structuredClone === 'function') {
+    return structuredClone(value);
+  }
+
+  return JSON.parse(JSON.stringify(value));
+};
+
 /**
  * Default ISO19650 CDE Folder Structure Diagram
  * Used as fallback when templates don't specify a custom fileStructureDiagram
@@ -111,7 +119,7 @@ export const TEMPLATE_REGISTRY = [
  * @returns {Object} Empty BEP data object
  */
 export const getEmptyBepData = () => {
-  return { ...EMPTY_BEP_DATA };
+  return deepClone(EMPTY_BEP_DATA);
 };
 
 /**
@@ -122,15 +130,17 @@ export const getEmptyBepData = () => {
 export const getTemplateById = (templateId) => {
   const template = TEMPLATE_REGISTRY.find(t => t.id === templateId);
   if (!template) {
-    console.warn(`Template not found: ${templateId}`);
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`Template not found: ${templateId}`);
+    }
     return null;
   }
 
   // Merge template data with empty base to ensure all fields exist
-  const mergedData = {
+  const mergedData = deepClone({
     ...EMPTY_BEP_DATA,
     ...template.data
-  };
+  });
 
   // Fall back to default ISO19650 folder structure if not specified
   if (!mergedData.fileStructureDiagram || mergedData.fileStructureDiagram.trim() === '') {

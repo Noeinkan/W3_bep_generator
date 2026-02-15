@@ -1,6 +1,8 @@
 import { toPng } from 'html-to-image';
 import { compressImagesBatch } from '../utils/imageCompression';
 
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
 /**
  * Simplified screenshot capture service for custom visual components
  * Captures screenshots from components rendered by HiddenComponentsRenderer
@@ -118,7 +120,7 @@ export const captureCustomComponentScreenshots = async (formData) => {
   console.log('✅ Screenshots captured and compressed');
 
   // Save to window for debugging
-  if (typeof window !== 'undefined') {
+  if (!IS_PRODUCTION && typeof window !== 'undefined') {
     window.lastCapturedScreenshots = compressedScreenshots;
   }
 

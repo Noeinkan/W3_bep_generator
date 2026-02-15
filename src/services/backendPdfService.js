@@ -1,7 +1,4 @@
-import axios from 'axios';
-
-// Use relative URL to leverage proxy configuration
-const API_BASE_URL = '';
+import { apiClient } from './apiService';
 
 /**
  * Generate BEP PDF on server using Puppeteer
@@ -32,8 +29,8 @@ export const generateBEPPDFOnServer = async (
     const timeout = options.quality === 'high' ? 120000 : 60000;
 
     // Send POST request to backend
-    const response = await axios.post(
-      `${API_BASE_URL}/api/export/bep/pdf`,
+    const response = await apiClient.post(
+      '/export/bep/pdf',
       {
         formData,
         bepType,
@@ -137,7 +134,7 @@ export const generateBEPPDFOnServer = async (
  */
 export const checkBackendAvailability = async () => {
   try {
-    await axios.get(`${API_BASE_URL}/api/health`, { timeout: 5000 });
+    await apiClient.get('/health', { timeout: 5000 });
     return true;
   } catch (error) {
     console.warn('Backend server not available:', error.message);
