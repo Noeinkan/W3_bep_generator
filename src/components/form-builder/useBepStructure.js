@@ -10,6 +10,23 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 const API_BASE_URL = process.env.REACT_APP_API_URL
   || (typeof window !== 'undefined' ? window.location.origin : '');
 
+const normalizeBaseUrl = (url = '') => url.replace(/\/+$/, '');
+
+const buildBepStructureUrl = (endpoint = '') => {
+  const base = normalizeBaseUrl(API_BASE_URL);
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+  if (!base) {
+    return `/api/bep-structure${cleanEndpoint}`;
+  }
+
+  if (base.endsWith('/api')) {
+    return `${base}/bep-structure${cleanEndpoint}`;
+  }
+
+  return `${base}/api/bep-structure${cleanEndpoint}`;
+};
+
 /**
  * useBepStructure
  *
@@ -36,7 +53,7 @@ export function useBepStructure({ projectId = null, draftId = null, bepType = nu
   // ========================================
 
   const apiCall = useCallback(async (endpoint, options = {}) => {
-    const url = `${API_BASE_URL}/api/bep-structure${endpoint}`;
+    const url = buildBepStructureUrl(endpoint);
     const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',

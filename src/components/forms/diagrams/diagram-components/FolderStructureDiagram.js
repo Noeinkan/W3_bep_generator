@@ -1064,7 +1064,7 @@ const FolderStructureDiagram = ({ field, value, onChange, error }) => {
       )}
 
       {/* Custom Styles */}
-      <style jsx>{`
+      <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 8px;
         }
