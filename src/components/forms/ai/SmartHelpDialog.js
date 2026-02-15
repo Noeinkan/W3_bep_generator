@@ -287,7 +287,7 @@ const SmartHelpDialog = ({
         </div>
 
         {/* Content */}
-        <div ref={contentRef} className="flex-1 overflow-y-auto -mx-6 -mb-4 p-6">
+        <div ref={contentRef} className="flex-1 min-h-0 overflow-y-auto -mx-6 -mb-4 p-6">
           {renderTabContent()}
         </div>
     </Modal>

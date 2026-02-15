@@ -106,7 +106,7 @@ const Modal = ({
         )}
 
         {/* Body */}
-        <div className={cn('px-6 py-4', !title && 'pt-6')}>
+        <div className={cn('px-6 py-4 flex flex-col flex-1 min-h-0', !title && 'pt-6')}>
           {children}
         </div>
 
