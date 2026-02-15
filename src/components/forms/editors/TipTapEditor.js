@@ -46,6 +46,8 @@ const TipTapEditor = ({
         history: {
           depth: 100, // Robust undo/redo history
         },
+        link: false,
+        underline: false,
       }),
       Underline,
       TextAlign.configure({
@@ -338,7 +340,7 @@ const TipTapEditor = ({
 
 
       {/* Custom Styles */}
-      <style jsx>{`
+      <style>{`
         .tiptap-editor {
           padding: ${compactMode ? '0.375rem 0.5rem' : '0.75rem'};
           min-height: ${minHeight};

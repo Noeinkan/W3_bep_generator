@@ -65,6 +65,7 @@ Most BEP tools are static templates or basic form fillers. BEP Suite is differen
 
 ### Frontend
 - **React 19.1.1** - Modern UI framework
+- **Vite 7.x** - Frontend dev server and production bundler
 - **React Router DOM 7.9.3** - Client-side routing
 - **TipTap 3.6.2** - Rich text editor with extensive extensions
 - **@xyflow/react 12.8.6** - Interactive node-based diagrams
@@ -343,9 +344,10 @@ This launches both the main application and ML service.
 #### Frontend & Backend
 
 - **`npm start`** - Runs frontend (3000) and backend (3001) in development mode
-- **`npm test`** - Launches test runner in interactive watch mode
-- **`npm run build`** - Builds production-ready app to `build` folder (8GB memory allocation)
-- **`npm run eject`** - Ejects from Create React App (one-way operation)
+- **`npm test`** - Runs frontend tests with Vitest
+- **`npm run test:ui`** - Opens Vitest UI
+- **`npm run build`** - Builds production-ready app to `build` folder
+- **`npm run preview`** - Serves the production build locally on port 4173
 
 #### ML Service
 
@@ -666,7 +668,7 @@ For issues, questions, or feature requests, please contact the development team 
 ## Acknowledgments
 
 - **ISO 19650** - International standards for information management using BIM
-- **Create React App** - React development environment
+- **Vite** - Fast frontend tooling and bundling
 - **TipTap** - Excellent rich text editor framework
 - **Ollama** - Local LLM runtime for AI capabilities
 - **FastAPI** - Modern Python web framework for ML API
@@ -674,7 +676,7 @@ For issues, questions, or feature requests, please contact the development team 
 ## Learn More
 
 ### React Resources
-- [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started)
+- [Vite documentation](https://vite.dev/guide/)
 - [React documentation](https://reactjs.org/)
 
 ### BIM Standards

@@ -1,7 +1,7 @@
 # CLAUDE.md — BEP Generator
 
 ## Project Overview
-BEP Generator — React 19 + Express + SQLite tool for building/exporting BEP documents.
+BEP Generator — React 19 + Vite + Express + SQLite tool for building/exporting BEP documents.
 
 ## Environment
 This is a Windows development environment. For bash commands, use PowerShell-compatible syntax and handle output display issues by using explicit print/echo statements or alternative verification methods.
@@ -21,7 +21,7 @@ This is a Windows development environment. For bash commands, use PowerShell-com
 
 ## Project layout
 
-- Frontend: `src/` — React 19 + CRA (`react-scripts`). Feature folders inside `src/components/`.
+- Frontend: `src/` — React 19 + Vite. Feature folders inside `src/components/`.
 - Backend: `server/` — Express + better-sqlite3. Routes in `server/routes/`, business logic in `server/services/`.
 - ML service: `ml-service/` — Python + Ollama. Separate process.
 - All three start together via `npm start` (concurrently).
@@ -32,7 +32,7 @@ This is a Windows development environment. For bash commands, use PowerShell-com
 - **State:** React Context + local state. No global store (no Redux/Zustand).
 - **API calls:** Service layer in `src/services/` wraps fetch/axios calls.
 - **Styles:** Tailwind CSS. No custom CSS files unless necessary.
-- **Tests:** Jest. Frontend tests in `src/__tests__/`. Run with `npm test`.
+- **Tests:** Vitest. Frontend tests in `src/__tests__/`. Run with `npm test`.
 - **DB:** SQLite via better-sqlite3 (synchronous). DB files in `server/db/`.
 
 ## Things to watch out for
@@ -42,7 +42,7 @@ This is a Windows development environment. For bash commands, use PowerShell-com
 - better-sqlite3 is synchronous — don't accidentally introduce async patterns around DB calls.
 - Puppeteer (PDF export) is heavy; avoid pulling it into frontend bundles.
 - Security middleware (Helmet, rate-limit) exists but some is commented out in dev — don't remove it.
-- CRA (react-scripts) constrains webpack config; don't try to eject or override without good reason.
+- Vite handles frontend bundling and dev server; keep `vite.config.js` aligned with existing proxy/env behavior.
 - The ML service is a separate Python process — changes there need a separate restart.
 
 ## Token optimization — MANDATORY
@@ -74,8 +74,10 @@ Before ANY exploration, read `.claude/project-index.md`. It maps every directory
 |------|---------|
 | Start all | `npm start` |
 | Tests | `npm test` |
-| Frontend only | `npm run start:client` |
-| Backend only | `npm run start:server` |
+| Frontend only | `npm run start:frontend` |
+| Backend only | `npm run start:backend` |
+| Build | `npm run build` |
+| Preview build | `npm run preview` |
 
 ## Common patterns
 
