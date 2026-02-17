@@ -41,6 +41,7 @@ This is a Windows development environment. For bash commands, use PowerShell-com
 - **form-builder barrel exports.** Sub-modules have their own barrels: import from `form-builder/field-editor`, `form-builder/step-editor`, etc. The top-level `form-builder/index.js` re-exports `FormBuilderProvider`, `useFormBuilder`, and `BepStructureMap`.
 - better-sqlite3 is synchronous — don't accidentally introduce async patterns around DB calls.
 - Puppeteer (PDF export) is heavy; avoid pulling it into frontend bundles.
+- **Export pipeline:** PDF/DOCX generation uses `htmlTemplateService` (renders HTML with `server/services/templates/bepStyles.css`) → Puppeteer. Temp files go to `server/temp/` and should be cleaned up after export.
 - Security middleware (Helmet, rate-limit) exists but some is commented out in dev — don't remove it.
 - Vite handles frontend bundling and dev server; keep `vite.config.js` aligned with existing proxy/env behavior.
 - The ML service is a separate Python process — changes there need a separate restart.
@@ -84,6 +85,7 @@ Before ANY exploration, read `.claude/project-index.md`. It maps every directory
 - **New API endpoint:** Route in `server/routes/` → Service in `server/services/` → Frontend call in `src/services/apiService.js`
 - **New form:** Schema in `src/schemas/` → Component uses `useForm` with `zodResolver`
 - **New page:** Add to `src/components/pages/` → Register route in `App.js`
+- **Export/PDF generation:** Data → `htmlTemplateService.js` (render HTML + CSS from `templates/`) → `puppeteerPdfService.js` (Puppeteer) → temp file in `server/temp/` → stream to client → cleanup
 
 ## Session Management
 When hitting usage limits mid-task, always save progress by:

@@ -178,3 +178,17 @@
   opacity: 1;
   transform: translateX(-50%) translateY(-4px);
 }
+
+.rich-text-preview p {
+  margin: 0.5rem 0;
+}
+
+.rich-text-preview img,
+.rich-text-preview .tiptap-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.75rem 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+}

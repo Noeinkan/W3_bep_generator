@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { Users, Download, Upload, Plus } from 'lucide-react';
 import { exportTidpCsvTemplate, importTidpFromCsv } from '../../utils/csvHelpers';
+import apiService from '../../services/apiService';
 
 const TIDPList = ({
   tidps,
@@ -101,8 +102,7 @@ const TIDPList = ({
       if (typeof onBulkUpdate === 'function') {
         await onBulkUpdate(selectedIds.map((id) => ({ id, update: fields })));
       } else {
-        const ApiService = require('../../services/apiService').default || require('../../services/apiService');
-        await ApiService.updateTIDPBatch(selectedIds.map((id) => ({ id, update: fields })));
+        await apiService.updateTIDPBatch(selectedIds.map((id) => ({ id, update: fields })));
       }
       onToast({ open: true, message: `Updated ${selectedIds.length} TIDPs`, type: 'success' });
       setShowBulkEdit(false);

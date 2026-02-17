@@ -10,6 +10,7 @@ const ForgotPasswordPage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [resetUrl, setResetUrl] = useState('');
+  const [emailDebug, setEmailDebug] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const {
@@ -26,6 +27,7 @@ const ForgotPasswordPage = () => {
       setError('');
       setSuccess('');
       setResetUrl('');
+      setEmailDebug(null);
 
       const result = await forgotPassword(data.email);
 
@@ -34,6 +36,10 @@ const ForgotPasswordPage = () => {
         // In development, show the reset URL
         if (result.resetUrl) {
           setResetUrl(result.resetUrl);
+        }
+
+        if (result.emailDebug) {
+          setEmailDebug(result.emailDebug);
         }
       } else {
         setError(result.error || 'Failed to process password reset request.');
@@ -102,6 +108,11 @@ const ForgotPasswordPage = () => {
                 </div>
                 <div className="ml-3">
                   <p className="text-sm text-green-800">{success}</p>
+                  {emailDebug && !emailDebug.sent && (
+                    <p className="mt-2 text-xs text-amber-700">
+                      Email delivery failed on server ({emailDebug.error || 'unknown error'}).
+                    </p>
+                  )}
                   {resetUrl && (
                     <div className="mt-2">
                       <p className="text-xs text-green-700 font-semibold">Development Mode:</p>

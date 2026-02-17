@@ -2,7 +2,11 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
 const { format } = require('date-fns');
+
+const execFileAsync = promisify(execFile);
 
 class ExportService {
   constructor() {
@@ -1325,6 +1329,94 @@ class ExportService {
 
     doc.end();
     return filepath;
+  }
+
+  sanitizeFilename(input) {
+    return String(input || 'export')
+      .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
+      .replace(/\s+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 120) || 'export';
+  }
+
+  buildAccFolderStructure(baseDir) {
+    const folders = {
+      appointment: path.join(baseDir, 'Appointment'),
+      workInProgress: path.join(baseDir, 'Work In Progress'),
+      workInProgressTidps: path.join(baseDir, 'Work In Progress', 'TIDPs'),
+      shared: path.join(baseDir, 'Shared'),
+      sharedPlanning: path.join(baseDir, 'Shared', 'Planning'),
+      sharedDeliveryPlans: path.join(baseDir, 'Shared', 'DeliveryPlans'),
+      sharedMatrices: path.join(baseDir, 'Shared', 'Matrices'),
+      published: path.join(baseDir, 'Published'),
+      archive: path.join(baseDir, 'Archive')
+    };
+
+    Object.values(folders).forEach((folderPath) => {
+      if (!fs.existsSync(folderPath)) {
+        fs.mkdirSync(folderPath, { recursive: true });
+      }
+    });
+
+    return folders;
+  }
+
+  createAccManifest(data = {}) {
+    return {
+      schemaVersion: '1.0',
+      packageType: 'acc-iso19650-folder-package',
+      generatedAt: new Date().toISOString(),
+      project: {
+        id: data.projectId || null,
+        name: data.projectName || 'Project',
+        accHubId: data.accHubId || null,
+        accProjectId: data.accProjectId || null,
+        accDefaultFolder: data.accDefaultFolder || null
+      },
+      bepType: data.bepType || null,
+      isoReference: 'ISO 19650',
+      files: Array.isArray(data.files) ? data.files : []
+    };
+  }
+
+  async createAccPackageArchive(sourceDir, outputBaseName) {
+    this.ensureTempDir();
+
+    const safeBase = this.sanitizeFilename(outputBaseName || `ACC_${format(new Date(), 'yyyyMMdd_HHmmss')}`);
+    const zipPath = path.join(this.tempDir, `${safeBase}.zip`);
+
+    if (fs.existsSync(zipPath)) {
+      fs.unlinkSync(zipPath);
+    }
+
+    if (process.platform === 'win32') {
+      const sourceEscaped = sourceDir.replace(/'/g, "''");
+      const zipEscaped = zipPath.replace(/'/g, "''");
+      const command = `Compress-Archive -Path '${sourceEscaped}\\*' -DestinationPath '${zipEscaped}' -Force`;
+
+      try {
+        await execFileAsync('powershell', ['-NoProfile', '-NonInteractive', '-Command', command]);
+      } catch (error) {
+        if (error.code === 'ENOENT') {
+          throw new Error('Archive tooling is unavailable: PowerShell not found for zip creation');
+        }
+        throw new Error(`Failed to create ACC package archive: ${error.stderr || error.message}`);
+      }
+
+      return zipPath;
+    }
+
+    try {
+      await execFileAsync('zip', ['-r', '-q', zipPath, '.'], { cwd: sourceDir });
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        throw new Error('Archive tooling is unavailable: zip command not found');
+      }
+      throw new Error(`Failed to create ACC package archive: ${error.stderr || error.message}`);
+    }
+
+    return zipPath;
   }
 
   /**

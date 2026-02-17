@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FolderOpen, Plus, ArrowRight, Trash2, Pencil, Check, X, ArrowLeft, FileText, Calendar } from 'lucide-react';
 import { useProject } from '../../contexts/ProjectContext';
 import toast from 'react-hot-toast';
+import ConfirmDialog from '../common/ConfirmDialog';
 
 const ProjectsPage = () => {
   const navigate = useNavigate();
@@ -20,6 +21,8 @@ const ProjectsPage = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState(null);
 
   const handleCreate = async () => {
     const name = newProjectName.trim();
@@ -42,16 +45,28 @@ const ProjectsPage = () => {
     navigate('/bep-generator');
   };
 
-  const handleDelete = async (e, project) => {
+  const handleDelete = (e, project) => {
     e.stopPropagation();
-    if (!window.confirm(`Delete project "${project.name}"? This will not delete associated drafts or TIDPs.`)) return;
+    setProjectToDelete(project);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!projectToDelete) return;
 
     try {
-      await deleteProject(project.id);
+      await deleteProject(projectToDelete.id);
       toast.success('Project deleted');
+      setDeleteDialogOpen(false);
+      setProjectToDelete(null);
     } catch (err) {
       toast.error('Failed to delete project');
     }
+  };
+
+  const cancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setProjectToDelete(null);
   };
 
   const handleStartEdit = (e, project) => {
@@ -321,6 +336,18 @@ const ProjectsPage = () => {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        title="Delete Project"
+        message={`Delete project "${projectToDelete?.name}"? This will permanently delete all associated drafts, BEPs, TIDPs, and MIDPs. This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmVariant="danger"
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 };

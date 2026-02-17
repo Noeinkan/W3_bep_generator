@@ -7,6 +7,7 @@ import { useExport } from '../../../hooks/useExport';
 import { useProject } from '../../../contexts/ProjectContext';
 import { getDefaultContainer } from '../../../utils/csvHelpers';
 import toast, { Toaster } from 'react-hot-toast';
+import apiService from '../../../services/apiService';
 import TIDPImportDialog from '../../tidp/TIDPImportDialog';
 import MIDPEvolutionDashboard from '../../midp/MIDPEvolutionDashboard';
 import TIDPList from '../../tidp/TIDPList';
@@ -87,11 +88,8 @@ const TidpMidpManager = ({ onClose, initialShowTidpForm = false, initialShowMidp
             // If initialTidpId was provided as 'id--slug', split on the double-dash separator to get the id
             const rawParts = String(initialTidpId).split('--');
             const idOnly = rawParts[0];
-            const t = await (async () => {
-              const ApiService = require('../../../services/apiService').default || require('../../../services/apiService');
-              const resp = await ApiService.getTIDP(idOnly);
-              return resp.data || resp;
-            })();
+            const resp = await apiService.getTIDP(idOnly);
+            const t = resp.data || resp;
 
             if (t) {
               // Populate tidpForm and detailsForm, and show the tidp form for editing

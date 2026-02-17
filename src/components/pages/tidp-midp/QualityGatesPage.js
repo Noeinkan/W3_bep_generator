@@ -1,64 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ShieldCheck, CheckCircle2, Clock, Users } from 'lucide-react';
+import React from 'react';
+import { ShieldCheck, CheckCircle2, Clock, Users } from 'lucide-react';
 import ApiService from '../../../services/apiService';
-import toast from 'react-hot-toast';
+import { useMidpSubPage } from '../../../hooks/useMidpSubPage';
+import { MidpSubPageLayout } from '../../common/MidpSubPageLayout';
 
 const QualityGatesPage = () => {
-  const { midpId } = useParams();
-  const navigate = useNavigate();
-  const [gates, setGates] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data, loading } = useMidpSubPage(
+    ApiService.getMIDPQualityGates,
+    'Failed to load quality gates'
+  );
 
-  useEffect(() => {
-    loadQualityGates();
-  }, [midpId]);
-
-  const loadQualityGates = async () => {
-    setLoading(true);
-    try {
-      const response = await ApiService.getMIDPQualityGates(midpId);
-      const gatesData = response.data?.qualityGates || response.data || [];
-      setGates(Array.isArray(gatesData) ? gatesData : []);
-    } catch (error) {
-      console.error('Failed to load quality gates:', error);
-      toast.error('Failed to load quality gates');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
-    );
-  }
+  const gatesData = data?.qualityGates || data || [];
+  const gates = Array.isArray(gatesData) ? gatesData : [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Header */}
-      <div className="sticky top-0 z-30 bg-white shadow-lg border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={() => navigate('/tidp-midp')}
-              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
-              <ShieldCheck className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Quality Gates</h1>
-              <p className="text-sm text-gray-600">{gates.length} gate{gates.length !== 1 ? 's' : ''} defined</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <MidpSubPageLayout
+      title="Quality Gates"
+      subtitle={`${gates.length} gate${gates.length !== 1 ? 's' : ''} defined`}
+      icon={ShieldCheck}
+      iconGradient="from-violet-500 to-purple-600"
+      loading={loading}
+    >
       <div className="max-w-7xl mx-auto px-4 py-6">
         {gates.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
@@ -126,7 +88,7 @@ const QualityGatesPage = () => {
           </div>
         )}
       </div>
-    </div>
+    </MidpSubPageLayout>
   );
 };
 

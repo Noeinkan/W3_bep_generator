@@ -32,6 +32,27 @@ class MIDPService {
     // SQLite database for persistent storage
   }
 
+  validateTidpProjectScope(tidps, requestedProjectId = null) {
+    if (!Array.isArray(tidps) || tidps.length === 0) {
+      throw new Error('At least one TIDP is required to create/update an MIDP');
+    }
+
+    const projectIds = _.uniq(tidps.map((tidp) => tidp?.projectId || null));
+    const nonNullProjectIds = projectIds.filter((id) => !!id);
+
+    if (nonNullProjectIds.length !== 1 || projectIds.length !== 1) {
+      throw new Error('All TIDPs must belong to the same project');
+    }
+
+    const scopedProjectId = nonNullProjectIds[0];
+
+    if (requestedProjectId && requestedProjectId !== scopedProjectId) {
+      throw new Error('Provided MIDP projectId does not match TIDP project scope');
+    }
+
+    return scopedProjectId;
+  }
+
   /**
    * Auto-generate MIDP from ALL TIDPs in the database (no projectId filter)
    * @param {Object} midpData - Basic MIDP information
@@ -169,10 +190,12 @@ class MIDPService {
    */
   createMIDPFromTIDPs(midpData, tidpIds) {
     const tidps = tidpIds.map(id => tidpService.getTIDP(id));
+    const scopedProjectId = this.validateTidpProjectScope(tidps, midpData?.projectId || null);
 
     const midp = {
       id: uuidv4(),
       ...midpData,
+      projectId: scopedProjectId,
       includedTIDPs: tidpIds,
       aggregatedData: this.aggregateTIDPs(tidps),
       deliverySchedule: this.generateDeliverySchedule(tidps),
@@ -204,7 +227,7 @@ class MIDPService {
       JSON.stringify(midp.resourcePlan || {}),
       midpData.description || '',
       JSON.stringify(midp.qualityGates || []),
-      midpData.projectId || null,
+      scopedProjectId,
       midp.createdAt,
       midp.updatedAt,
       midp.version,
@@ -230,6 +253,7 @@ class MIDPService {
     }
 
     const tidps = updatedTidpIds.map(id => tidpService.getTIDP(id));
+    const scopedProjectId = this.validateTidpProjectScope(tidps, existingMidp.projectId || null);
 
     const updatedAt = new Date().toISOString();
     const version = this.incrementVersion(existingMidp.version);
@@ -243,7 +267,7 @@ class MIDPService {
     // Update MIDP
     const updateStmt = db.prepare(`
       UPDATE midps
-      SET aggregated_data = ?, delivery_schedule = ?, included_tidps = ?, risk_register = ?, dependency_matrix = ?, resource_plan = ?, updatedAt = ?, version = ?
+      SET aggregated_data = ?, delivery_schedule = ?, included_tidps = ?, risk_register = ?, dependency_matrix = ?, resource_plan = ?, projectId = ?, updatedAt = ?, version = ?
       WHERE id = ?
     `);
 
@@ -254,6 +278,7 @@ class MIDPService {
       JSON.stringify(riskRegister),
       JSON.stringify(dependencyMatrix),
       JSON.stringify(resourcePlan),
+      scopedProjectId,
       updatedAt,
       version,
       midpId
@@ -933,6 +958,11 @@ class MIDPService {
 
   getAllMIDPs() {
     const midps = db.prepare('SELECT * FROM midps').all();
+    return midps.map(m => this.getMIDP(m.id));
+  }
+
+  getMIDPsByProject(projectId) {
+    const midps = db.prepare('SELECT * FROM midps WHERE projectId = ?').all(projectId);
     return midps.map(m => this.getMIDP(m.id));
   }
 

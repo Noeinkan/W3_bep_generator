@@ -1,14 +1,15 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBepForm } from '../../../contexts/BepFormContext';
+import { useProject } from '../../../contexts/ProjectContext';
 import { useTidpData } from '../../../hooks/useTidpData';
 import { useMidpData } from '../../../hooks/useMidpData';
 import PreviewExportPage from '../PreviewExportPage';
 import { generateBEPContent } from '../../../services/bepFormatter';
 import { generateBEPPDFOnServer } from '../../../services/backendPdfService';
 import { generateDocx } from '../../../services/docxGenerator';
-import { generateDocxSimple } from '../../../services/docxGenerator.simple';
 import { captureCustomComponentScreenshots } from '../../../services/componentScreenshotCapture';
+import apiService from '../../../services/apiService';
 import HiddenComponentsRenderer from '../../export/HiddenComponentsRenderer';
 import toast from 'react-hot-toast';
 
@@ -18,6 +19,7 @@ import toast from 'react-hot-toast';
 const BepPreviewView = () => {
   const navigate = useNavigate();
   const { bepType, getFormData } = useBepForm();
+  const { currentProject } = useProject();
   const { tidps } = useTidpData();
   const { midps } = useMidpData();
 
@@ -123,8 +125,7 @@ const BepPreviewView = () => {
 
         // Generate DOCX with component images
         setStatusMessage('Generating Word document...');
-        // Using simple version for testing
-        const docxBlob = await generateDocxSimple(formData, bepType, {
+        const docxBlob = await generateDocx(formData, bepType, {
           tidpData: tidps,
           midpData: midps,
           componentImages: componentScreenshots
@@ -137,9 +138,36 @@ const BepPreviewView = () => {
         const blob = new Blob([content], { type: 'text/html;charset=utf-8' });
         downloadBlob(blob, `BEP_${bepType}_${new Date().toISOString().split('T')[0]}.html`);
         setStatusMessage(`Document exported successfully as ${exportFormat.toUpperCase()}.`);
+      } else if (exportFormat === 'acc-package') {
+        setStatusMessage('Capturing component diagrams for ACC package...');
+
+        let componentScreenshots = {};
+        try {
+          componentScreenshots = await captureCustomComponentScreenshots(formData);
+        } catch (captureError) {
+          console.error('Error capturing screenshots for ACC package:', captureError);
+          toast.error('Warning: Some diagrams may not appear in the ACC package');
+        }
+
+        setStatusMessage('Building ACC folder package...');
+
+        await apiService.exportACCFolderPackage({
+          projectId: currentProject?.id,
+          projectName: formData?.projectName || currentProject?.name || 'Project',
+          formData,
+          bepType,
+          componentImages: componentScreenshots,
+          options: {
+            orientation: 'portrait'
+          }
+        });
+
+        setStatusMessage('ACC folder package exported successfully.');
+        toast.success('ACC folder package generated successfully!');
       }
     } catch (error) {
       setStatusMessage(`Export failed: ${error.message}`);
+      toast.error(error.message || 'Export failed');
     } finally {
       setIsGenerating(false);
       if (statusMessage.includes('successfully') || statusMessage.includes('failed')) {
@@ -147,7 +175,7 @@ const BepPreviewView = () => {
       }
       setStatusMessage('');
     }
-  }, [exportFormat, formData, bepType, tidps, midps, downloadBlob, statusMessage]);
+  }, [exportFormat, formData, bepType, tidps, midps, downloadBlob, statusMessage, currentProject?.id, currentProject?.name]);
 
   const handleBack = useCallback(() => {
     navigate(-1); // Go back to previous step

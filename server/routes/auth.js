@@ -79,6 +79,34 @@ router.post('/logout', (req, res) => {
 });
 
 /**
+ * GET /api/auth/email-health
+ * Email service diagnostics (non-production only)
+ */
+router.get('/email-health', async (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'Not found' });
+  }
+
+  try {
+    const status = emailService.getStatus();
+    const verification = await emailService.verifyConnection();
+
+    return res.json({
+      success: true,
+      email: {
+        ...status,
+        verification
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to check email service health'
+    });
+  }
+});
+
+/**
  * GET /api/auth/me
  * Get current user (protected)
  */
@@ -93,6 +121,7 @@ router.get('/me', authenticateToken, (req, res) => {
 router.post('/forgot-password', validate(forgotPasswordSchema), async (req, res) => {
   try {
     const { email } = req.body;
+    const emailStatus = emailService.getStatus();
 
     const user = authService.getUserByEmail(email);
 
@@ -106,18 +135,30 @@ router.post('/forgot-password', validate(forgotPasswordSchema), async (req, res)
     const resetToken = authService.createPasswordResetToken(user.id);
     const appBase = process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`;
     const resetUrl = `${appBase}/reset-password/${resetToken}`;
+    let emailError = null;
 
     // Send password reset email
     try {
       const mail = passwordResetEmail({ name: user.name, resetUrl });
       await emailService.sendMail({ to: email, subject: mail.subject, text: mail.text, html: mail.html });
     } catch (err) {
-      console.error('Failed to send password reset email:', err && err.message);
+      emailError = (err && err.message) || 'Unknown email delivery error';
+      console.error('Failed to send password reset email:', emailError);
     }
 
     res.json({
       message: 'If an account with that email exists, a password reset link has been sent.',
-      ...(process.env.NODE_ENV !== 'production' && { resetToken, resetUrl })
+      ...(process.env.NODE_ENV !== 'production' && {
+        resetToken,
+        resetUrl,
+        emailDebug: {
+          configured: emailStatus.configured,
+          mode: emailStatus.mode,
+          from: emailStatus.from,
+          sent: !emailError,
+          error: emailError
+        }
+      })
     });
   } catch (error) {
     console.error('Forgot password error:', error);

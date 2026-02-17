@@ -203,11 +203,30 @@ db.exec(`
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     user_id TEXT NOT NULL,
+    acc_hub_id TEXT,
+    acc_project_id TEXT,
+    acc_default_folder TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
 
   CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
+
+  CREATE TABLE IF NOT EXISTS acc_secrets (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    secret_type TEXT NOT NULL,
+    encrypted_value TEXT NOT NULL,
+    iv TEXT NOT NULL,
+    auth_tag TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(project_id, secret_type),
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_acc_secrets_project_id ON acc_secrets(project_id);
+  CREATE INDEX IF NOT EXISTS idx_acc_secrets_secret_type ON acc_secrets(secret_type);
 
   -- Client Documents: EIR and other client-provided documents for analysis
   CREATE TABLE IF NOT EXISTS client_documents (
@@ -304,6 +323,58 @@ if (!hasEmailVerified) {
     console.error('Could not add email_verified column:', err.message);
   }
 }
+
+// Migration: add ACC linkage columns to projects table if missing
+const projectColumns = db.prepare("PRAGMA table_info(projects)").all();
+const hasAccHubId = projectColumns.some(col => col.name === 'acc_hub_id');
+const hasAccProjectId = projectColumns.some(col => col.name === 'acc_project_id');
+const hasAccDefaultFolder = projectColumns.some(col => col.name === 'acc_default_folder');
+
+if (!hasAccHubId) {
+  try {
+    db.exec('ALTER TABLE projects ADD COLUMN acc_hub_id TEXT');
+    console.log('Migration: added acc_hub_id column to projects');
+  } catch (err) {
+    console.error('Could not add acc_hub_id column:', err.message);
+  }
+}
+
+if (!hasAccProjectId) {
+  try {
+    db.exec('ALTER TABLE projects ADD COLUMN acc_project_id TEXT');
+    console.log('Migration: added acc_project_id column to projects');
+  } catch (err) {
+    console.error('Could not add acc_project_id column:', err.message);
+  }
+}
+
+if (!hasAccDefaultFolder) {
+  try {
+    db.exec('ALTER TABLE projects ADD COLUMN acc_default_folder TEXT');
+    console.log('Migration: added acc_default_folder column to projects');
+  } catch (err) {
+    console.error('Could not add acc_default_folder column:', err.message);
+  }
+}
+
+// Migration safety: ensure acc_secrets table and indexes exist on existing DBs
+db.exec(`
+  CREATE TABLE IF NOT EXISTS acc_secrets (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    secret_type TEXT NOT NULL,
+    encrypted_value TEXT NOT NULL,
+    iv TEXT NOT NULL,
+    auth_tag TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(project_id, secret_type),
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_acc_secrets_project_id ON acc_secrets(project_id);
+  CREATE INDEX IF NOT EXISTS idx_acc_secrets_secret_type ON acc_secrets(secret_type);
+`);
 
 // Create indexes for draft_id (safe to run even if they exist)
 db.exec('CREATE INDEX IF NOT EXISTS idx_step_configs_draft ON bep_step_configs(draft_id)');

@@ -10,6 +10,11 @@ const tidpSyncService = require('../services/tidpSyncService');
 const puppeteerPdfService = require('../services/puppeteerPdfService');
 const htmlTemplateService = require('../services/htmlTemplateService');
 const eirExportService = require('../services/eirExportService');
+const projectService = require('../services/projectService');
+const { authenticateToken } = require('../middleware/authMiddleware');
+
+// Apply authentication to all export routes
+router.use(authenticateToken);
 
 /**
  * POST /api/export/tidp/:id/excel
@@ -281,6 +286,12 @@ router.get('/formats', (req, res) => {
         formats: ['excel'],
         descriptions: {
           excel: 'Complete project documentation combining MIDP and all TIDPs in a single workbook'
+        }
+      },
+      acc: {
+        formats: ['zip'],
+        descriptions: {
+          zip: 'ACC ISO 19650 folder-structured package for manual upload'
         }
       }
     }
@@ -669,6 +680,197 @@ router.post('/bep/pdf', async (req, res, next) => {
       success: false,
       error: error.message || 'PDF generation failed'
     });
+  }
+});
+
+/**
+ * POST /api/export/acc/package
+ * Build an ACC ISO19650 folder-structured package archive for manual upload
+ */
+router.post('/acc/package', async (req, res, next) => {
+  let workspaceRoot = null;
+  let zipPath = null;
+  const generatedFiles = [];
+
+  try {
+    const {
+      projectId,
+      projectName,
+      formData,
+      bepType,
+      tidpIds = [],
+      midpId,
+      includeResponsibilityMatrix = false,
+      componentImages = {},
+      options = {}
+    } = req.body;
+
+    if (!formData || !bepType || !projectName) {
+      return res.status(400).json({
+        success: false,
+        error: 'formData, bepType, and projectName are required'
+      });
+    }
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    workspaceRoot = path.join(
+      exportService.tempDir,
+      `acc_package_${timestamp}_${Math.random().toString(36).slice(2, 8)}`
+    );
+
+    await fs.promises.mkdir(workspaceRoot, { recursive: true });
+    const accFolders = exportService.buildAccFolderStructure(workspaceRoot);
+
+    // Generate BEP PDF to Shared/Planning
+    const tidpData = Array.isArray(tidpIds) ? tidpIds.map(id => tidpService.getTIDP(id)) : [];
+    const midpData = midpId ? [midpService.getMIDP(midpId)] : [];
+
+    const html = await htmlTemplateService.generateBEPHTML(
+      formData,
+      bepType,
+      tidpData,
+      midpData,
+      componentImages || {}
+    );
+
+    const bepPdfPath = await puppeteerPdfService.generatePDFFromHTML(html, {
+      format: 'A4',
+      orientation: options.orientation || 'portrait',
+      margins: {
+        top: '25mm',
+        right: '20mm',
+        bottom: '25mm',
+        left: '20mm'
+      },
+      timeout: 90000,
+      deviceScaleFactor: 1.5
+    });
+
+    const safeProjectName = exportService.sanitizeFilename(projectName);
+    const bepFilename = `BEP_${safeProjectName}_${new Date().toISOString().split('T')[0]}.pdf`;
+    const bepDestination = path.join(accFolders.sharedPlanning, bepFilename);
+    await fs.promises.copyFile(bepPdfPath, bepDestination);
+    exportService.cleanupFile(bepPdfPath);
+    generatedFiles.push(path.relative(workspaceRoot, bepDestination).replace(/\\/g, '/'));
+
+    // Generate MIDP (optional) to Shared/DeliveryPlans
+    if (midpId) {
+      const midp = midpService.getMIDP(midpId);
+      const midpFilepath = await exportService.exportMIDPToExcel(midp);
+      const midpDestination = path.join(
+        accFolders.sharedDeliveryPlans,
+        path.basename(midpFilepath)
+      );
+      await fs.promises.copyFile(midpFilepath, midpDestination);
+      exportService.cleanupFile(midpFilepath);
+      generatedFiles.push(path.relative(workspaceRoot, midpDestination).replace(/\\/g, '/'));
+    }
+
+    // Generate TIDPs (optional) to Work In Progress/TIDPs
+    if (Array.isArray(tidpIds) && tidpIds.length > 0) {
+      for (const tidpId of tidpIds) {
+        const tidp = tidpService.getTIDP(tidpId);
+        const tidpFilepath = await exportService.exportTIDPToExcel(tidp);
+        const tidpDestination = path.join(
+          accFolders.workInProgressTidps,
+          path.basename(tidpFilepath)
+        );
+        await fs.promises.copyFile(tidpFilepath, tidpDestination);
+        exportService.cleanupFile(tidpFilepath);
+        generatedFiles.push(path.relative(workspaceRoot, tidpDestination).replace(/\\/g, '/'));
+      }
+    }
+
+    // Generate responsibility matrices (optional) to Shared/Matrices
+    if (includeResponsibilityMatrix && projectId) {
+      const imActivities = responsibilityMatrixService.getIMActivities(projectId);
+      const deliverables = responsibilityMatrixService.getDeliverables(projectId);
+
+      const matrixFilepath = await exportService.exportResponsibilityMatricesToExcel({
+        imActivities,
+        deliverables,
+        project: {
+          id: projectId,
+          name: projectName
+        },
+        options: {
+          includeSummary: true,
+          includeImActivities: true,
+          includeDeliverables: true,
+          includeIsoReferences: true,
+          includeDescriptions: true,
+          includeSyncStatus: false
+        }
+      });
+
+      const matrixDestination = path.join(
+        accFolders.sharedMatrices,
+        path.basename(matrixFilepath)
+      );
+      await fs.promises.copyFile(matrixFilepath, matrixDestination);
+      exportService.cleanupFile(matrixFilepath);
+      generatedFiles.push(path.relative(workspaceRoot, matrixDestination).replace(/\\/g, '/'));
+    }
+
+    const linkedProject = projectId ? projectService.getProject(projectId) : null;
+    const manifest = exportService.createAccManifest({
+      projectId,
+      projectName,
+      bepType,
+      accHubId: linkedProject?.acc_hub_id,
+      accProjectId: linkedProject?.acc_project_id,
+      accDefaultFolder: linkedProject?.acc_default_folder,
+      files: generatedFiles
+    });
+
+    const manifestPath = path.join(workspaceRoot, 'manifest.json');
+    await fs.promises.writeFile(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
+
+    zipPath = await exportService.createAccPackageArchive(
+      workspaceRoot,
+      `ACC_${safeProjectName}_${new Date().toISOString().split('T')[0]}`
+    );
+
+    const archiveName = path.basename(zipPath);
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${archiveName}"`);
+
+    const stream = fs.createReadStream(zipPath);
+    stream.pipe(res);
+
+    const cleanup = async () => {
+      if (zipPath) {
+        exportService.cleanupFile(zipPath);
+      }
+      if (workspaceRoot) {
+        await fs.promises.rm(workspaceRoot, { recursive: true, force: true });
+      }
+    };
+
+    stream.on('end', () => {
+      setTimeout(() => {
+        cleanup().catch((cleanupError) => {
+          console.error('Error cleaning ACC package temp files:', cleanupError);
+        });
+      }, 5000);
+    });
+
+    stream.on('error', (error) => {
+      cleanup().finally(() => next(error));
+    });
+  } catch (error) {
+    if (workspaceRoot) {
+      await fs.promises.rm(workspaceRoot, { recursive: true, force: true }).catch(() => {});
+    }
+    if (zipPath) {
+      exportService.cleanupFile(zipPath);
+    }
+
+    if (error.message && error.message.includes('Archive tooling is unavailable')) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
+
+    next(error);
   }
 });
 

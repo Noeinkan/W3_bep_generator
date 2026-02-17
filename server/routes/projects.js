@@ -1,14 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const projectService = require('../services/projectService');
+const { authenticateToken } = require('../middleware/authMiddleware');
 
 // GET /api/projects — list projects for a user
-router.get('/', (req, res, next) => {
+router.get('/', authenticateToken, (req, res, next) => {
   try {
-    const { userId } = req.query;
-    if (!userId) {
-      return res.status(400).json({ success: false, error: 'userId is required' });
-    }
+    const userId = req.user.id;
     const projects = projectService.getAllProjects(userId);
     res.json({ success: true, projects });
   } catch (err) {
@@ -17,11 +15,15 @@ router.get('/', (req, res, next) => {
 });
 
 // GET /api/projects/:id — get single project
-router.get('/:id', (req, res, next) => {
+router.get('/:id', authenticateToken, (req, res, next) => {
   try {
     const project = projectService.getProject(req.params.id);
     if (!project) {
       return res.status(404).json({ success: false, error: 'Project not found' });
+    }
+    // Verify ownership
+    if (project.user_id !== req.user.id) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
     }
     res.json({ success: true, project });
   } catch (err) {
@@ -30,13 +32,18 @@ router.get('/:id', (req, res, next) => {
 });
 
 // POST /api/projects — create project
-router.post('/', (req, res, next) => {
+router.post('/', authenticateToken, (req, res, next) => {
   try {
-    const { userId, name } = req.body;
-    if (!userId || !name) {
-      return res.status(400).json({ success: false, error: 'userId and name are required' });
+    const userId = req.user.id;
+    const { name, accHubId, accProjectId, accDefaultFolder } = req.body;
+    if (!name) {
+      return res.status(400).json({ success: false, error: 'name is required' });
     }
-    const project = projectService.createProject(userId, name);
+    const project = projectService.createProject(userId, name, {
+      accHubId,
+      accProjectId,
+      accDefaultFolder
+    });
     res.status(201).json({ success: true, project });
   } catch (err) {
     next(err);
@@ -44,17 +51,40 @@ router.post('/', (req, res, next) => {
 });
 
 // PUT /api/projects/:id — update project
-router.put('/:id', (req, res, next) => {
+router.put('/:id', authenticateToken, (req, res, next) => {
   try {
-    const { name } = req.body;
-    if (!name) {
-      return res.status(400).json({ success: false, error: 'name is required' });
+    const { name, accHubId, accProjectId, accDefaultFolder } = req.body;
+    const updatePayload = {};
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'name')) {
+      updatePayload.name = name;
     }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'accHubId')) {
+      updatePayload.accHubId = accHubId;
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'accProjectId')) {
+      updatePayload.accProjectId = accProjectId;
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'accDefaultFolder')) {
+      updatePayload.accDefaultFolder = accDefaultFolder;
+    }
+
+    if (Object.keys(updatePayload).length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'At least one supported field is required (name, accHubId, accProjectId, accDefaultFolder)'
+      });
+    }
+
     const existing = projectService.getProject(req.params.id);
     if (!existing) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
-    const project = projectService.updateProject(req.params.id, name);
+    // Verify ownership
+    if (existing.user_id !== req.user.id) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+    const project = projectService.updateProject(req.params.id, updatePayload);
     res.json({ success: true, project });
   } catch (err) {
     next(err);
@@ -62,11 +92,15 @@ router.put('/:id', (req, res, next) => {
 });
 
 // DELETE /api/projects/:id — delete project
-router.delete('/:id', (req, res, next) => {
+router.delete('/:id', authenticateToken, (req, res, next) => {
   try {
     const existing = projectService.getProject(req.params.id);
     if (!existing) {
       return res.status(404).json({ success: false, error: 'Project not found' });
+    }
+    // Verify ownership
+    if (existing.user_id !== req.user.id) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
     }
     projectService.deleteProject(req.params.id);
     res.json({ success: true, message: 'Project deleted' });

@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const bepStructureService = require('../services/bepStructureService');
+const { authenticateToken } = require('../middleware/authMiddleware');
+
+// Apply authentication to all BEP structure routes
+router.use(authenticateToken);
 
 // ============================================
 // STEP ENDPOINTS (H1)

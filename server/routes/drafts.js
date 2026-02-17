@@ -3,21 +3,16 @@ const router = express.Router();
 const db = require('../db/database');
 const { createId } = require('@paralleldrive/cuid2');
 const bepStructureService = require('../services/bepStructureService');
+const { authenticateToken } = require('../middleware/authMiddleware');
 
 /**
  * GET /api/drafts
  * Get all drafts for a user
  */
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { userId, projectId } = req.query;
-
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'userId is required'
-      });
-    }
+    const userId = req.user.id;
+    const { projectId } = req.query;
 
     let drafts;
     if (projectId) {
@@ -58,17 +53,10 @@ router.get('/', async (req, res) => {
  * GET /api/drafts/:id
  * Get a specific draft
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId } = req.query;
-
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'userId is required'
-      });
-    }
+    const userId = req.user.id;
 
     const draft = db.prepare(`
       SELECT * FROM drafts
@@ -103,14 +91,15 @@ router.get('/:id', async (req, res) => {
  * POST /api/drafts
  * Create a new draft
  */
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { userId, projectId, title, type, data } = req.body;
+    const userId = req.user.id;
+    const { projectId, title, type, data } = req.body;
 
-    if (!userId || !title || !type || !data) {
+    if (!title || !type || !data) {
       return res.status(400).json({
         success: false,
-        message: 'userId, title, type, and data are required'
+        message: 'title, type, and data are required'
       });
     }
 
@@ -163,17 +152,11 @@ router.post('/', async (req, res) => {
  * PUT /api/drafts/:id
  * Update a draft
  */
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId, title, data, projectId } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'userId is required'
-      });
-    }
+    const userId = req.user.id;
+    const { title, data, projectId } = req.body;
 
     // Check if draft exists and belongs to user
     const existing = db.prepare(`
@@ -241,17 +224,10 @@ router.put('/:id', async (req, res) => {
  * DELETE /api/drafts/:id
  * Delete (soft delete) a draft
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId } = req.query;
-
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'userId is required'
-      });
-    }
+    const userId = req.user.id;
 
     // Check if draft exists and belongs to user
     const existing = db.prepare(`
@@ -295,14 +271,15 @@ router.delete('/:id', async (req, res) => {
  * POST /api/drafts/migrate
  * Migrate drafts from localStorage to database
  */
-router.post('/migrate', async (req, res) => {
+router.post('/migrate', authenticateToken, async (req, res) => {
   try {
-    const { userId, drafts } = req.body;
+    const userId = req.user.id;
+    const { drafts } = req.body;
 
-    if (!userId || !drafts) {
+    if (!drafts) {
       return res.status(400).json({
         success: false,
-        message: 'userId and drafts are required'
+        message: 'drafts are required'
       });
     }
 

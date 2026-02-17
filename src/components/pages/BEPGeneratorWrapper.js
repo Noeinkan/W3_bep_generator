@@ -33,7 +33,7 @@ const BEPGeneratorWrapper = () => {
     <BepFormProvider>
       <Routes>
         {/* Layout wrapper for all BEP routes */}
-        <Route path="/" element={<BepLayout />}>
+        <Route element={<BepLayout />}>
           {/* Start menu - root route */}
           <Route index element={
             authLoading ? (

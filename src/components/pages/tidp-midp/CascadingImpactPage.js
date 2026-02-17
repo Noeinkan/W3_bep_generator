@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertTriangle, ChevronDown, ChevronRight, Zap, Clock, Users } from 'lucide-react';
+import React, { useState } from 'react';
+import { AlertTriangle, ChevronDown, ChevronRight, Zap, Clock, Users } from 'lucide-react';
 import ApiService from '../../../services/apiService';
-import toast from 'react-hot-toast';
+import { useMidpSubPage } from '../../../hooks/useMidpSubPage';
+import { MidpSubPageLayout } from '../../common/MidpSubPageLayout';
 
 const SEVERITY_COLORS = {
   Critical: 'bg-red-100 text-red-800 border-red-200',
@@ -12,28 +12,11 @@ const SEVERITY_COLORS = {
 };
 
 const CascadingImpactPage = () => {
-  const { midpId } = useParams();
-  const navigate = useNavigate();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { data, loading } = useMidpSubPage(
+    ApiService.getMIDPCascadingImpact,
+    'Failed to load cascading impact analysis'
+  );
   const [expandedImpacts, setExpandedImpacts] = useState(new Set());
-
-  useEffect(() => {
-    loadCascadingImpact();
-  }, [midpId]);
-
-  const loadCascadingImpact = async () => {
-    setLoading(true);
-    try {
-      const response = await ApiService.getMIDPCascadingImpact(midpId);
-      setData(response.data);
-    } catch (error) {
-      console.error('Failed to load cascading impact:', error);
-      toast.error('Failed to load cascading impact analysis');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const toggleImpact = (index) => {
     setExpandedImpacts(prev => {
@@ -44,42 +27,17 @@ const CascadingImpactPage = () => {
     });
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
-    );
-  }
-
   const impacts = data?.impacts || [];
   const overallSeverity = data?.overallSeverity || 'Low';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Header */}
-      <div className="sticky top-0 z-30 bg-white shadow-lg border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={() => navigate('/tidp-midp')}
-              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-rose-600 rounded-lg flex items-center justify-center shadow-md">
-              <AlertTriangle className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Cascading Impact Analysis</h1>
-              <p className="text-sm text-gray-600">
-                {data?.lateContainerCount || 0} late deliverable{data?.lateContainerCount !== 1 ? 's' : ''} affecting {data?.totalAffected || 0} downstream container{data?.totalAffected !== 1 ? 's' : ''}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <MidpSubPageLayout
+      title="Cascading Impact Analysis"
+      subtitle={`${data?.lateContainerCount || 0} late deliverable${data?.lateContainerCount !== 1 ? 's' : ''} affecting ${data?.totalAffected || 0} downstream container${data?.totalAffected !== 1 ? 's' : ''}`}
+      icon={AlertTriangle}
+      iconGradient="from-red-500 to-rose-600"
+      loading={loading}
+    >
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -212,7 +170,7 @@ const CascadingImpactPage = () => {
           </div>
         ))}
       </div>
-    </div>
+    </MidpSubPageLayout>
   );
 };
 

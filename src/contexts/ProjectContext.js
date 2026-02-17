@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import axios from 'axios';
 import { useAuth } from './AuthContext';
 import { draftStorageService } from '../services/draftStorageService';
+import apiService from '../services/apiService';
 
 const ProjectContext = createContext();
 
@@ -12,8 +12,6 @@ export const useProject = () => {
   }
   return context;
 };
-
-const API_BASE_URL = '/api';
 
 export const ProjectProvider = ({ children }) => {
   const { user } = useAuth();
@@ -32,22 +30,19 @@ export const ProjectProvider = ({ children }) => {
 
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/projects`, {
-        params: { userId: user.id }
-      });
-      if (response.data.success) {
-        let projectList = response.data.projects;
+      const response = await apiService.getProjects();
+      if (response.success) {
+        let projectList = response.projects;
 
         // Auto-create "Sample Project" if no projects exist (once per session)
         if (projectList.length === 0 && !seedRunRef.current) {
           seedRunRef.current = true;
           try {
-            const createRes = await axios.post(`${API_BASE_URL}/projects`, {
-              userId: user.id,
+            const createRes = await apiService.createProject({
               name: 'Sample Project'
             });
-            if (createRes.data.success) {
-              const sampleProject = createRes.data.project;
+            if (createRes.success) {
+              const sampleProject = createRes.project;
               projectList = [sampleProject];
 
               // Migrate orphaned localStorage drafts to this project
@@ -101,13 +96,12 @@ export const ProjectProvider = ({ children }) => {
   const createProject = useCallback(async (name) => {
     if (!user?.id) throw new Error('Must be logged in');
 
-    const response = await axios.post(`${API_BASE_URL}/projects`, {
-      userId: user.id,
+    const response = await apiService.createProject({
       name
     });
 
-    if (response.data.success) {
-      const newProject = response.data.project;
+    if (response.success) {
+      const newProject = response.project;
       setProjects(prev => [newProject, ...prev]);
       return newProject;
     }
@@ -115,10 +109,10 @@ export const ProjectProvider = ({ children }) => {
   }, [user?.id]);
 
   const updateProject = useCallback(async (id, name) => {
-    const response = await axios.put(`${API_BASE_URL}/projects/${id}`, { name });
+    const response = await apiService.updateProject(id, { name });
 
-    if (response.data.success) {
-      const updated = response.data.project;
+    if (response.success) {
+      const updated = response.project;
       setProjects(prev => prev.map(p => p.id === id ? updated : p));
       if (currentProject?.id === id) {
         setCurrentProject(updated);
@@ -129,7 +123,7 @@ export const ProjectProvider = ({ children }) => {
   }, [currentProject?.id]);
 
   const deleteProject = useCallback(async (id) => {
-    await axios.delete(`${API_BASE_URL}/projects/${id}`);
+    await apiService.deleteProject(id);
 
     setProjects(prev => prev.filter(p => p.id !== id));
     if (currentProject?.id === id) {

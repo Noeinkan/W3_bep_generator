@@ -50,6 +50,15 @@ const PreviewExportPage = ({
       color: 'text-green-600',
       bgColor: 'bg-green-50',
       borderColor: 'border-green-200'
+    },
+    {
+      value: 'acc-package',
+      icon: Download,
+      label: 'ACC Package',
+      description: 'ISO 19650 folder ZIP',
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-50',
+      borderColor: 'border-indigo-200'
     }
   ];
 
@@ -144,7 +153,7 @@ const PreviewExportPage = ({
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {exportFormats.map(format => (
             <label
               key={format.value}

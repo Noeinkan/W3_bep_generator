@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import apiService from '../services/apiService';
+import { runDraftMigrationOnAppLoad } from '../utils/draftMigration';
 
 const AuthContext = createContext();
 
@@ -41,6 +42,22 @@ export const AuthProvider = ({ children }) => {
 
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    const runMigration = async () => {
+      if (!user?.id) return;
+      const migration = await runDraftMigrationOnAppLoad(user.id);
+
+      if (migration?.migrated) {
+        console.log(
+          `Draft migration complete: ${migration?.meta?.migratedCount || 0} migrated, ` +
+          `${migration?.meta?.skippedCount || 0} skipped, ${migration?.meta?.failedCount || 0} failed.`
+        );
+      }
+    };
+
+    runMigration();
+  }, [user?.id]);
 
   const register = async (userData) => {
     try {
@@ -84,7 +101,12 @@ export const AuthProvider = ({ children }) => {
   const forgotPassword = async (email) => {
     try {
       const response = await apiService.forgotPassword(email);
-      return { success: true, message: response.message, resetUrl: response.resetUrl };
+      return {
+        success: true,
+        message: response.message,
+        resetUrl: response.resetUrl,
+        emailDebug: response.emailDebug
+      };
     } catch (error) {
       return { success: false, error: error.message };
     }

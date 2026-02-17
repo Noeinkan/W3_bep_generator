@@ -236,6 +236,7 @@ These environment variables let you speed up EIR analysis without reducing accur
 - `POST /midp/:id/pdf` - Export MIDP to PDF
 - `POST /responsibility-matrix/excel` - Export matrices to Excel
 - `POST /project/:projectId/consolidated-excel` - Consolidated project export
+- `POST /acc/package` - Generate ACC ISO 19650 folder-structured ZIP package for manual upload
 
 ### Validation Routes (`/api/validation`)
 - `POST /tidp/:id` - Validate TIDP
@@ -463,6 +464,10 @@ Press `Ctrl+K` (Windows/Linux) or `Cmd+K` (Mac) to:
 - Formulas and conditional formatting
 - Import/export templates
 
+### ACC Folder Package Export
+- Generates a manual-upload ZIP with ISO 19650-style ACC folders (`Appointment`, `Work In Progress`, `Shared`, `Published`, `Archive`)
+- Includes BEP PDF and optional MIDP/TIDP/matrix files plus a package `manifest.json`
+
 ## Security Features
 
 - Helmet.js security headers
@@ -512,7 +517,19 @@ The optimized production build will be in the `build` folder with:
 6. Set environment variables:
    - `NODE_ENV=production`
    - Configure CORS for production domain
+   - `APP_BASE_URL=https://your-domain`
+   - SMTP credentials for auth emails (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`)
    - Set database path if needed
+
+### Email Diagnostics (Dev)
+
+To verify password-reset email wiring in non-production, call:
+
+```bash
+curl http://localhost:3001/api/auth/email-health
+```
+
+This returns whether SMTP is configured and whether the server can verify the SMTP connection.
 
 ### Docker Production Deployment
 

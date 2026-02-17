@@ -1,4 +1,5 @@
 import React from 'react';
+import DOMPurify from 'dompurify';
 import OrgStructureField from '../forms/specialized/OrgStructureField';
 import OrgStructureDataTable from '../forms/specialized/OrgStructureDataTable';
 import CDEPlatformEcosystem from '../forms/custom/CDEPlatformEcosystem';
@@ -14,6 +15,13 @@ import CONFIG from '../../config/bepConfig';
  */
 const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] }) => {
   const noop = () => {}; // No-op onChange for preview mode
+
+  const isLikelyHtml = (value) => typeof value === 'string' && /<\/?[a-z][\s\S]*>/i.test(value);
+
+  const sanitizeRichText = (html) => DOMPurify.sanitize(html, {
+    FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed'],
+    ADD_ATTR: ['class', 'data-caption', 'target', 'rel']
+  });
 
   const renderFieldValue = (field, value) => {
     if (!value) return null;
@@ -148,6 +156,15 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
         );
 
       case 'textarea':
+        if (typeof value === 'string' && isLikelyHtml(value)) {
+          return (
+            <div
+              className="my-2 text-gray-700 rich-text-preview"
+              dangerouslySetInnerHTML={{ __html: sanitizeRichText(value) }}
+            />
+          );
+        }
+
         return (
           <p className="my-2 text-gray-700 whitespace-pre-wrap">{value}</p>
         );

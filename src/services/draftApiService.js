@@ -5,18 +5,35 @@ import { apiClient } from './apiService';
  * Manages BEP drafts with server persistence
  */
 class DraftApiService {
-  /**
-   * Get all drafts for a user
-   * @param {string} userId - User ID
-   * @returns {Promise<Array>} Array of draft objects
-   */
-  async getAllDrafts(userId, projectId = null) {
-    if (!userId) {
-      throw new Error('User ID is required');
+  normalizeDraft(draft) {
+    if (!draft || typeof draft !== 'object') {
+      return null;
     }
 
+    const normalized = {
+      ...draft,
+      id: draft.id,
+      name: draft.title ?? draft.name ?? 'Untitled Draft',
+      title: draft.title ?? draft.name ?? 'Untitled Draft',
+      bepType: draft.type ?? draft.bepType ?? 'pre-appointment',
+      type: draft.type ?? draft.bepType ?? 'pre-appointment',
+      lastModified: draft.updated_at ?? draft.lastModified ?? new Date().toISOString(),
+      projectId: draft.project_id ?? draft.projectId ?? null,
+      projectName: draft.data?.projectName || draft.projectName || 'Unnamed Project',
+      data: draft.data || {}
+    };
+
+    return normalized;
+  }
+
+  /**
+   * Get all drafts for the authenticated user
+   * @param {string} projectId - Optional project ID filter
+   * @returns {Promise<Array>} Array of draft objects
+   */
+  async getAllDrafts(projectId = null) {
     try {
-      const params = { userId };
+      const params = {};
       if (projectId) params.projectId = projectId;
 
       const response = await apiClient.get('/drafts', {
@@ -24,7 +41,9 @@ class DraftApiService {
       });
 
       if (response.data.success) {
-        return response.data.drafts;
+        return (response.data.drafts || [])
+          .map((draft) => this.normalizeDraft(draft))
+          .filter(Boolean);
       } else {
         throw new Error(response.data.message || 'Failed to fetch drafts');
       }
@@ -37,21 +56,18 @@ class DraftApiService {
   /**
    * Get a specific draft
    * @param {string} draftId - Draft ID
-   * @param {string} userId - User ID
    * @returns {Promise<Object>} Draft object
    */
-  async getDraft(draftId, userId) {
-    if (!draftId || !userId) {
-      throw new Error('Draft ID and User ID are required');
+  async getDraft(draftId) {
+    if (!draftId) {
+      throw new Error('Draft ID is required');
     }
 
     try {
-      const response = await apiClient.get(`/drafts/${draftId}`, {
-        params: { userId }
-      });
+      const response = await apiClient.get(`/drafts/${draftId}`);
 
       if (response.data.success) {
-        return response.data.draft;
+        return this.normalizeDraft(response.data.draft);
       } else {
         throw new Error(response.data.message || 'Failed to fetch draft');
       }
@@ -63,16 +79,15 @@ class DraftApiService {
 
   /**
    * Create a new draft
-   * @param {string} userId - User ID
    * @param {string} title - Draft title
    * @param {string} type - BEP type ('pre-appointment' or 'post-appointment')
    * @param {Object} data - Draft data (form data)
    * @param {string} projectId - Optional project ID
    * @returns {Promise<Object>} Created draft object
    */
-  async createDraft(userId, title, type, data, projectId = null) {
-    if (!userId || !title || !type || !data) {
-      throw new Error('User ID, title, type, and data are required');
+  async createDraft(title, type, data, projectId = null) {
+    if (!title || !type || !data) {
+      throw new Error('Title, type, and data are required');
     }
 
     if (type !== 'pre-appointment' && type !== 'post-appointment') {
@@ -81,7 +96,6 @@ class DraftApiService {
 
     try {
       const response = await apiClient.post('/drafts', {
-        userId,
         title,
         type,
         data,
@@ -89,7 +103,7 @@ class DraftApiService {
       });
 
       if (response.data.success) {
-        return response.data.draft;
+        return this.normalizeDraft(response.data.draft);
       } else {
         throw new Error(response.data.message || 'Failed to create draft');
       }
@@ -102,23 +116,19 @@ class DraftApiService {
   /**
    * Update an existing draft
    * @param {string} draftId - Draft ID
-   * @param {string} userId - User ID
    * @param {Object} updates - Object with fields to update (title, data, projectId)
    * @returns {Promise<Object>} Updated draft object
    */
-  async updateDraft(draftId, userId, updates) {
-    if (!draftId || !userId) {
-      throw new Error('Draft ID and User ID are required');
+  async updateDraft(draftId, updates) {
+    if (!draftId) {
+      throw new Error('Draft ID is required');
     }
 
     try {
-      const response = await apiClient.put(`/drafts/${draftId}`, {
-        userId,
-        ...updates
-      });
+      const response = await apiClient.put(`/drafts/${draftId}`, updates);
 
       if (response.data.success) {
-        return response.data.draft;
+        return this.normalizeDraft(response.data.draft);
       } else {
         throw new Error(response.data.message || 'Failed to update draft');
       }
@@ -131,18 +141,15 @@ class DraftApiService {
   /**
    * Delete a draft
    * @param {string} draftId - Draft ID
-   * @param {string} userId - User ID
    * @returns {Promise<boolean>} Success status
    */
-  async deleteDraft(draftId, userId) {
-    if (!draftId || !userId) {
-      throw new Error('Draft ID and User ID are required');
+  async deleteDraft(draftId) {
+    if (!draftId) {
+      throw new Error('Draft ID is required');
     }
 
     try {
-      const response = await apiClient.delete(`/drafts/${draftId}`, {
-        params: { userId }
-      });
+      const response = await apiClient.delete(`/drafts/${draftId}`);
 
       if (response.data.success) {
         return true;
@@ -157,18 +164,16 @@ class DraftApiService {
 
   /**
    * Migrate drafts from localStorage to database
-   * @param {string} userId - User ID
    * @param {Object} localStorageDrafts - Drafts from localStorage
    * @returns {Promise<Object>} Migration results
    */
-  async migrateDrafts(userId, localStorageDrafts) {
-    if (!userId || !localStorageDrafts) {
-      throw new Error('User ID and drafts are required');
+  async migrateDrafts(localStorageDrafts) {
+    if (!localStorageDrafts) {
+      throw new Error('Drafts are required');
     }
 
     try {
       const response = await apiClient.post('/drafts/migrate', {
-        userId,
         drafts: localStorageDrafts
       });
 
@@ -185,7 +190,6 @@ class DraftApiService {
 
   /**
    * Save or update a draft (convenience method)
-   * @param {string} userId - User ID
    * @param {string} title - Draft title
    * @param {string} type - BEP type
    * @param {Object} data - Draft data
@@ -193,13 +197,13 @@ class DraftApiService {
    * @param {string} projectId - Optional project ID
    * @returns {Promise<Object>} Saved draft object
    */
-  async saveDraft(userId, title, type, data, draftId = null, projectId = null) {
+  async saveDraft(title, type, data, draftId = null, projectId = null) {
     if (draftId) {
       // Update existing draft
-      return await this.updateDraft(draftId, userId, { title, data, projectId });
+      return await this.updateDraft(draftId, { title, data, projectId });
     } else {
       // Create new draft
-      return await this.createDraft(userId, title, type, data, projectId);
+      return await this.createDraft(title, type, data, projectId);
     }
   }
 }

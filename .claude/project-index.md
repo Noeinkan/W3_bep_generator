@@ -31,23 +31,26 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 | `src/components/forms/specialized/` | Budget input, milestones table, org structure field |
 | `src/components/layout/` | MainLayout (sidebar, header, Outlet) |
 | `src/components/midp/` | MIDP form, list, evolution dashboard |
-| `src/components/pages/` | HomePage, ProjectsPage, BEPGeneratorWrapper, PreviewExportPage, ProfilePage, SettingsPage |
-| `src/components/pages/auth/` | Login/Register/ForgotPassword/ResetPassword/VerifyEmail pages |
-| `src/components/pages/tidp-midp/` | TIDP/MIDP dashboard, risk register, resource plan, quality gates, dependency matrix |
-| `src/components/pages/idrm-manager/` | IDRM dashboard (IM activities, deliverables, templates) |
+| `src/components/pages/` | HomePage (+ sections: Integration, ISOCompliance, ProductCard, SocialProof), ProjectsPage, BEPGeneratorWrapper, PreviewExportPage, ProfilePage, SettingsPage, TidpEditorPage |
+| `src/components/pages/auth/` | Login, Register, ForgotPassword, ResetPassword, VerifyEmail, VerificationPending pages |
+| `src/components/pages/bep/` | BepLayout, BepStartMenuView, BepSelectTypeView, BepFormView, BepPreviewView, BepDraftsView, BepImportView, BepInfoRequirementsView, BepStructureMapView, BepTemplatesView, BepTypeSelector, ImportBepDialog, TemplateGallery; `components/` subfolder: BepHeader, BepSidebar, BepFooter, SuccessToast |
+| `src/components/pages/drafts/` | DraftManager, DraftListItem, SaveDraftDialog, SearchAndFilters |
+| `src/components/pages/tidp-midp/` | TIDPMIDPDashboard, TidpMidpManager, RiskRegister, ResourcePlan, QualityGates, DependencyMatrix, CascadingImpact; `dashboard/` subfolder: TIDPsView, MIDPsView, StatisticsCards, MIDPAnalyticsDrawer, MIDPSummaryPanel, HelpModal |
+| `src/components/pages/idrm-manager/` | IDRMDashboard; `dashboard/` subfolder: IMActivitiesView, DeliverablesView, TemplatesView, StatisticsCards, QuickActions, HelpModal |
 | `src/components/responsibility-matrix/` | RACI matrix manager, IM activities, deliverables, export, TIDP sync |
 | `src/components/tidp/` | TIDP dashboard, form, list, details, import, Excel editor |
 | `src/components/steps/` | FormStepRHF (RHF step wrapper) |
 | `src/contexts/` | AuthContext, ProjectContext, BepFormContext, EirContext |
 | `src/schemas/` | bepValidationSchemas.js, authSchemas.js (Zod) |
 | `src/services/` | apiService, documentService, draftApiService, backendPdfService, bepFormatter, docxGenerator |
-| `src/hooks/` | useAISuggestion, useDrafts, useExport, useTidpData, useMidpData, useResponsibilityMatrix, useStepNavigation, + more |
+| `src/hooks/` | useAISuggestion, useDrafts, useDraftSave, useDraftFilters, useDraftOperations, useExport, useTidpData, useTIDPFilters, useMidpData, useResponsibilityMatrix, useStepNavigation, useMindmapD3, useOutsideClick, useUndoRedo |
 | `src/data/` | emptyBepData, templateRegistry, helpContentData, cdePlatformLibrary |
 | `src/config/` | bepConfig.js (BEP types, step categories, field mappings) |
 | `src/constants/` | fieldExamples, iso19650ActivitiesTemplate, routes, tidpTemplates |
 | `src/utils/` | cn, complianceCheck, csvHelpers, imageCompression, markdownToHtml, validationUtils |
-| `server/routes/` | auth, tidp, midp, drafts, ai, export, documents, projects, validation, bep-structure, responsibility-matrix |
-| `server/services/` | tidpService, midpService, authService, emailService, projectService, exportService, puppeteerPdfService, bepStructureService, responsibilityMatrixService |
+| `server/routes/` | auth, tidp, midp, drafts, ai, export, documents, projects, validation, bep-structure, responsibility-matrix, migrate |
+| `server/services/` | tidpService, midpService, authService, emailService, emailTemplates, projectService, exportService, htmlTemplateService, puppeteerPdfService, bepStructureService, responsibilityMatrixService, eirExportService, tidpSyncService, encryptedSecretService |
+| `server/services/templates/` | bepStyles.css (HTML/CSS templates for PDF/export rendering) |
 | `server/db/` | database.js (better-sqlite3 setup, all table creation) |
 | `server/middleware/` | authMiddleware.js (JWT verify) |
 | `ml-service/` | api_ollama.py (FastAPI), eir_analyzer.py, ollama_generator.py, text_extractor.py |
@@ -77,6 +80,7 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 | `/api/bep-structure` | Steps + fields CRUD (dynamic form structure) |
 | `/api/responsibility-matrix` | RACI matrix CRUD |
 | `/api/validation` | POST tidp/:id, POST midp/:id |
+| `/api/migrate` | DB migration endpoints |
 
 ## Schemas (Zod)
 
@@ -90,7 +94,7 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 - **Frontend:** React 19, React Router v7, RHF + Zod, TipTap, Tailwind, @xyflow/react, @dnd-kit, lucide-react, axios, react-hot-toast
 - **Backend:** Express, better-sqlite3, bcryptjs, jsonwebtoken, Puppeteer, multer, docx, xlsx
 - **ML:** FastAPI, Ollama, pdfplumber, python-docx, pydantic
-- **Dev:** Jest, concurrently, cross-env, nodemon
+- **Dev:** Vitest, concurrently, cross-env, nodemon
 
 ## DB Tables
 

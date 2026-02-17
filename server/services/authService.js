@@ -5,7 +5,15 @@ const db = require('../db/database');
 const emailService = require('./emailService');
 const { verificationEmail, passwordResetEmail } = require('./emailTemplates');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+// Validate JWT_SECRET is configured
+if (!process.env.JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('FATAL: JWT_SECRET environment variable is required in production');
+  }
+  console.warn('WARNING: JWT_SECRET not set, using insecure default for development only');
+}
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-only-insecure-secret-change-for-production';
 const JWT_EXPIRES_IN = '24h';
 const BCRYPT_ROUNDS = 10;
 

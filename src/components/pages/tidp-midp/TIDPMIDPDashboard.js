@@ -86,7 +86,7 @@ const TIDPMIDPDashboard = () => {
       const projectId = currentProject?.id || null;
       const [tidpData, midpData] = await Promise.all([
         ApiService.getAllTIDPs(projectId),
-        ApiService.getAllMIDPs()
+        ApiService.getAllMIDPs(projectId)
       ]);
 
       if (!mountedRef.current) return;

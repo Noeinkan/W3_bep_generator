@@ -24,7 +24,10 @@ const app = require('./app');
 const PORT = process.env.PORT || 3001;
 
 // Security middleware
-// app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // Disabled for now due to inline scripts in React
+  crossOriginEmbedderPolicy: false // Allow image loading from data URLs
+}));
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
     ? ['https://77.42.70.26.nip.io']
@@ -32,13 +35,28 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting
-// const limiter = rateLimit({
-//   windowMs: 15 * 60 * 1000, // 15 minutes
-//   max: 100, // limit each IP to 100 requests per windowMs
-//   message: 'Too many requests from this IP, please try again later.'
-// });
-// app.use('/api/', limiter);
+// Rate limiting - general API
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false
+});
+app.use('/api/', limiter);
+
+// Stricter rate limiting for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // max 5 login attempts per 15 minutes
+  message: 'Too many authentication attempts, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true // Don't count successful logins
+});
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/forgot-password', authLimiter);
 
 // Body parsing middleware
 // Increased limit for BEP PDF generation with compressed component images
@@ -122,15 +140,44 @@ if (require.main === module) {
   app.listen(PORT, '0.0.0.0', async () => {
     console.log(`Server running on port ${PORT}`);
 
+    // Validate critical environment variables
+    console.log('\n🔐 Security Check:');
+    if (!process.env.JWT_SECRET) {
+      if (process.env.NODE_ENV === 'production') {
+        console.error('❌ FATAL: JWT_SECRET not set in production!');
+        process.exit(1);
+      } else {
+        console.warn('⚠️  WARNING: JWT_SECRET not set (using insecure default for dev)');
+      }
+    } else {
+      console.log('✅ JWT_SECRET configured');
+    }
+
+    // Validate email service configuration
+    const emailService = require('./services/emailService');
+    const emailStatus = emailService.getStatus();
+    if (!emailStatus.configured) {
+      if (process.env.NODE_ENV === 'production') {
+        console.warn('⚠️  WARNING: Email service not configured');
+        console.warn('   Password reset and email verification will not work');
+        console.warn('   Set SMTP_HOST, SMTP_USER, SMTP_PASS, EMAIL_FROM in .env');
+      } else {
+        console.log('ℹ️  Email service not configured (optional in dev)');
+      }
+    } else {
+      console.log(`✅ Email service configured (${emailStatus.mode})`);
+    }
+
     // Initialize Puppeteer browser pool
     try {
-      console.log('🚀 Initializing Puppeteer...');
+      console.log('\n🚀 Initializing Puppeteer...');
       await puppeteerPdfService.initialize();
       console.log('✅ Puppeteer initialized successfully');
     } catch (error) {
       console.error('⚠️  Puppeteer initialization failed:', error.message);
       console.error('   PDF generation will not be available until server restart');
     }
+    console.log(''); // blank line for readability
   });
 }
 

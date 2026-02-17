@@ -12,8 +12,12 @@ const fs = require('fs');
 const axios = require('axios');
 const { createId } = require('@paralleldrive/cuid2');
 const db = require('../db/database');
+const { authenticateToken } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+
+// Apply authentication to all document routes
+router.use(authenticateToken);
 
 // Configuration
 const UPLOAD_DIR = path.join(__dirname, '..', 'uploads');

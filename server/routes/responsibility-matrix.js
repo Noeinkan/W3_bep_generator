@@ -22,6 +22,10 @@ const {
   getSyncStatus,
   unsyncTIDP
 } = require('../services/tidpSyncService');
+const { authenticateToken } = require('../middleware/authMiddleware');
+
+// Apply authentication to all responsibility matrix routes
+router.use(authenticateToken);
 
 /**
  * INFORMATION MANAGEMENT ACTIVITIES ROUTES (Matrix 1)

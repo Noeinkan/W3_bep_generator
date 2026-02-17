@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { draftStorageService } from '../services/draftStorageService';
+import { draftApiService } from '../services/draftApiService';
 import { validateUser, validateFormData, validateCallbacks } from '../utils/validationUtils';
 import { useDraftFilters } from './useDraftFilters';
 
@@ -34,13 +34,16 @@ export const useDrafts = (user, currentFormData, onLoadDraft, onClose, projectId
     setError(null);
 
     try {
-      const validDrafts = projectId
-        ? draftStorageService.loadDraftsByProject(safeUserId, projectId)
-        : draftStorageService.loadDrafts(safeUserId);
-      setRawDrafts(validDrafts);
+      const drafts = await draftApiService.getAllDrafts(projectId || null);
+      const draftMap = drafts.reduce((acc, draft) => {
+        acc[draft.id] = draft;
+        return acc;
+      }, {});
+
+      setRawDrafts(draftMap);
     } catch (error) {
       console.error('Error loading drafts:', error);
-      setError('Failed to load drafts. The data may be corrupted.');
+      setError('Failed to load drafts. Please try again.');
       setRawDrafts({});
     } finally {
       setIsLoading(false);

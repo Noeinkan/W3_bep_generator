@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react';
 import { validateDraftName, sanitizeText, sanitizeFileName } from '../utils/validationUtils';
-import { draftStorageService } from '../services/draftStorageService';
+import { draftApiService } from '../services/draftApiService';
 
 export const useDraftOperations = (user, currentFormData, bepType, onLoadDraft, onClose, projectId = null) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const findDraftByName = useCallback((name) => {
+  const findDraftByName = useCallback(async (name) => {
     if (!user?.id) return null;
 
     const validation = validateDraftName(name);
@@ -15,13 +15,13 @@ export const useDraftOperations = (user, currentFormData, bepType, onLoadDraft, 
     const sanitizedName = validation.sanitized;
 
     try {
-      const existingDrafts = draftStorageService.loadDrafts(user.id);
+      const existingDrafts = await draftApiService.getAllDrafts();
 
-      const existingDraft = Object.entries(existingDrafts).find(
-        ([_, draft]) => sanitizeText(draft.name).toLowerCase() === sanitizedName.toLowerCase()
+      const existingDraft = existingDrafts.find(
+        (draft) => sanitizeText(draft.name).toLowerCase() === sanitizedName.toLowerCase()
       );
 
-      return existingDraft ? { id: existingDraft[0], ...existingDraft[1] } : null;
+      return existingDraft || null;
     } catch (error) {
       console.error('Error finding draft:', error);
       return null;
@@ -51,18 +51,14 @@ export const useDraftOperations = (user, currentFormData, bepType, onLoadDraft, 
     setError(null);
 
     try {
-      const existingDrafts = draftStorageService.loadDrafts(user.id);
-
-      const existingDraftEntry = Object.entries(existingDrafts).find(
-        ([_, draft]) => sanitizeText(draft.name).toLowerCase() === sanitizedName.toLowerCase()
-      );
+      const existingDraft = await findDraftByName(sanitizedName);
 
       // If draft exists and we're not overwriting, return the existing draft for confirmation
-      if (existingDraftEntry && !overwrite) {
+      if (existingDraft && !overwrite) {
         setIsLoading(false);
         return {
           success: false,
-          existingDraft: { id: existingDraftEntry[0], ...existingDraftEntry[1] }
+          existingDraft
         };
       }
 
@@ -70,21 +66,20 @@ export const useDraftOperations = (user, currentFormData, bepType, onLoadDraft, 
         ? sanitizeText(data.projectName) || 'Unnamed Project'
         : 'Unnamed Project';
 
-      // If overwriting, use the existing draft ID
-      const draftId = existingDraftEntry ? existingDraftEntry[0] : Date.now().toString();
-
-      const draft = {
-        id: draftId,
-        name: sanitizedName,
-        data: data,
-        bepType: bepType || 'pre-appointment',
-        lastModified: new Date().toISOString(),
-        projectName: sanitizedProjectName,
-        projectId: projectId || null
+      const payloadData = {
+        ...data,
+        projectName: sanitizedProjectName
       };
 
-      draftStorageService.saveDraft(user.id, draft);
-      return { success: true, existingDraft: null, draftId: draftId };
+      const savedDraft = await draftApiService.saveDraft(
+        sanitizedName,
+        bepType || 'pre-appointment',
+        payloadData,
+        existingDraft?.id || null,
+        projectId || null
+      );
+
+      return { success: true, existingDraft: null, draftId: savedDraft.id };
     } catch (error) {
       console.error('Error saving draft:', error);
       setError('Failed to save draft. Please try again.');
@@ -92,7 +87,7 @@ export const useDraftOperations = (user, currentFormData, bepType, onLoadDraft, 
     } finally {
       setIsLoading(false);
     }
-  }, [user, currentFormData, bepType]);
+  }, [user, currentFormData, bepType, projectId, findDraftByName]);
 
   const deleteDraft = useCallback(async (draftId) => {
     if (!draftId || typeof draftId !== 'string') {
@@ -111,11 +106,8 @@ export const useDraftOperations = (user, currentFormData, bepType, onLoadDraft, 
     setError(null);
 
     try {
-      const success = draftStorageService.deleteDraft(user.id, draftId);
-      if (!success) {
-        setError('Draft not found');
-      }
-      return success;
+      await draftApiService.deleteDraft(draftId);
+      return true;
     } catch (error) {
       console.error('Error deleting draft:', error);
       setError('Failed to delete draft. Please try again.');
@@ -148,15 +140,16 @@ export const useDraftOperations = (user, currentFormData, bepType, onLoadDraft, 
     setError(null);
 
     try {
-      const existingDrafts = draftStorageService.loadDrafts(user.id);
+      const existingDrafts = await draftApiService.getAllDrafts();
 
-      if (!existingDrafts[draftId]) {
+      const targetDraft = existingDrafts.find((draft) => draft.id === draftId);
+      if (!targetDraft) {
         setError('Draft not found');
         return false;
       }
 
-      const isDuplicateName = Object.entries(existingDrafts).some(
-        ([id, draft]) => id !== draftId && sanitizeText(draft.name).toLowerCase() === sanitizedName.toLowerCase()
+      const isDuplicateName = existingDrafts.some(
+        (draft) => draft.id !== draftId && sanitizeText(draft.name).toLowerCase() === sanitizedName.toLowerCase()
       );
 
       if (isDuplicateName) {
@@ -164,12 +157,11 @@ export const useDraftOperations = (user, currentFormData, bepType, onLoadDraft, 
         return false;
       }
 
-      const success = draftStorageService.updateDraft(user.id, draftId, {
-        name: sanitizedName,
-        lastModified: new Date().toISOString()
+      await draftApiService.updateDraft(draftId, {
+        title: sanitizedName
       });
 
-      return success;
+      return true;
     } catch (error) {
       console.error('Error renaming draft:', error);
       setError('Failed to rename draft. Please try again.');

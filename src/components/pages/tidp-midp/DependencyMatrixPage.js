@@ -1,32 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, GitBranch, ChevronDown, ChevronRight, Zap } from 'lucide-react';
+import React, { useState } from 'react';
+import { GitBranch, ChevronDown, ChevronRight, Zap } from 'lucide-react';
 import ApiService from '../../../services/apiService';
-import toast from 'react-hot-toast';
+import { useMidpSubPage } from '../../../hooks/useMidpSubPage';
+import { MidpSubPageLayout } from '../../common/MidpSubPageLayout';
 
 const DependencyMatrixPage = () => {
-  const { midpId } = useParams();
-  const navigate = useNavigate();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { data, loading } = useMidpSubPage(
+    ApiService.getMIDPDependencyMatrix,
+    'Failed to load dependency matrix'
+  );
   const [expandedTeams, setExpandedTeams] = useState(new Set());
-
-  useEffect(() => {
-    loadDependencyMatrix();
-  }, [midpId]);
-
-  const loadDependencyMatrix = async () => {
-    setLoading(true);
-    try {
-      const response = await ApiService.getMIDPDependencyMatrix(midpId);
-      setData(response.data);
-    } catch (error) {
-      console.error('Failed to load dependency matrix:', error);
-      toast.error('Failed to load dependency matrix');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const toggleTeam = (teamName) => {
     setExpandedTeams(prev => {
@@ -36,14 +19,6 @@ const DependencyMatrixPage = () => {
       return next;
     });
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
-    );
-  }
 
   const depMatrix = data?.dependencyMatrix || data || {};
   const matrix = depMatrix.matrix || [];
@@ -79,28 +54,13 @@ const DependencyMatrixPage = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Header */}
-      <div className="sticky top-0 z-30 bg-white shadow-lg border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={() => navigate('/tidp-midp')}
-              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center shadow-md">
-              <GitBranch className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Dependency Matrix</h1>
-              <p className="text-sm text-gray-600">{summary.totalDependencies} dependencies across {summary.teamsInvolved} teams</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <MidpSubPageLayout
+      title="Dependency Matrix"
+      subtitle={`${summary.totalDependencies} dependencies across ${summary.teamsInvolved} teams`}
+      icon={GitBranch}
+      iconGradient="from-cyan-500 to-blue-600"
+      loading={loading}
+    >
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         {/* Summary Cards */}
         <div className="grid grid-cols-3 gap-4">
@@ -222,7 +182,7 @@ const DependencyMatrixPage = () => {
           )}
         </div>
       </div>
-    </div>
+    </MidpSubPageLayout>
   );
 };
 

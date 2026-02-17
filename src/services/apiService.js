@@ -112,6 +112,30 @@ class ApiService {
   }
 
   // ======================
+  // Project Services
+  // ======================
+
+  getProjects() {
+    return this._get('/projects', 'Failed to fetch projects');
+  }
+
+  getProject(id) {
+    return this._get(`/projects/${id}`, `Failed to fetch project ${id}`);
+  }
+
+  createProject(projectData) {
+    return this._post('/projects', projectData, 'Failed to create project');
+  }
+
+  updateProject(id, projectData) {
+    return this._put(`/projects/${id}`, projectData, `Failed to update project ${id}`);
+  }
+
+  deleteProject(id) {
+    return this._delete(`/projects/${id}`, `Failed to delete project ${id}`);
+  }
+
+  // ======================
   // TIDP Services
   // ======================
 
@@ -176,8 +200,9 @@ class ApiService {
   // MIDP Services
   // ======================
 
-  getAllMIDPs() {
-    return this._get('/midp', 'Failed to fetch MIDPs');
+  getAllMIDPs(projectId = null) {
+    const params = projectId ? { projectId } : {};
+    return this._get('/midp', 'Failed to fetch MIDPs', { params });
   }
 
   getMIDP(id) {
@@ -366,6 +391,11 @@ class ApiService {
     return this._postBlob(`/export/project/${projectId}/consolidated-excel`, { midpId }, `Failed to export consolidated project ${projectId}`, `Project_${projectId}_Consolidated.xlsx`);
   }
 
+  exportACCFolderPackage(payload) {
+    const date = new Date().toISOString().split('T')[0];
+    return this._postBlob('/export/acc/package', payload, 'Failed to export ACC folder package', `ACC_${date}.zip`);
+  }
+
   getExportFormats() {
     return this._get('/export/formats', 'Failed to get export formats');
   }
@@ -445,7 +475,13 @@ class ApiService {
   handleError(error, defaultMessage) {
     // If server responded with structured error, prefer that
     if (error.response?.data?.error) {
-      return new Error(error.response.data.error);
+      const serverError = String(error.response.data.error);
+
+      if (serverError.includes('All TIDPs must belong to the same project')) {
+        return new Error('Selected TIDPs must all belong to the active project. Please filter TIDPs by project and try again.');
+      }
+
+      return new Error(serverError);
     }
 
     // Validation error with details

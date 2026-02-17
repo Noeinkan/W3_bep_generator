@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { sanitizeText } from '../utils/validationUtils';
+import { sanitizeText, formatDate } from '../utils/validationUtils';
 
 export const useDraftFilters = (rawDrafts) => {
   // Search and filter states
@@ -170,9 +170,6 @@ export const useDraftFilters = (rawDrafts) => {
       return part;
     });
   }, []);
-
-  // Import formatDate from validationUtils
-  const { formatDate } = require('../utils/validationUtils');
 
   return {
     // State

@@ -3,6 +3,10 @@ const router = express.Router();
 const tidpService = require('../services/tidpService');
 const midpService = require('../services/midpService');
 const { validateTIDP, validateTIDPUpdate } = require('../validators/tidpValidator');
+const { authenticateToken } = require('../middleware/authMiddleware');
+
+// Apply authentication to all TIDP routes
+router.use(authenticateToken);
 
 /**
  * GET /api/tidp

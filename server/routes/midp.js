@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const midpService = require('../services/midpService');
 const { validateMIDP, validateMIDPUpdate } = require('../validators/midpValidator');
+const { authenticateToken } = require('../middleware/authMiddleware');
+
+// Apply authentication to all MIDP routes
+router.use(authenticateToken);
 
 /**
  * GET /api/midp
@@ -9,7 +13,10 @@ const { validateMIDP, validateMIDPUpdate } = require('../validators/midpValidato
  */
 router.get('/', async (req, res, next) => {
   try {
-    const midps = midpService.getAllMIDPs();
+    const { projectId } = req.query;
+    const midps = projectId
+      ? midpService.getMIDPsByProject(projectId)
+      : midpService.getAllMIDPs();
 
     res.json({
       success: true,

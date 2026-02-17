@@ -488,7 +488,14 @@ class HtmlTemplateService {
     if (value === null || value === undefined) return false;
 
     if (typeof value === 'string') {
-      return value.trim().length > 0;
+      const trimmed = value.trim();
+      if (!trimmed) return false;
+
+      if (field?.type === 'textarea' && this.isLikelyHtml(trimmed)) {
+        return this.hasMeaningfulHtmlContent(trimmed);
+      }
+
+      return true;
     }
 
     if (typeof value === 'number') {
@@ -601,7 +608,14 @@ class HtmlTemplateService {
    * @returns {string} Textarea HTML
    */
   renderTextarea(value) {
-    return `<p class="textarea-content">${this.escapeHtml(value).replace(/\n/g, '<br>')}</p>`;
+    const text = String(value ?? '');
+
+    if (this.isLikelyHtml(text)) {
+      const sanitizedHtml = this.sanitizeRichTextHtml(text);
+      return `<div class="textarea-content rich-text-content">${sanitizedHtml}</div>`;
+    }
+
+    return `<p class="textarea-content">${this.escapeHtml(text).replace(/\n/g, '<br>')}</p>`;
   }
 
   /**
@@ -919,6 +933,48 @@ class HtmlTemplateService {
     return str.replace(/[&<>"']/g, m => map[m]);
   }
 
+  stripHtmlTags(html) {
+    return String(html || '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  isLikelyHtml(value) {
+    return typeof value === 'string' && /<\/?[a-z][\s\S]*>/i.test(value);
+  }
+
+  hasMeaningfulHtmlContent(html) {
+    const plainText = this.stripHtmlTags(html);
+    if (plainText.length > 0) return true;
+
+    return /<img\b[^>]*src\s*=\s*['"][^'"]+['"][^>]*>/i.test(String(html || ''));
+  }
+
+  sanitizeRichTextHtml(html) {
+    let sanitized = String(html || '');
+
+    sanitized = sanitized
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+      .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
+      .replace(/<embed\b[^>]*>/gi, '')
+      .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+      .replace(/\sstyle\s*=\s*("[^"]*"|'[^']*')/gi, '')
+      .replace(/\s(?:href|src)\s*=\s*("\s*javascript:[^"]*"|'\s*javascript:[^']*')/gi, '')
+      .replace(/\s(?:href|src)\s*=\s*("\s*vbscript:[^"]*"|'\s*vbscript:[^']*')/gi, '')
+      .replace(/\s(?:href|src)\s*=\s*("\s*data:(?!image\/(?:png|jpe?g|gif|webp|svg\+xml);base64,)[^"]*"|'\s*data:(?!image\/(?:png|jpe?g|gif|webp|svg\+xml);base64,)[^']*')/gi, '');
+
+    sanitized = sanitized.replace(
+      /<\/?(?!p\b|br\b|strong\b|b\b|em\b|i\b|u\b|s\b|ul\b|ol\b|li\b|blockquote\b|h1\b|h2\b|h3\b|h4\b|h5\b|h6\b|table\b|thead\b|tbody\b|tr\b|th\b|td\b|a\b|img\b|code\b|pre\b|span\b)[^>]*>/gi,
+      ''
+    );
+
+    return sanitized;
+  }
+
   /**
    * Load CSS from external file with caching
    * @returns {string} CSS content
@@ -1223,6 +1279,26 @@ class HtmlTemplateService {
         margin: 10px 0;
         color: #4b5563;
         white-space: pre-wrap;
+      }
+
+      .rich-text-content {
+        line-height: 1.6;
+      }
+
+      .rich-text-content p {
+        margin: 8px 0;
+      }
+
+      .rich-text-content img,
+      .rich-text-content .tiptap-image {
+        display: block;
+        max-width: 100%;
+        max-height: 180mm;
+        width: auto;
+        height: auto;
+        margin: 12px 0;
+        border: 1px solid #e5e7eb;
+        border-radius: 4px;
       }
 
       .monospace {

@@ -14,24 +14,54 @@ class ProjectService {
     return stmt.get(id);
   }
 
-  createProject(userId, name) {
+  createProject(userId, name, options = {}) {
     const id = uuidv4();
     const now = new Date().toISOString();
+    const { accHubId = null, accProjectId = null, accDefaultFolder = null } = options;
 
     const stmt = db.prepare(
-      'INSERT INTO projects (id, name, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
+      'INSERT INTO projects (id, name, user_id, acc_hub_id, acc_project_id, acc_default_folder, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     );
-    stmt.run(id, name, userId, now, now);
+    stmt.run(id, name, userId, accHubId, accProjectId, accDefaultFolder, now, now);
 
     return this.getProject(id);
   }
 
-  updateProject(id, name) {
+  updateProject(id, updates = {}) {
+    const normalizedUpdates = typeof updates === 'string' ? { name: updates } : updates;
+    const fields = [];
+    const values = [];
+
+    if (Object.prototype.hasOwnProperty.call(normalizedUpdates, 'name')) {
+      fields.push('name = ?');
+      values.push(normalizedUpdates.name);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(normalizedUpdates, 'accHubId')) {
+      fields.push('acc_hub_id = ?');
+      values.push(normalizedUpdates.accHubId || null);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(normalizedUpdates, 'accProjectId')) {
+      fields.push('acc_project_id = ?');
+      values.push(normalizedUpdates.accProjectId || null);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(normalizedUpdates, 'accDefaultFolder')) {
+      fields.push('acc_default_folder = ?');
+      values.push(normalizedUpdates.accDefaultFolder || null);
+    }
+
+    if (fields.length === 0) {
+      return this.getProject(id);
+    }
+
     const now = new Date().toISOString();
-    const stmt = db.prepare(
-      'UPDATE projects SET name = ?, updated_at = ? WHERE id = ?'
-    );
-    stmt.run(name, now, id);
+    fields.push('updated_at = ?');
+    values.push(now, id);
+
+    const stmt = db.prepare(`UPDATE projects SET ${fields.join(', ')} WHERE id = ?`);
+    stmt.run(...values);
 
     return this.getProject(id);
   }
