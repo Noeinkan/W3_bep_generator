@@ -12,9 +12,11 @@ import HiddenComponentsRenderer from '../../export/HiddenComponentsRenderer';
 import useStepNavigation from '../../../hooks/useStepNavigation';
 import useDraftSave from '../../../hooks/useDraftSave';
 import { BepSidebar, BepHeader, BepFooter, SuccessToast } from './components';
+import { cn } from '../../../utils/cn';
 import { ROUTES } from '../../../constants/routes';
 import { EirProvider, useEir } from '../../../contexts/EirContext';
 import { EirUploadStep, EirAnalysisView } from '../../eir';
+import { bepUi } from './bepUiClasses';
 
 /**
  * Inner component that renders the form content
@@ -151,7 +153,7 @@ const BepFormViewContent = () => {
   }
 
   return (
-    <div className="h-screen bg-gray-50 flex relative" data-page-uri={location.pathname}>
+    <div className={cn('h-screen flex relative', bepUi.shell)} data-page-uri={location.pathname}>
       {/* Sidebar */}
       <BepSidebar
         bepType={bepType}
@@ -185,12 +187,14 @@ const BepFormViewContent = () => {
         />
 
         {/* Form Content */}
-        <div ref={contentRef} className="flex-1 overflow-y-auto bg-gray-50">
+        <div ref={contentRef} className={cn('flex-1', bepUi.contentScroll, 'bg-ui-canvas')}>
           <div className={`mx-auto px-6 py-8 ${currentStep === totalSteps - 1 ? 'max-w-[297mm]' : 'max-w-[210mm]'}`}>
             <div
-              className={`bg-white rounded-xl shadow-sm border border-gray-200 p-8 transition-all duration-300 ease-in-out ${
+              className={cn(
+                bepUi.panel,
+                'bg-ui-surface border border-ui-border rounded-xl shadow-sm p-8 transition-all duration-300 ease-in-out',
                 isTransitioning ? 'opacity-50 transform scale-95' : 'opacity-100 transform scale-100'
-              }`}
+              )}
             >
               <FormStepRenderer stepIndex={currentStep} bepType={bepType} />
             </div>
@@ -277,11 +281,11 @@ const EirStepWrapper = ({ children }) => {
   // If showing EIR step
   if (showEirStep) {
     return (
-      <div className="h-screen bg-gray-50 flex">
+      <div className={cn('h-screen flex', bepUi.shell)}>
         <div className="flex-1 flex flex-col">
-          <div className="flex-1 overflow-y-auto">
+          <div className={cn('flex-1', bepUi.contentScroll)}>
             <div className="max-w-4xl mx-auto px-4 py-4 lg:py-6">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className={cn(bepUi.panel, 'bg-ui-surface border border-ui-border rounded-xl shadow-sm p-6')}>
                 {showAnalysisView && hasAnalysis ? (
                   <EirAnalysisView
                     analysis={analysis}

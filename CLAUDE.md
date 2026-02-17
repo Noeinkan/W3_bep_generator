@@ -13,6 +13,7 @@ This is a Windows development environment. For bash commands, use PowerShell-com
 - **After writing code, flag risks.** List what could break and suggest tests to cover it.
 - **Bug workflow: test first.** When fixing a bug, start by writing (or identifying) a test that reproduces it, then fix until it passes.
 - **Learn from corrections.** Whenever a correction is made, add a new rule here so the same mistake doesn't repeat.
+- **Tailwind semantic token naming.** Use dashed keys/classes only (e.g., `text-ui-text-muted`, `bg-ui-primary-hover`, `bg-ui-success-bg`); never use camelCase token names in Tailwind config or utility classes; when adding new UI tokens, keep config keys and class usage naming style exactly matched.
 - **After code changes,** run `npm test` before considering done.
 - **Stay focused.** Do not perform additional unrequested work like installing packages, creating extra documentation, or expanding scope without explicit user approval.
 

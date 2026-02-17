@@ -1,67 +1,22 @@
-import { useCallback, useState, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, LayoutGrid } from 'lucide-react';
 import { useBepForm } from '../../../contexts/BepFormContext';
-import { FormBuilderProvider, BepStructureMap, useFormBuilder } from '../../form-builder';
-import { FieldStructureEditor } from '../../form-builder/field-editor';
-import { StepStructureEditor } from '../../form-builder/step-editor';
+import { FormBuilderProvider, BepStructureMap } from '../../form-builder';
 
 /**
  * Inner layout component — lives inside FormBuilderProvider so it can read context.
- * Renders single-column in view mode, two-panel in edit mode.
+ * Renders structure map in a single panel.
  */
-const StructureMapEditLayout = ({ onStepSelect }) => {
-  const { isEditMode, steps } = useFormBuilder();
-  const [selectedStepId, setSelectedStepId] = useState(null);
-
-  const selectedStep = useMemo(
-    () => (selectedStepId ? steps.find((s) => s.id === selectedStepId) || null : null),
-    [selectedStepId, steps]
-  );
-
-  if (!isEditMode) {
-    return (
-      <div
-        className="bg-gray-50 border border-gray-200 rounded-xl p-4 overflow-y-auto"
-        style={{ maxHeight: 'calc(100vh - 260px)' }}
-      >
-        <BepStructureMap
-          onStepClick={onStepSelect}
-          showHeader={true}
-          showEditToggle={true}
-        />
-      </div>
-    );
-  }
-
-  // Edit mode: two-panel layout
+const StructureMapEditLayout = ({ canEditStructure, editDisabledReason }) => {
   return (
-    <div className="flex gap-4" style={{ height: 'calc(100vh - 260px)' }}>
-      {/* Left panel: structure tree */}
-      <div className="w-[55%] overflow-y-auto bg-gray-50 border border-gray-200 rounded-xl p-4">
-        <BepStructureMap
-          showHeader={true}
-          showEditToggle={true}
-          hideEditors={true}
-          onSelectedStepChange={setSelectedStepId}
-          controlledSelectedStepId={selectedStepId}
-        />
-      </div>
-
-      {/* Right panel: editors for selected step */}
-      <div className="w-[45%] overflow-y-auto flex flex-col gap-4">
-        {selectedStep && (
-          <FieldStructureEditor
-            stepId={selectedStep.id}
-            stepTitle={selectedStep.title}
-            stepNumber={selectedStep.step_number}
-          />
-        )}
-        <StepStructureEditor
-          selectedStepId={selectedStepId}
-          onSelectStep={(step) => setSelectedStepId(step?.id || null)}
-        />
-      </div>
+    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+      <BepStructureMap
+        showHeader={true}
+        showEditToggle={true}
+        canEditStructure={canEditStructure}
+        editDisabledReason={editDisabledReason}
+      />
     </div>
   );
 };
@@ -72,7 +27,10 @@ const StructureMapEditLayout = ({ onStepSelect }) => {
  */
 const BepStructureMapView = () => {
   const navigate = useNavigate();
-  const { bepType } = useBepForm();
+  const { bepType, currentDraft } = useBepForm();
+
+  const canEditStructure = true;
+  const editDisabledReason = 'Structure editing is available on this page.';
 
   const goToInfoRequirements = useCallback(() => {
     navigate('/bep-generator/info-requirements');
@@ -80,10 +38,6 @@ const BepStructureMapView = () => {
 
   const goBackToSelectType = useCallback(() => {
     navigate('/bep-generator/select-type');
-  }, [navigate]);
-
-  const handleStepSelect = useCallback((stepIndex) => {
-    navigate(`/bep-generator/new-document/step/${stepIndex}`);
   }, [navigate]);
 
   return (
@@ -102,8 +56,11 @@ const BepStructureMapView = () => {
         </div>
 
         {bepType ? (
-          <FormBuilderProvider projectId={null} bepType={bepType}>
-            <StructureMapEditLayout onStepSelect={handleStepSelect} />
+          <FormBuilderProvider projectId={null} draftId={currentDraft?.id ?? null} bepType={bepType}>
+            <StructureMapEditLayout
+              canEditStructure={canEditStructure}
+              editDisabledReason={editDisabledReason}
+            />
           </FormBuilderProvider>
         ) : (
           <div className="text-sm text-gray-500">

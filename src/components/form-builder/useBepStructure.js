@@ -6,25 +6,18 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { apiClient } from '../../services/apiService';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL
-  || (typeof window !== 'undefined' ? window.location.origin : '');
-
-const normalizeBaseUrl = (url = '') => url.replace(/\/+$/, '');
-
-const buildBepStructureUrl = (endpoint = '') => {
-  const base = normalizeBaseUrl(API_BASE_URL);
+const buildBepStructurePath = (endpoint = '') => {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  return `/bep-structure${cleanEndpoint}`;
+};
 
-  if (!base) {
-    return `/api/bep-structure${cleanEndpoint}`;
-  }
-
-  if (base.endsWith('/api')) {
-    return `${base}/bep-structure${cleanEndpoint}`;
-  }
-
-  return `${base}/api/bep-structure${cleanEndpoint}`;
+const isCancellationError = (error) => {
+  if (!error) return false;
+  return error.name === 'AbortError'
+    || error.name === 'CanceledError'
+    || error.code === 'ERR_CANCELED';
 };
 
 /**
@@ -53,21 +46,33 @@ export function useBepStructure({ projectId = null, draftId = null, bepType = nu
   // ========================================
 
   const apiCall = useCallback(async (endpoint, options = {}) => {
-    const url = buildBepStructureUrl(endpoint);
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-      },
-      ...options
-    });
+    try {
+      let data;
+      if (options.body !== undefined) {
+        data = typeof options.body === 'string'
+          ? JSON.parse(options.body)
+          : options.body;
+      }
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `API error: ${response.status}`);
+      const response = await apiClient.request({
+        url: buildBepStructurePath(endpoint),
+        method: options.method || 'GET',
+        headers: options.headers,
+        data,
+        signal: options.signal
+      });
+
+      return response.data;
+    } catch (error) {
+      if (isCancellationError(error)) {
+        throw error;
+      }
+      const errorMessage = error.response?.data?.error || error.message || 'API request failed';
+      const apiError = new Error(errorMessage);
+      apiError.name = error.name || 'Error';
+      apiError.code = error.code;
+      throw apiError;
     }
-
-    return response.json();
   }, []);
 
   // ========================================
@@ -93,17 +98,17 @@ export function useBepStructure({ projectId = null, draftId = null, bepType = nu
       let structureData;
       if (draftId) {
         // Draft-level structure
-        const response = await apiCall(`/draft/${draftId}?${params}`);
+        const response = await apiCall(`/draft/${draftId}?${params}`, { signal: abortControllerRef.current.signal });
         structureData = response.data;
         setHasCustomStructure(response.hasCustomStructure);
       } else if (projectId) {
         // Project-level structure (deprecated)
-        const response = await apiCall(`/project/${projectId}?${params}`);
+        const response = await apiCall(`/project/${projectId}?${params}`, { signal: abortControllerRef.current.signal });
         structureData = response.data;
         setHasCustomStructure(response.hasCustomStructure);
       } else {
         // Default template
-        const response = await apiCall(`/template?${params}`);
+        const response = await apiCall(`/template?${params}`, { signal: abortControllerRef.current.signal });
         structureData = response.data;
         setHasCustomStructure(false);
       }
@@ -126,11 +131,11 @@ export function useBepStructure({ projectId = null, draftId = null, bepType = nu
       setFields(allFields);
 
       // Fetch field types
-      const typesResponse = await apiCall('/field-types');
+      const typesResponse = await apiCall('/field-types', { signal: abortControllerRef.current.signal });
       setFieldTypes(typesResponse.data);
 
     } catch (err) {
-      if (err.name === 'AbortError') return;
+      if (isCancellationError(err)) return;
       setError(err.message);
       console.error('Error fetching BEP structure:', err);
     } finally {

@@ -31,25 +31,25 @@ const MilestonesTableField = ({ field, value, onChange, error }) => {
         required={required}
       />
       <div className="overflow-x-auto">
-        <table className="min-w-full border border-gray-300 rounded-lg">
-          <thead className="bg-gray-50">
+        <table className="min-w-full border border-ui-border rounded-lg overflow-hidden bep-table bg-ui-surface">
+          <thead className="bg-ui-muted border-b border-ui-border">
             <tr>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-700 border-b">Stage/Phase</th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-700 border-b">Milestone Description</th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-700 border-b">Deliverables</th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-700 border-b">Due Date</th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-700 border-b">Actions</th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-ui-text border-b border-ui-border">Stage/Phase</th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-ui-text border-b border-ui-border">Milestone Description</th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-ui-text border-b border-ui-border">Deliverables</th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-ui-text border-b border-ui-border">Due Date</th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-ui-text border-b border-ui-border">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="bg-ui-surface">
             {milestones.map((milestone, index) => (
-              <tr key={index} className="border-b">
+              <tr key={index} className="border-b border-ui-border hover:bg-ui-muted/60 transition-colors">
                 <td className="px-4 py-2">
                   <BaseTextInput
                     type="text"
                     value={milestone.stage || ''}
                     onChange={(e) => updateMilestone(index, 'stage', e.target.value)}
-                    className="p-2 border-gray-300 rounded"
+                    className="p-2 border-ui-border rounded-md bg-ui-surface text-ui-text placeholder:text-ui-text-muted focus-visible:ring-2 focus-visible:ring-ui-primary/30"
                     placeholder="Stage 3"
                   />
                 </td>
@@ -58,7 +58,7 @@ const MilestonesTableField = ({ field, value, onChange, error }) => {
                     type="text"
                     value={milestone.description || ''}
                     onChange={(e) => updateMilestone(index, 'description', e.target.value)}
-                    className="p-2 border-gray-300 rounded"
+                    className="p-2 border-ui-border rounded-md bg-ui-surface text-ui-text placeholder:text-ui-text-muted focus-visible:ring-2 focus-visible:ring-ui-primary/30"
                     placeholder="Coordinated Federated Models"
                   />
                 </td>
@@ -67,7 +67,7 @@ const MilestonesTableField = ({ field, value, onChange, error }) => {
                     type="text"
                     value={milestone.deliverables || ''}
                     onChange={(e) => updateMilestone(index, 'deliverables', e.target.value)}
-                    className="p-2 border-gray-300 rounded"
+                    className="p-2 border-ui-border rounded-md bg-ui-surface text-ui-text placeholder:text-ui-text-muted focus-visible:ring-2 focus-visible:ring-ui-primary/30"
                     placeholder="Architecture, Structure, MEP Models"
                   />
                 </td>
@@ -76,14 +76,14 @@ const MilestonesTableField = ({ field, value, onChange, error }) => {
                     type="date"
                     value={milestone.dueDate || ''}
                     onChange={(e) => updateMilestone(index, 'dueDate', e.target.value)}
-                    className="p-2 border-gray-300 rounded"
+                    className="p-2 border-ui-border rounded-md bg-ui-surface text-ui-text focus-visible:ring-2 focus-visible:ring-ui-primary/30"
                   />
                 </td>
                 <td className="px-4 py-2">
                   <button
                     type="button"
                     onClick={() => removeMilestone(index)}
-                    className="text-red-600 hover:text-red-800"
+                    className="inline-flex items-center px-2.5 py-1.5 rounded-md border border-ui-border bg-ui-surface text-red-600 hover:bg-ui-muted hover:text-red-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-primary/30"
                   >
                     Remove
                   </button>
@@ -95,7 +95,7 @@ const MilestonesTableField = ({ field, value, onChange, error }) => {
         <button
           type="button"
           onClick={addMilestone}
-          className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+          className="mt-3 px-4 py-2 rounded-md border border-ui-border bg-ui-surface text-ui-text-muted hover:bg-ui-muted hover:text-ui-text transition-colors flex items-center space-x-2 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-primary/30"
         >
           <Plus className="w-4 h-4" />
           <span>Add Milestone</span>

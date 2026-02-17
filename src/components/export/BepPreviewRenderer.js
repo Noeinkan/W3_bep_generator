@@ -23,6 +23,33 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
     ADD_ATTR: ['class', 'data-caption', 'target', 'rel']
   });
 
+  const normalizeMilestoneRow = (row) => {
+    if (!row || typeof row !== 'object') {
+      return {
+        'Stage/Phase': '',
+        'Milestone Description': '',
+        Deliverables: '',
+        'Due Date': ''
+      };
+    }
+
+    const getFirstValue = (keys) => {
+      for (const key of keys) {
+        if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
+          return row[key];
+        }
+      }
+      return '';
+    };
+
+    return {
+      'Stage/Phase': getFirstValue(['Stage/Phase', 'Stage', 'Phase', 'stage', 'phase']),
+      'Milestone Description': getFirstValue(['Milestone Description', 'milestoneDescription', 'Description', 'description']),
+      Deliverables: getFirstValue(['Deliverables', 'deliverables']),
+      'Due Date': getFirstValue(['Due Date', 'dueDate', 'Date', 'date'])
+    };
+  };
+
   const renderFieldValue = (field, value) => {
     if (!value) return null;
 
@@ -131,6 +158,43 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
                 {value.map((row, rowIdx) => (
                   <tr key={rowIdx} className="hover:bg-gray-50">
                     {columns.map((col, colIdx) => (
+                      <td key={colIdx} className="px-4 py-2 text-sm text-gray-900 border-b border-gray-200">
+                        {row[col] || '-'}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+
+      case 'milestones-table':
+        if (!Array.isArray(value) || value.length === 0) return null;
+        const milestoneColumns = field.columns?.length
+          ? field.columns
+          : ['Stage/Phase', 'Milestone Description', 'Deliverables', 'Due Date'];
+        const normalizedMilestones = value.map(normalizeMilestoneRow);
+
+        return (
+          <div className="my-4 overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
+              <thead className="bg-gray-50">
+                <tr>
+                  {milestoneColumns.map((col, idx) => (
+                    <th
+                      key={idx}
+                      className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border-b border-gray-300"
+                    >
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {normalizedMilestones.map((row, rowIdx) => (
+                  <tr key={rowIdx} className="hover:bg-gray-50">
+                    {milestoneColumns.map((col, colIdx) => (
                       <td key={colIdx} className="px-4 py-2 text-sm text-gray-900 border-b border-gray-200">
                         {row[col] || '-'}
                       </td>

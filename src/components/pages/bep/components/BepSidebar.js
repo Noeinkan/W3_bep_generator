@@ -6,6 +6,8 @@ import { FormBuilderContext, DynamicProgressSidebar } from '../../../form-builde
 import CONFIG from '../../../../config/bepConfig';
 import { ROUTES } from '../../../../constants/routes';
 import { useEir } from '../../../../contexts/EirContext';
+import { cn } from '../../../../utils/cn';
+import { bepUi } from '../bepUiClasses';
 
 /**
  * BEP Form sidebar component with navigation and progress
@@ -52,20 +54,20 @@ const BepSidebar = ({
   };
 
   return (
-    <div className="w-80 bg-white shadow-xl border-r border-gray-200 flex flex-col">
+    <div className={cn('w-80 flex flex-col', bepUi.sidebar, 'rounded-none border-l-0 border-y-0 border-r border-ui-border shadow-none')}>
       {/* Header */}
-      <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+      <div className="p-6 border-b border-ui-border bg-ui-surface">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-xl font-bold text-gray-900 flex items-center">
-              <Zap className="w-5 h-5 text-blue-600 mr-2" />
+            <h1 className="text-xl font-semibold text-ui-text flex items-center">
+              <Zap className="w-5 h-5 text-ui-primary mr-2" />
               BEP Generator
             </h1>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-ui-text-muted mt-1">
               {CONFIG.bepTypeDefinitions[bepType]?.title}
             </p>
             {currentDraft && (
-              <p className="text-xs text-blue-600 mt-1 font-medium flex items-center">
+              <p className="text-xs text-ui-primary mt-1 font-medium flex items-center">
                 <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z" />
                   <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
@@ -77,7 +79,7 @@ const BepSidebar = ({
           <div className="flex items-center space-x-1">
             <button
               onClick={goToTidpManager}
-              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+              className={cn(bepUi.btnSecondary, 'p-2 rounded-md')}
               title="TIDP/MIDP Manager"
             >
               <ExternalLink className="w-4 h-4" />
@@ -88,7 +90,10 @@ const BepSidebar = ({
         <button
           onClick={() => navigate(ROUTES.BEP_DRAFTS)}
           disabled={!user}
-          className="w-full inline-flex items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+          className={cn(
+            bepUi.btnSecondary,
+            'w-full px-3 py-2 rounded-md shadow-sm disabled:opacity-50 disabled:cursor-not-allowed'
+          )}
         >
           <FolderOpen className="w-4 h-4 mr-2" />
           Drafts
@@ -97,11 +102,13 @@ const BepSidebar = ({
         {/* EIR Upload Button */}
         <button
           onClick={goToEirStep}
-          className={`w-full mt-2 inline-flex items-center justify-center px-3 py-2 border shadow-sm text-sm font-medium rounded-lg transition-all duration-200 ${
+          className={cn(
+            bepUi.btnBase,
+            'w-full mt-2 px-3 py-2 rounded-md shadow-sm',
             hasAnalysis
-              ? 'border-green-300 text-green-700 bg-green-50 hover:bg-green-100'
-              : 'border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100'
-          }`}
+              ? 'border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+              : 'border-violet-300 text-violet-700 bg-violet-50 hover:bg-violet-100'
+          )}
         >
           {hasAnalysis ? (
             <>
@@ -118,8 +125,8 @@ const BepSidebar = ({
 
         {/* EIR Analysis Indicator */}
         {hasAnalysis && (
-          <div className="mt-2 p-2 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
-            <div className="flex items-center gap-2 text-xs text-purple-700">
+          <div className="mt-2 p-2 bg-violet-50 rounded-md border border-violet-200">
+            <div className="flex items-center gap-2 text-xs text-violet-700">
               <Sparkles className="w-3 h-3" />
               <span>AI suggestions active</span>
             </div>

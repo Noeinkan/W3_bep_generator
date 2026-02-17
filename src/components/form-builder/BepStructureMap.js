@@ -1,5 +1,5 @@
 import React, { useContext, useMemo, useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Eye, EyeOff, Settings2, Pencil } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronUp, Eye, EyeOff, Settings2, Pencil } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import FormBuilderContext from './FormBuilderContext';
 import { useBepStructure } from './useBepStructure';
@@ -40,11 +40,13 @@ const StructureMap = ({
   currentStepIndex,
   showHeader,
   showEditToggle,
-  hideEditors = false,
   onSelectedStepChange = null,
-  controlledSelectedStepId
+  controlledSelectedStepId,
+  canEditStructure = true,
+  editDisabledReason = 'Save as draft to unlock structure editing.'
 }) => {
   const [expandedSteps, setExpandedSteps] = useState(new Set());
+  const [expandedCategories, setExpandedCategories] = useState(new Set());
   const [showHidden, setShowHidden] = useState(false);
   const [selectedStepId, setSelectedStepId] = useState(null);
 
@@ -113,9 +115,17 @@ const StructureMap = ({
   }, [orderedSteps]);
 
   useEffect(() => {
-    if (!isEditMode || selectedStepId || orderedSteps.length === 0) return;
-    setSelectedStepId(orderedSteps[0].id);
-  }, [isEditMode, orderedSteps, selectedStepId]);
+    if (orderedSteps.length === 0) return;
+    const selectedExists = orderedSteps.some((step) => step.id === selectedStepId);
+    if (!selectedStepId || !selectedExists) {
+      setSelectedStepId(orderedSteps[0].id);
+    }
+  }, [orderedSteps, selectedStepId]);
+
+  useEffect(() => {
+    if (!isEditMode) return;
+    setExpandedCategories(new Set(groupedByCategory.map((group) => group.category)));
+  }, [isEditMode, groupedByCategory]);
 
   useEffect(() => {
     if (onSelectedStepChange) onSelectedStepChange(selectedStepId);
@@ -139,9 +149,44 @@ const StructureMap = ({
     });
   };
 
-  const handleStepClick = (step) => {
+  const toggleCategoryExpanded = (category) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
+  };
+
+  const focusStepEditors = (step) => {
     setSelectedStepId(step.id);
-    if (!onStepClick || isEditMode) return;
+    setExpandedSteps((prev) => {
+      const next = new Set(prev);
+      next.add(step.id);
+      return next;
+    });
+
+    const stepCategory = getDisplayCategory(step.category);
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      next.add(stepCategory);
+      return next;
+    });
+
+    if (!isEditMode) return;
+  };
+
+  const handleStepClick = (step) => {
+    if (isEditMode) {
+      focusStepEditors(step);
+      return;
+    }
+
+    setSelectedStepId(step.id);
+    if (!onStepClick) return;
     const targetIndex = visibleIndexById.get(step.id);
     if (targetIndex === undefined) return;
     onStepClick(targetIndex);
@@ -166,7 +211,12 @@ const StructureMap = ({
           {showEditToggle && toggleEditMode && (
             <button
               onClick={toggleEditMode}
+              disabled={!canEditStructure}
+              title={!canEditStructure ? editDisabledReason : undefined}
               className={`inline-flex items-center px-4 py-2 text-sm font-semibold rounded-lg transition-colors shadow-sm ${
+                !canEditStructure
+                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed shadow-none'
+                  :
                 isEditMode
                   ? 'bg-gray-700 text-white hover:bg-gray-800'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -176,6 +226,16 @@ const StructureMap = ({
               {isEditMode ? 'Done' : 'Edit structure'}
             </button>
           )}
+        </div>
+      )}
+
+      {showHeader && showEditToggle && !canEditStructure && (
+        <div className="text-xs text-gray-500">{editDisabledReason}</div>
+      )}
+
+      {isEditMode && (
+        <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+          Edit mode: click “Edit fields” on a step to open live editing controls directly inside that step card.
         </div>
       )}
 
@@ -230,20 +290,34 @@ const StructureMap = ({
                     <div className="absolute left-0 top-5 h-px w-4 bg-gray-300" />
                     <div className="ml-4">
                       <div className="flex items-center gap-2 py-2">
-                        <div className={`h-5 w-1 rounded-full ${colors.accent}`} />
-                        <span className={`text-xs font-semibold ${colors.text}`}>{group.category}</span>
-                        <span className="text-xs text-gray-400">({group.steps.length} step{group.steps.length !== 1 ? 's' : ''})</span>
+                        <button
+                          type="button"
+                          onClick={() => toggleCategoryExpanded(group.category)}
+                          className="inline-flex items-center gap-2 text-left"
+                        >
+                          {expandedCategories.has(group.category) ? (
+                            <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+                          ) : (
+                            <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+                          )}
+                          <div className={`h-5 w-1 rounded-full ${colors.accent}`} />
+                          <span className={`text-xs font-semibold ${colors.text}`}>{group.category}</span>
+                          <span className="text-xs text-gray-400">({group.steps.length} step{group.steps.length !== 1 ? 's' : ''})</span>
+                        </button>
                       </div>
-                      <div className="space-y-2">
-                        {group.steps.map((step, si) => {
+                      {expandedCategories.has(group.category) && (
+                        <div className="space-y-2">
+                          {group.steps.map((step, si) => {
                           const isLastStep = si === group.steps.length - 1;
                           const Icon = getIcon(step.icon);
                           const isCurrent = currentStepIndex !== null && visibleIndexById.get(step.id) === currentStepIndex;
                           const isExpanded = expandedSteps.has(step.id);
                           const stepFields = fieldsByStepId.get(step.id) || [];
-                          const isClickable = onStepClick && visibleIndexById.has(step.id) && !isEditMode;
+                          const isClickable = true;
                           const isSelected = selectedStepId === step.id;
                           const category = getDisplayCategory(step.category);
+                          const showInlineEditor = isEditMode && isSelected;
+                          const showFieldPreview = isExpanded && !showInlineEditor;
 
                           return (
                             <div key={step.id} className="relative">
@@ -252,7 +326,7 @@ const StructureMap = ({
                               <div className="ml-4">
                                 <div
                                   className={`border rounded-lg p-3 bg-white transition-colors ${
-                                    isCurrent || isSelected ? 'border-blue-400 ring-1 ring-blue-200' : 'border-gray-200 hover:border-blue-200'
+                                    isCurrent || isSelected ? 'border-blue-500 ring-2 ring-blue-100 bg-blue-50/40' : 'border-gray-200 hover:border-blue-200'
                                   } ${step.is_visible ? '' : 'opacity-60'} ${isClickable ? 'cursor-pointer' : ''}`}
                                   onClick={() => isClickable && handleStepClick(step)}
                                   role={isClickable ? 'button' : 'article'}
@@ -320,7 +394,11 @@ const StructureMap = ({
                                         <button
                                           onClick={(event) => {
                                             event.stopPropagation();
-                                            setSelectedStepId(step.id);
+                                            if (isSelected) {
+                                              setSelectedStepId(null);
+                                              return;
+                                            }
+                                            focusStepEditors(step);
                                           }}
                                           className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md border transition-colors ${
                                             isSelected
@@ -329,13 +407,13 @@ const StructureMap = ({
                                           }`}
                                         >
                                           <Pencil className="w-3 h-3" />
-                                          Edit fields
+                                          {isSelected ? 'Close editor' : 'Edit fields'}
                                         </button>
                                       )}
                                     </div>
                                   </div>
 
-                                  {isExpanded && (
+                                  {showFieldPreview && (
                                     <div className="mt-2 border-t border-gray-100 pt-3">
                                       <div className="border-l border-gray-200 pl-4 space-y-2">
                                         {stepFields.length > 0 ? (
@@ -363,37 +441,36 @@ const StructureMap = ({
                                       </div>
                                     </div>
                                   )}
+
+                                  {showInlineEditor && (
+                                    <div className="mt-3 border-t border-blue-100 pt-3 space-y-3">
+                                      <div className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
+                                        Editing step {step.step_number}: {step.title}
+                                      </div>
+                                      <FieldStructureEditor
+                                        stepId={step.id}
+                                        stepTitle={step.title}
+                                        stepNumber={step.step_number}
+                                      />
+                                      <StepStructureEditor
+                                        selectedStepId={selectedStepId}
+                                        onSelectStep={(selected) => setSelectedStepId(selected?.id || null)}
+                                      />
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
                           );
-                        })}
-                      </div>
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
           </div>
-
-          {!hideEditors && isEditMode && selectedStep && (
-            <div className="border-t border-gray-200 pt-4">
-              <FieldStructureEditor
-                stepId={selectedStep.id}
-                stepTitle={selectedStep.title}
-                stepNumber={selectedStep.step_number}
-              />
-            </div>
-          )}
-
-          {!hideEditors && isEditMode && (
-            <div className="border-t border-gray-200 pt-4">
-              <StepStructureEditor
-                selectedStepId={selectedStepId}
-                onSelectStep={(step) => setSelectedStepId(step?.id || null)}
-              />
-            </div>
-          )}
         </>
       )}
     </div>
@@ -405,9 +482,10 @@ const StructureMapWithContext = ({
   currentStepIndex,
   showHeader,
   showEditToggle,
-  hideEditors,
   onSelectedStepChange,
-  controlledSelectedStepId
+  controlledSelectedStepId,
+  canEditStructure,
+  editDisabledReason
 }) => {
   const {
     steps,
@@ -430,9 +508,10 @@ const StructureMapWithContext = ({
       currentStepIndex={currentStepIndex}
       showHeader={showHeader}
       showEditToggle={showEditToggle}
-      hideEditors={hideEditors}
       onSelectedStepChange={onSelectedStepChange}
       controlledSelectedStepId={controlledSelectedStepId}
+      canEditStructure={canEditStructure}
+      editDisabledReason={editDisabledReason}
     />
   );
 };
@@ -444,7 +523,9 @@ const StructureMapWithFetch = ({
   onStepClick,
   currentStepIndex,
   showHeader,
-  showEditToggle
+  showEditToggle,
+  canEditStructure,
+  editDisabledReason
 }) => {
   const {
     steps,
@@ -465,6 +546,8 @@ const StructureMapWithFetch = ({
       currentStepIndex={currentStepIndex}
       showHeader={showHeader}
       showEditToggle={showEditToggle}
+      canEditStructure={canEditStructure}
+      editDisabledReason={editDisabledReason}
     />
   );
 };
@@ -476,9 +559,10 @@ export default function BepStructureMap({
   currentStepIndex = null,
   showHeader = true,
   showEditToggle = true,
-  hideEditors = false,
   onSelectedStepChange = null,
-  controlledSelectedStepId
+  controlledSelectedStepId,
+  canEditStructure = true,
+  editDisabledReason = 'Save as draft to unlock structure editing.'
 }) {
   const formBuilderContext = useContext(FormBuilderContext);
 
@@ -497,9 +581,10 @@ export default function BepStructureMap({
         currentStepIndex={currentStepIndex}
         showHeader={showHeader}
         showEditToggle={showEditToggle}
-        hideEditors={hideEditors}
         onSelectedStepChange={onSelectedStepChange}
         controlledSelectedStepId={controlledSelectedStepId}
+        canEditStructure={canEditStructure}
+        editDisabledReason={editDisabledReason}
       />
     );
   }
@@ -512,6 +597,8 @@ export default function BepStructureMap({
       currentStepIndex={currentStepIndex}
       showHeader={showHeader}
       showEditToggle={showEditToggle}
+      canEditStructure={canEditStructure}
+      editDisabledReason={editDisabledReason}
     />
   );
 }

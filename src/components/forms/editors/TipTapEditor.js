@@ -315,7 +315,7 @@ const TipTapEditor = ({
 
       {/* Editor Content with Zoom */}
       <div
-        className={`tiptap-content-wrapper border border-gray-300 ${showToolbar ? 'rounded-b-lg' : 'rounded-lg'} bg-white overflow-auto`}
+        className={`tiptap-content-wrapper border border-ui-border ${showToolbar ? 'rounded-b-lg' : 'rounded-lg'} bg-ui-surface text-ui-text overflow-auto`}
         style={{
           minHeight,
           transform: `scale(${zoom / 100})`,
@@ -345,6 +345,8 @@ const TipTapEditor = ({
           padding: ${compactMode ? '0.375rem 0.5rem' : '0.75rem'};
           min-height: ${minHeight};
           outline: none;
+          color: var(--color-ui-text, #1f2937);
+          background: var(--color-ui-surface, #ffffff);
         }
 
         .tiptap-editor:focus {
@@ -353,7 +355,7 @@ const TipTapEditor = ({
         }
 
         .tiptap-editor p.is-editor-empty:first-child::before {
-          color: #adb5bd;
+          color: var(--color-ui-text-muted, #6b7280);
           content: attr(data-placeholder);
           float: left;
           height: 0;
@@ -362,7 +364,7 @@ const TipTapEditor = ({
 
         /* Smooth caret animation */
         .tiptap-editor .ProseMirror-focused {
-          caret-color: #3b82f6;
+          caret-color: var(--color-ui-primary, #2563eb);
         }
 
         /* Table styles */
@@ -376,7 +378,7 @@ const TipTapEditor = ({
 
         .tiptap-editor table td,
         .tiptap-editor table th {
-          border: 1px solid #000000;
+          border: 1px solid var(--color-ui-border, #d1d5db);
           box-sizing: border-box;
           min-width: 3em;
           padding: 0.5rem;
@@ -385,15 +387,16 @@ const TipTapEditor = ({
         }
 
         .tiptap-editor table th {
-          background-color: #f3f4f6;
+          background-color: var(--color-ui-muted, #f3f4f6);
+          color: var(--color-ui-text, #1f2937);
           font-weight: 600;
           text-align: left;
         }
 
         .tiptap-editor table .selectedCell {
-          background-color: #dbeafe !important;
-          border-color: #3b82f6 !important;
-          box-shadow: inset 0 0 0 1px #3b82f6;
+          background-color: rgba(37, 99, 235, 0.12) !important;
+          border-color: var(--color-ui-primary, #2563eb) !important;
+          box-shadow: inset 0 0 0 1px var(--color-ui-primary, #2563eb);
         }
 
         /* Column resize handle */
@@ -403,7 +406,7 @@ const TipTapEditor = ({
           top: 0;
           bottom: -2px;
           width: 4px;
-          background-color: #3b82f6;
+          background-color: var(--color-ui-primary, #2563eb);
           pointer-events: none;
           z-index: 20;
         }
@@ -415,7 +418,7 @@ const TipTapEditor = ({
         /* ProseMirror table resize handle visibility */
         .tiptap-editor .ProseMirror-table-handle {
           position: absolute;
-          background-color: #3b82f6;
+          background-color: var(--color-ui-primary, #2563eb);
           opacity: 0;
           transition: opacity 0.2s;
         }
@@ -437,18 +440,18 @@ const TipTapEditor = ({
         }
 
         .tiptap-image.ProseMirror-selectednode {
-          outline: 3px solid #3b82f6;
+          outline: 3px solid var(--color-ui-primary, #2563eb);
         }
 
         /* Link styles */
         .tiptap-link {
-          color: #3b82f6;
+          color: var(--color-ui-primary, #2563eb);
           text-decoration: underline;
           cursor: pointer;
         }
 
         .tiptap-link:hover {
-          color: #2563eb;
+          color: var(--color-ui-text, #1f2937);
         }
 
         /* List styles */
@@ -472,35 +475,45 @@ const TipTapEditor = ({
         }
 
         /* Heading styles */
-        .tiptap-editor h1 { font-size: 2em; font-weight: bold; margin: 0.67em 0; }
-        .tiptap-editor h2 { font-size: 1.5em; font-weight: bold; margin: 0.75em 0; }
-        .tiptap-editor h3 { font-size: 1.17em; font-weight: bold; margin: 0.83em 0; }
-        .tiptap-editor h4 { font-size: 1em; font-weight: bold; margin: 1.12em 0; }
-        .tiptap-editor h5 { font-size: 0.83em; font-weight: bold; margin: 1.5em 0; }
-        .tiptap-editor h6 { font-size: 0.75em; font-weight: bold; margin: 1.67em 0; }
+        .tiptap-editor h1 { font-size: 1.75rem; font-weight: 700; margin: 0.75em 0 0.45em; line-height: 1.25; color: var(--color-ui-text, #1f2937); }
+        .tiptap-editor h2 { font-size: 1.5rem; font-weight: 700; margin: 0.8em 0 0.5em; line-height: 1.3; color: var(--color-ui-text, #1f2937); }
+        .tiptap-editor h3 { font-size: 1.25rem; font-weight: 600; margin: 0.9em 0 0.5em; line-height: 1.35; color: var(--color-ui-text, #1f2937); }
+        .tiptap-editor h4 { font-size: 1.125rem; font-weight: 600; margin: 0.95em 0 0.55em; line-height: 1.4; color: var(--color-ui-text, #1f2937); }
+        .tiptap-editor h5 { font-size: 1rem; font-weight: 600; margin: 1em 0 0.6em; line-height: 1.45; color: var(--color-ui-text, #1f2937); }
+        .tiptap-editor h6 { font-size: 0.9375rem; font-weight: 600; margin: 1em 0 0.6em; line-height: 1.45; color: var(--color-ui-text-muted, #6b7280); }
 
         /* Code and blockquote */
         .tiptap-editor code {
-          background-color: #f3f4f6;
+          background-color: var(--color-ui-muted, #f3f4f6);
+          color: var(--color-ui-text, #1f2937);
+          border: 1px solid var(--color-ui-border, #d1d5db);
           border-radius: 0.25rem;
           padding: 0.125rem 0.25rem;
           font-family: 'Courier New', monospace;
         }
 
         .tiptap-editor pre {
-          background-color: #1f2937;
-          color: #f9fafb;
+          background-color: var(--color-ui-muted, #f3f4f6);
+          color: var(--color-ui-text, #1f2937);
+          border: 1px solid var(--color-ui-border, #d1d5db);
           border-radius: 0.5rem;
           padding: 1rem;
           overflow-x: auto;
         }
 
+        .tiptap-editor pre code {
+          background: transparent;
+          border: 0;
+          padding: 0;
+        }
+
         .tiptap-editor blockquote {
-          border-left: 4px solid #d1d5db;
+          border-left: 3px solid var(--color-ui-border, #d1d5db);
           padding-left: 1rem;
           margin: 1rem 0;
           font-style: italic;
-          color: #6b7280;
+          color: var(--color-ui-text-muted, #6b7280);
+          background: var(--color-ui-muted, #f3f4f6);
         }
 
         /* Highlight styles */

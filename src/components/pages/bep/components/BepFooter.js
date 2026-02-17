@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import CONFIG from '../../../../config/bepConfig';
+import bepUi from '../bepUiClasses';
 
 /**
  * BEP Form footer component with navigation buttons
@@ -19,27 +20,28 @@ const BepFooter = ({
   onPrevious,
 }) => {
   const totalSteps = CONFIG.steps?.length || 0;
+  const quietButtonClass = bepUi.btnQuiet || bepUi.btnSecondary;
 
   return (
-    <div className="bg-white border-t border-gray-200 px-6 py-4 shadow-lg flex-shrink-0">
+    <div className={`${bepUi.panel} border-t border-ui-border px-6 py-4 flex-shrink-0`}>
       <div className="flex items-center justify-between">
         <button
           onClick={onPrevious}
           disabled={isFirstStep}
-          className="inline-flex items-center px-6 py-3 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 hover:border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+          className={`${quietButtonClass} inline-flex items-center px-6 py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           <ChevronLeft className="w-4 h-4 mr-2" />
           Previous
         </button>
 
         <div className="flex items-center space-x-4">
-          <span className="text-sm text-gray-500 font-medium">
+          <span className="text-sm text-ui-text-muted font-medium">
             {isLastStep ? 'Ready for preview' : `Step ${currentStep + 1} of ${totalSteps}`}
           </span>
 
           <button
             onClick={onNext}
-            className="inline-flex items-center px-6 py-3 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 hover:shadow-md transition-all duration-200 transform hover:scale-105"
+            className={`${bepUi.btnPrimary} inline-flex items-center px-6 py-3 rounded-lg`}
           >
             {isLastStep ? 'Preview' : 'Next'}
             <ChevronRight className="w-4 h-4 ml-2" />

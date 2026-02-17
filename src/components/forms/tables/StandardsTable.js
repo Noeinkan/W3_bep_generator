@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus, X, Edit2, GripVertical, AlertTriangle } from 'lucide-react';
 import FieldHeader from '../base/FieldHeader';
 import FieldError from '../base/FieldError';
+import { cn } from '../../../utils/cn';
 
 const StandardsTable = React.memo(({ field, value, onChange, error }) => {
   const { name, label, number, required } = field;
@@ -209,12 +210,12 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
 
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div className="mb-4 p-4 bg-ui-muted border border-ui-border rounded-lg">
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle className="w-5 h-5 text-red-600" />
-            <span className="font-semibold text-red-800">Validation Errors:</span>
+            <span className="font-semibold text-ui-text">Validation Errors:</span>
           </div>
-          <ul className="list-disc list-inside text-sm text-red-700">
+          <ul className="list-disc list-inside text-sm text-ui-text-muted">
             {validationErrors.map((error, index) => (
               <li key={index}>{error}</li>
             ))}
@@ -222,14 +223,14 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
         </div>
       )}
 
-      <div className="border rounded-xl overflow-hidden shadow-sm bg-white">
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-100 px-6 py-4 border-b border-gray-200">
+      <div className="border border-ui-border rounded-xl overflow-hidden shadow-sm bg-ui-surface">
+        <div className="bg-ui-muted px-6 py-4 border-b border-ui-border">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
-              <span className="text-base font-semibold text-gray-800">
+              <span className="text-base font-semibold text-ui-text">
                 {tableData.length} Standards
               </span>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-ui-text-muted">
                 Drag rows to reorder • M = Mandatory, R = Recommended
               </span>
             </div>
@@ -239,7 +240,7 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
                   key={category}
                   type="button"
                   onClick={() => addRow(category)}
-                  className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition-all transform hover:scale-105 shadow-md text-sm"
+                  className="flex items-center space-x-2 px-3 py-2 rounded-md border border-ui-border bg-ui-surface text-ui-text-muted hover:bg-ui-muted hover:text-ui-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-primary/30 transition-colors shadow-sm text-sm"
                 >
                   <Plus size={14} />
                   <span>Add {category.split(' ')[0]}</span>
@@ -250,26 +251,26 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
         </div>
 
         {tableData.length === 0 ? (
-          <div className="p-12 text-center text-gray-500">
-            <div className="w-16 h-16 mx-auto mb-4 text-gray-300 bg-gray-100 rounded-full flex items-center justify-center">
+          <div className="p-12 text-center text-ui-text-muted">
+            <div className="w-16 h-16 mx-auto mb-4 text-ui-text-muted bg-ui-muted rounded-full flex items-center justify-center border border-ui-border">
               📋
             </div>
             <p className="text-lg mb-4">No standards defined yet.</p>
             <p className="text-sm">Click "Add Core", "Add Enablers", or "Add Others" to get started.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto bg-white">
-            <table className="w-full min-w-full table-fixed">
-              <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+          <div className="overflow-x-auto bg-ui-surface">
+            <table className="w-full min-w-full table-fixed bep-table">
+              <thead className="bg-ui-muted border-b border-ui-border">
                 <tr>
                   <th className="w-10 px-1 py-3">
                   </th>
                   {columns.map((column, colIndex) => (
-                    <th key={column} className={`px-4 py-3 text-left ${
+                    <th key={column} className={cn('px-4 py-3 text-left text-ui-text border-b border-ui-border',
                       column === 'Category' ? 'w-32' :
                       column === 'Reference' ? 'w-64' :
                       'w-24'
-                    }`}>
+                    )}>
                       <div className="group">
                         {/* Column name (editable for dynamic columns) */}
                         <div className="mb-2">
@@ -287,7 +288,7 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
                                 }
                               }}
                               autoFocus
-                              className="w-full px-2 py-1.5 text-sm font-semibold border-2 border-blue-500 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                              className="w-full px-2 py-1.5 text-sm font-semibold border border-ui-primary rounded-md bg-ui-surface text-ui-text shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-primary/30"
                             />
                           ) : (
                             <div
@@ -297,11 +298,11 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
                                   setEditingColumnName(column);
                                 }
                               }}
-                              className={`px-2 py-1.5 text-sm font-semibold text-gray-700 uppercase tracking-wider rounded-lg transition-all ${
+                              className={cn('px-2 py-1.5 text-sm font-semibold text-ui-text uppercase tracking-wider rounded-md transition-colors',
                                 fixedColumns.includes(column)
                                   ? 'cursor-default'
-                                  : 'cursor-pointer hover:bg-white hover:shadow-sm'
-                              }`}
+                                  : 'cursor-pointer hover:bg-ui-surface'
+                              )}
                               title={fixedColumns.includes(column) ? 'Fixed column' : 'Click to rename'}
                             >
                               {column}
@@ -317,7 +318,7 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
                               type="button"
                               onClick={() => moveColumn(colIndex, colIndex - 1)}
                               disabled={colIndex === 0}
-                              className="p-1 rounded-md bg-white hover:bg-blue-50 text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white shadow-sm border border-gray-200 transition-all hover:scale-110 text-xs"
+                              className="p-1 rounded-md border border-ui-border bg-ui-surface hover:bg-ui-muted text-ui-primary disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-ui-surface shadow-sm transition-colors text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-primary/30"
                               title="Move left"
                             >
                               ←
@@ -330,7 +331,7 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
                                 setEditingColumn(colIndex);
                                 setEditingColumnName(column);
                               }}
-                              className="p-1 rounded-md bg-white hover:bg-green-50 text-green-600 shadow-sm border border-gray-200 transition-all hover:scale-110"
+                              className="p-1 rounded-md border border-ui-border bg-ui-surface hover:bg-ui-muted text-ui-text-muted hover:text-ui-text shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-primary/30"
                               title="Rename column"
                             >
                               <Edit2 size={12} />
@@ -341,7 +342,7 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
                               type="button"
                               onClick={() => moveColumn(colIndex, colIndex + 1)}
                               disabled={colIndex === columns.length - 1}
-                              className="p-1 rounded-md bg-white hover:bg-blue-50 text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white shadow-sm border border-gray-200 transition-all hover:scale-110 text-xs"
+                              className="p-1 rounded-md border border-ui-border bg-ui-surface hover:bg-ui-muted text-ui-primary disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-ui-surface shadow-sm transition-colors text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-primary/30"
                               title="Move right"
                             >
                               →
@@ -351,7 +352,7 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
                             <button
                               type="button"
                               onClick={() => setColumnToDelete(colIndex)}
-                              className="p-1 rounded-md bg-white hover:bg-red-50 text-red-500 shadow-sm border border-gray-200 transition-all hover:scale-110"
+                              className="p-1 rounded-md border border-ui-border bg-ui-surface hover:bg-ui-muted text-red-600 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-primary/30"
                               title="Remove column"
                             >
                               <X size={12} />
@@ -365,7 +366,7 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
                     <button
                       type="button"
                       onClick={addColumn}
-                      className="p-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all hover:scale-110"
+                      className="p-1.5 rounded-md border border-ui-border bg-ui-surface hover:bg-ui-muted text-ui-primary shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-primary/30"
                       title="Add application area"
                     >
                       <Plus size={16} />
@@ -373,7 +374,7 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white">
+              <tbody className="bg-ui-surface">
                 {categories.map(category => {
                   const categoryData = groupedData[category];
                   if (categoryData.length === 0) return null;
@@ -381,14 +382,14 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
                   return (
                     <React.Fragment key={category}>
                       {/* Category Header */}
-                      <tr className="bg-gradient-to-r from-blue-50 to-indigo-50 border-t-2 border-blue-200">
-                        <td colSpan={columns.length + 2} className="px-4 py-3">
+                      <tr className="bg-ui-muted border-t border-ui-border">
+                        <td colSpan={columns.length + 2} className="px-4 py-3 border-b border-ui-border">
                           <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-                            <span className="font-bold text-blue-900 uppercase tracking-wide text-sm">
+                            <div className="w-2.5 h-2.5 bg-ui-primary rounded-full"></div>
+                            <span className="font-semibold text-ui-text uppercase tracking-wide text-sm">
                               {category}
                             </span>
-                            <span className="text-sm text-blue-700">
+                            <span className="text-sm text-ui-text-muted">
                               ({categoryData.length} {categoryData.length === 1 ? 'standard' : 'standards'})
                             </span>
                           </div>
@@ -401,7 +402,7 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
                         return (
                           <tr
                             key={globalIndex}
-                            className="hover:bg-gray-50 transition-colors border-b border-gray-100"
+                            className="hover:bg-ui-muted/60 transition-colors border-b border-ui-border"
                             draggable
                             onDragStart={(e) => handleDragStart(e, globalIndex)}
                             onDragOver={handleDragOver}
@@ -410,7 +411,7 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
                           >
                             <td className="px-1 py-2">
                               <div className="flex items-center justify-center cursor-move">
-                                <GripVertical size={14} className="text-gray-400" />
+                                <GripVertical size={14} className="text-ui-text-muted" />
                               </div>
                             </td>
                             {columns.map(column => (
@@ -419,7 +420,7 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
                                   <select
                                     value={row[column] || ''}
                                     onChange={(e) => updateCell(globalIndex, column, e.target.value)}
-                                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-2 py-1.5 text-sm border border-ui-border rounded-md bg-ui-surface text-ui-text focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-primary/30"
                                   >
                                     {categories.map(cat => (
                                       <option key={cat} value={cat}>{cat}</option>
@@ -430,7 +431,7 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
                                     type="text"
                                     value={row[column] || ''}
                                     onChange={(e) => updateCell(globalIndex, column, e.target.value)}
-                                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-2 py-1.5 text-sm border border-ui-border rounded-md bg-ui-surface text-ui-text placeholder:text-ui-text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-primary/30"
                                     placeholder="e.g., BS EN ISO 19650-1:2018"
                                   />
                                 ) : (
@@ -438,11 +439,11 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
                                     <button
                                       type="button"
                                       onClick={() => updateCell(globalIndex, column, row[column] === 'M' ? '' : 'M')}
-                                      className={`w-8 h-8 rounded border-2 flex items-center justify-center text-xs font-bold transition-all ${
+                                      className={cn('w-8 h-8 rounded-md border flex items-center justify-center text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-primary/30',
                                         row[column] === 'M'
-                                          ? 'bg-red-100 border-red-500 text-red-700 shadow-md'
-                                          : 'border-gray-300 text-gray-400 hover:border-red-300 hover:text-red-500'
-                                      }`}
+                                          ? 'bg-red-50 border-red-300 text-red-700 shadow-sm'
+                                          : 'border-ui-border text-ui-text-muted hover:bg-ui-muted hover:text-ui-text'
+                                      )}
                                       title="Mandatory"
                                     >
                                       M
@@ -450,11 +451,11 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
                                     <button
                                       type="button"
                                       onClick={() => updateCell(globalIndex, column, row[column] === 'R' ? '' : 'R')}
-                                      className={`w-8 h-8 rounded border-2 flex items-center justify-center text-xs font-bold transition-all ${
+                                      className={cn('w-8 h-8 rounded-md border flex items-center justify-center text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-primary/30',
                                         row[column] === 'R'
-                                          ? 'bg-orange-100 border-orange-500 text-orange-700 shadow-md'
-                                          : 'border-gray-300 text-gray-400 hover:border-orange-300 hover:text-orange-500'
-                                      }`}
+                                          ? 'bg-amber-50 border-amber-300 text-amber-700 shadow-sm'
+                                          : 'border-ui-border text-ui-text-muted hover:bg-ui-muted hover:text-ui-text'
+                                      )}
                                       title="Recommended"
                                     >
                                       R
@@ -467,7 +468,7 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
                               <button
                                 type="button"
                                 onClick={() => removeRow(globalIndex)}
-                                className="w-6 h-6 flex items-center justify-center text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors font-medium text-sm"
+                                className="w-6 h-6 flex items-center justify-center text-red-600 hover:text-red-700 hover:bg-ui-muted rounded-md transition-colors font-medium text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-primary/30"
                                 title="Remove standard"
                               >
                                 ✕
@@ -489,24 +490,24 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
 
       {/* Delete Column Confirmation Modal */}
       {columnToDelete !== null && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setColumnToDelete(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 transform transition-all" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setColumnToDelete(null)}>
+          <div className="bg-ui-surface border border-ui-border rounded-xl shadow-xl p-6 max-w-md w-full mx-4 transform transition-all" onClick={(e) => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-start gap-4 mb-4">
-              <div className="p-3 bg-red-100 rounded-full">
+              <div className="p-3 bg-red-50 rounded-full border border-red-200">
                 <X size={24} className="text-red-600" />
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-bold text-gray-900 mb-1">Remove Application Area?</h3>
-                <p className="text-gray-600">
-                  Are you sure you want to remove the application area <span className="font-semibold text-gray-900">"{columns[columnToDelete]}"</span>?
+                <h3 className="text-lg font-semibold text-ui-text mb-1 uppercase tracking-wide">Remove Application Area?</h3>
+                <p className="text-ui-text-muted">
+                  Are you sure you want to remove the application area <span className="font-semibold text-ui-text">"{columns[columnToDelete]}"</span>?
                 </p>
               </div>
             </div>
 
             {/* Warning message */}
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
-              <p className="text-sm text-amber-800">
+            <div className="bg-ui-muted border border-ui-border rounded-lg p-3 mb-6">
+              <p className="text-sm text-ui-text-muted">
                 ⚠️ This will permanently delete all applicability data for this area from all standards.
               </p>
             </div>
@@ -516,14 +517,14 @@ const StandardsTable = React.memo(({ field, value, onChange, error }) => {
               <button
                 type="button"
                 onClick={() => setColumnToDelete(null)}
-                className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
+                className="flex-1 px-4 py-2.5 bg-ui-surface hover:bg-ui-muted text-ui-text-muted hover:text-ui-text font-medium rounded-md border border-ui-border shadow-sm transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={() => removeColumn(columnToDelete)}
-                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors shadow-lg"
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-md border border-red-600 shadow-sm transition-colors"
               >
                 Remove Area
               </button>

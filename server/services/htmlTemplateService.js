@@ -464,6 +464,9 @@ class HtmlTemplateService {
       case 'table':
         return this.renderTable(field, value);
 
+      case 'milestones-table':
+        return this.renderMilestonesTable(field, value);
+
       case 'checkbox':
         return this.renderCheckboxList(value);
 
@@ -581,6 +584,45 @@ class HtmlTemplateService {
     html += '</tbody></table></div>';
 
     return html;
+  }
+
+  renderMilestonesTable(field, rows) {
+    if (!Array.isArray(rows) || rows.length === 0) return '';
+
+    const columns = Array.isArray(field.columns) && field.columns.length > 0
+      ? field.columns
+      : ['Stage/Phase', 'Milestone Description', 'Deliverables', 'Due Date'];
+
+    const normalizedRows = rows.map((row) => this.normalizeMilestoneRow(row));
+
+    return this.renderTable({ ...field, columns }, normalizedRows);
+  }
+
+  normalizeMilestoneRow(row) {
+    if (!row || typeof row !== 'object') {
+      return {
+        'Stage/Phase': '',
+        'Milestone Description': '',
+        Deliverables: '',
+        'Due Date': ''
+      };
+    }
+
+    const getFirstValue = (keys) => {
+      for (const key of keys) {
+        if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
+          return row[key];
+        }
+      }
+      return '';
+    };
+
+    return {
+      'Stage/Phase': getFirstValue(['Stage/Phase', 'Stage', 'Phase', 'stage', 'phase']),
+      'Milestone Description': getFirstValue(['Milestone Description', 'milestoneDescription', 'Description', 'description']),
+      Deliverables: getFirstValue(['Deliverables', 'deliverables']),
+      'Due Date': getFirstValue(['Due Date', 'dueDate', 'Date', 'date'])
+    };
   }
 
   /**
