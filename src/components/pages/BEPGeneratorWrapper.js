@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { BepFormProvider } from '../../contexts/BepFormContext';
+import { EirProvider } from '../../contexts/EirContext';
 import BepLayout from './bep/BepLayout';
 import BepStartMenuView from './bep/BepStartMenuView';
 import BepSelectTypeView from './bep/BepSelectTypeView';
@@ -30,6 +31,7 @@ const BEPGeneratorWrapper = () => {
   const { user, loading: authLoading } = useAuth();
 
   return (
+    <EirProvider>
     <BepFormProvider>
       <Routes>
         {/* Layout wrapper for all BEP routes */}
@@ -71,6 +73,7 @@ const BEPGeneratorWrapper = () => {
         <Route path="*" element={<Navigate to="/bep-generator" replace />} />
       </Routes>
     </BepFormProvider>
+    </EirProvider>
   );
 };
 

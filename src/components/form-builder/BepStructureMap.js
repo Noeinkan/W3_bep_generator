@@ -1,4 +1,4 @@
-import React, { useContext, useMemo, useState, useEffect } from 'react';
+import { useContext, useMemo, useState, useEffect, useRef } from 'react';
 import { ChevronDown, ChevronRight, ChevronUp, Eye, EyeOff, Settings2, Pencil } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import FormBuilderContext from './FormBuilderContext';
@@ -6,8 +6,6 @@ import { useBepStructure } from './useBepStructure';
 import { StepStructureEditor } from './step-editor';
 import FieldStructureEditor from './field-editor/FieldStructureEditor';
 import { getFieldNumber } from './utils/fieldNumberUtils';
-
-const CATEGORY_ORDER = ['Management', 'Commercial', 'Technical'];
 
 const CATEGORY_COLORS = {
   Commercial: { bg: 'bg-blue-100', text: 'text-blue-800', accent: 'bg-blue-500' },
@@ -20,11 +18,6 @@ const getIcon = (iconName) => {
   if (!iconName) return LucideIcons.FileText;
   const Icon = LucideIcons[iconName];
   return Icon || LucideIcons.FileText;
-};
-
-const getCategoryOrderIndex = (category) => {
-  const index = CATEGORY_ORDER.indexOf(category);
-  return index === -1 ? CATEGORY_ORDER.length : index;
 };
 
 const getDisplayCategory = (category) => category || 'Other';
@@ -49,6 +42,7 @@ const StructureMap = ({
   const [expandedCategories, setExpandedCategories] = useState(new Set());
   const [showHidden, setShowHidden] = useState(false);
   const [selectedStepId, setSelectedStepId] = useState(null);
+  const hasInitializedRef = useRef(false);
 
   useEffect(() => {
     if (isEditMode) {
@@ -88,11 +82,6 @@ const StructureMap = ({
     return map;
   }, [fields]);
 
-  const selectedStep = useMemo(() => {
-    if (!selectedStepId) return null;
-    return stepsSorted.find((step) => step.id === selectedStepId) || null;
-  }, [selectedStepId, stepsSorted]);
-
   const orderedSteps = useMemo(() => {
     return [...displaySteps].sort((a, b) => {
       const aNum = Number(a.step_number);
@@ -117,7 +106,16 @@ const StructureMap = ({
   useEffect(() => {
     if (orderedSteps.length === 0) return;
     const selectedExists = orderedSteps.some((step) => step.id === selectedStepId);
-    if (!selectedStepId || !selectedExists) {
+    if (!hasInitializedRef.current) {
+      // First load: auto-select the first step
+      hasInitializedRef.current = true;
+      if (!selectedStepId || !selectedExists) {
+        setSelectedStepId(orderedSteps[0].id);
+      }
+      return;
+    }
+    // After initialization: only auto-select if the selected step was removed from the list
+    if (selectedStepId !== null && !selectedExists) {
       setSelectedStepId(orderedSteps[0].id);
     }
   }, [orderedSteps, selectedStepId]);
@@ -176,7 +174,6 @@ const StructureMap = ({
       return next;
     });
 
-    if (!isEditMode) return;
   };
 
   const handleStepClick = (step) => {
@@ -313,9 +310,7 @@ const StructureMap = ({
                           const isCurrent = currentStepIndex !== null && visibleIndexById.get(step.id) === currentStepIndex;
                           const isExpanded = expandedSteps.has(step.id);
                           const stepFields = fieldsByStepId.get(step.id) || [];
-                          const isClickable = true;
                           const isSelected = selectedStepId === step.id;
-                          const category = getDisplayCategory(step.category);
                           const showInlineEditor = isEditMode && isSelected;
                           const showFieldPreview = isExpanded && !showInlineEditor;
 
@@ -327,12 +322,11 @@ const StructureMap = ({
                                 <div
                                   className={`border rounded-lg p-3 bg-white transition-colors ${
                                     isCurrent || isSelected ? 'border-blue-500 ring-2 ring-blue-100 bg-blue-50/40' : 'border-gray-200 hover:border-blue-200'
-                                  } ${step.is_visible ? '' : 'opacity-60'} ${isClickable ? 'cursor-pointer' : ''}`}
-                                  onClick={() => isClickable && handleStepClick(step)}
-                                  role={isClickable ? 'button' : 'article'}
-                                  tabIndex={isClickable ? 0 : -1}
+                                  } ${step.is_visible ? '' : 'opacity-60'} cursor-pointer`}
+                                  onClick={() => handleStepClick(step)}
+                                  role="button"
+                                  tabIndex={0}
                                   onKeyDown={(event) => {
-                                    if (!isClickable) return;
                                     if (event.key === 'Enter' || event.key === ' ') {
                                       event.preventDefault();
                                       handleStepClick(step);
@@ -354,7 +348,7 @@ const StructureMap = ({
                                           </div>
                                         )}
                                         <div className="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
-                                          {category}
+                                          {group.category}
                                         </div>
                                         {!step.is_visible && (
                                           <div className="text-xs text-gray-400 mt-1">Hidden</div>

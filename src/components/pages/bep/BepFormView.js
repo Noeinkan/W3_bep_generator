@@ -14,7 +14,7 @@ import useDraftSave from '../../../hooks/useDraftSave';
 import { BepSidebar, BepHeader, BepFooter, SuccessToast } from './components';
 import { cn } from '../../../utils/cn';
 import { ROUTES } from '../../../constants/routes';
-import { EirProvider, useEir } from '../../../contexts/EirContext';
+import { useEir } from '../../../contexts/EirContext';
 import { EirUploadStep, EirAnalysisView } from '../../eir';
 import { bepUi } from './bepUiClasses';
 
@@ -323,13 +323,11 @@ const BepFormView = () => {
   const draftId = currentDraft?.id || null;
 
   return (
-    <EirProvider>
-      <FormBuilderProvider draftId={draftId} bepType={bepType}>
-        <EirStepWrapper>
-          <BepFormViewContent />
-        </EirStepWrapper>
-      </FormBuilderProvider>
-    </EirProvider>
+    <FormBuilderProvider draftId={draftId} bepType={bepType}>
+      <EirStepWrapper>
+        <BepFormViewContent />
+      </EirStepWrapper>
+    </FormBuilderProvider>
   );
 };
 

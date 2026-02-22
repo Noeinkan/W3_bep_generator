@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { Download, FileText, Eye, FileType, Printer, CheckCircle, AlertCircle, Loader2, Settings, RotateCcw, ArrowLeft } from 'lucide-react';
+import { Download, FileText, Eye, FileType, Printer, CheckCircle, AlertCircle, Loader2, Settings, RotateCcw, ArrowLeft, Table } from 'lucide-react';
 import { generateBEPContent } from '../../services/bepFormatter';
 import { generateBEPPDFOnServer } from '../../services/backendPdfService';
 import BepPreviewRenderer from '../export/BepPreviewRenderer';
 import { captureCustomComponentScreenshots } from '../../services/componentScreenshotCapture';
 import toast from 'react-hot-toast';
+import { useEir } from '../../contexts/EirContext';
+import { buildEirMatrix, summariseMatrix } from '../../utils/eirResponsivenessMatrix';
+import EirResponsivenessMatrixModal from './bep/components/EirResponsivenessMatrixModal';
 
 const PreviewExportPage = ({
   formData,
@@ -22,6 +25,17 @@ const PreviewExportPage = ({
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [pdfQuality, setPdfQuality] = useState('standard'); // 'standard' or 'high'
   const [pdfOrientation, setPdfOrientation] = useState('portrait'); // 'portrait' or 'landscape'
+
+  const { analysis, hasAnalysis } = useEir();
+  const [showEirMatrix, setShowEirMatrix] = useState(false);
+  const [eirMatrix, setEirMatrix] = useState({ rows: [], summary: null });
+
+  const handleOpenEirMatrix = () => {
+    const rows = buildEirMatrix(analysis, formData);
+    const summary = summariseMatrix(rows);
+    setEirMatrix({ rows, summary });
+    setShowEirMatrix(true);
+  };
 
   const exportFormats = [
     {
@@ -361,6 +375,23 @@ const PreviewExportPage = ({
                 </>
               )}
             </button>
+
+            {hasAnalysis && (
+              <button
+                onClick={handleOpenEirMatrix}
+                className="
+                  flex items-center justify-center space-x-2 px-6 py-3 rounded-lg font-medium
+                  text-indigo-700 bg-indigo-50 border border-indigo-200
+                  hover:bg-indigo-100 hover:border-indigo-300
+                  transition-all duration-200
+                  focus:outline-none focus:ring-2 focus:ring-indigo-300
+                  w-full
+                "
+              >
+                <Table className="w-5 h-5" />
+                <span>EIR Responsiveness Matrix</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -408,6 +439,14 @@ const PreviewExportPage = ({
           </div>
         </div>
       </div>
+
+      <EirResponsivenessMatrixModal
+        isOpen={showEirMatrix}
+        onClose={() => setShowEirMatrix(false)}
+        rows={eirMatrix.rows}
+        summary={eirMatrix.summary}
+        projectName={formData?.projectName}
+      />
     </div>
   );
 };
