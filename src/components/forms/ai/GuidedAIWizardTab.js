@@ -29,6 +29,8 @@ const GuidedAIWizardTab = ({ editor, fieldName, fieldType, onClose }) => {
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const [questionsTotal, setQuestionsTotal] = useState(0);
   const [error, setError] = useState(null);
+  const [streamingText, setStreamingText] = useState('');
+  const [thinkingStage, setThinkingStage] = useState('');
 
   // ── Fetch questions ──
   const fetchQuestions = useCallback(async () => {
@@ -66,10 +68,12 @@ const GuidedAIWizardTab = ({ editor, fieldName, fieldType, onClose }) => {
 
   useEffect(() => { fetchQuestions(); }, [fetchQuestions]);
 
-  // ── Generate content ──
+  // ── Generate content — streams tokens, falls back to non-streaming on error ──
   const generateContent = useCallback(async () => {
     setPhase('generating');
     setError(null);
+    setStreamingText('');
+    setThinkingStage('');
 
     const answerList = questions.map(q => ({
       question_id: q.id,
@@ -77,27 +81,94 @@ const GuidedAIWizardTab = ({ editor, fieldName, fieldType, onClose }) => {
       answer: answers[q.id]?.trim() || null
     }));
 
-    try {
-      const response = await axios.post('/api/ai/generate-from-answers', {
-        field_type: fieldType || fieldName,
-        field_label: fieldName,
-        answers: answerList,
-        field_context: null
-      }, { timeout: 60000 });
+    const answeredCount = answerList.filter(a => a.answer).length;
 
-      if (response.data.success) {
-        setGeneratedContent(response.data.text);
-        setQuestionsAnswered(response.data.questions_answered);
-        setQuestionsTotal(response.data.questions_total);
+    // Try streaming first
+    try {
+      const response = await fetch('/api/ai/generate-from-answers-stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          field_type: fieldType || fieldName,
+          field_label: fieldName,
+          answers: answerList,
+          field_context: null
+        })
+      });
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let accumulated = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop();
+
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith('data: ')) continue;
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr) continue;
+
+          let event;
+          try { event = JSON.parse(jsonStr); } catch { continue; }
+
+          if (event.type === 'stage') {
+            setThinkingStage(event.message);
+          } else if (event.type === 'token') {
+            accumulated += event.text;
+            setStreamingText(accumulated);
+          } else if (event.type === 'done') {
+            setGeneratedContent(event.fullText);
+            setQuestionsAnswered(answeredCount);
+            setQuestionsTotal(answerList.length);
+            setPhase('result');
+            return;
+          } else if (event.type === 'error') {
+            throw new Error(event.message);
+          }
+        }
+      }
+
+      // Stream ended without a done event — use accumulated tokens
+      if (accumulated) {
+        setGeneratedContent(accumulated);
+        setQuestionsAnswered(answeredCount);
+        setQuestionsTotal(answerList.length);
         setPhase('result');
-      } else {
-        setError(response.data.message || 'Content generation failed.');
+      }
+    } catch (streamErr) {
+      console.warn('Guided AI streaming failed, falling back:', streamErr.message);
+      // Fallback to non-streaming
+      try {
+        const response = await axios.post('/api/ai/generate-from-answers', {
+          field_type: fieldType || fieldName,
+          field_label: fieldName,
+          answers: answerList,
+          field_context: null
+        }, { timeout: 60000 });
+
+        if (response.data.success) {
+          setGeneratedContent(response.data.text);
+          setQuestionsAnswered(response.data.questions_answered);
+          setQuestionsTotal(response.data.questions_total);
+          setPhase('result');
+        } else {
+          setError(response.data.message || 'Content generation failed.');
+          setPhase('error');
+        }
+      } catch (fallbackErr) {
+        console.error('Guided AI — generation failed:', fallbackErr);
+        setError(fallbackErr.response?.data?.message || 'Content generation failed. Please try again.');
         setPhase('error');
       }
-    } catch (err) {
-      console.error('Guided AI — generation failed:', err);
-      setError(err.response?.data?.message || 'Content generation failed. Please try again.');
-      setPhase('error');
     }
   }, [questions, answers, fieldType, fieldName]);
 
@@ -282,15 +353,39 @@ const GuidedAIWizardTab = ({ editor, fieldName, fieldType, onClose }) => {
   // ── Generating ──
   if (phase === 'generating') {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <Loader2 className="w-12 h-12 text-purple-500 animate-spin mb-4" />
-        <h4 className="text-lg font-semibold text-gray-800 mb-2">Generating content…</h4>
-        <p className="text-sm text-gray-500">
-          Using your answers to create tailored content
-        </p>
-        <div className="w-48 bg-gray-200 rounded-full h-2 mt-4 overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-500 rounded-full animate-pulse" style={{ width: '100%' }} />
-        </div>
+      <div className="space-y-3">
+        {/* Thinking stage banner — shown until first token arrives */}
+        {thinkingStage && !streamingText && (
+          <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg flex items-center gap-3">
+            <Loader2 size={16} className="animate-spin text-purple-500 flex-shrink-0" />
+            <p className="text-sm text-purple-700 italic">{thinkingStage}</p>
+          </div>
+        )}
+
+        {/* Live token preview — appears once first token arrives */}
+        {streamingText ? (
+          <div className="border border-purple-200 rounded-lg bg-white overflow-hidden">
+            <div className="flex items-center gap-2 px-3 py-2 bg-purple-50 border-b border-purple-200">
+              <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+              <span className="text-xs font-medium text-purple-700">Writing tailored content…</span>
+            </div>
+            <div className="p-3 max-h-48 overflow-y-auto">
+              <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap font-mono">
+                {streamingText}
+                <span className="inline-block w-0.5 h-4 bg-purple-500 animate-pulse ml-0.5 align-text-bottom" />
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-8">
+            <Loader2 className="w-12 h-12 text-purple-500 animate-spin mb-4" />
+            <h4 className="text-lg font-semibold text-gray-800 mb-2">Generating content…</h4>
+            <p className="text-sm text-gray-500">Using your answers to create tailored content</p>
+            <div className="w-48 bg-gray-200 rounded-full h-2 mt-4 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-500 rounded-full animate-pulse" style={{ width: '100%' }} />
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -307,10 +402,10 @@ const GuidedAIWizardTab = ({ editor, fieldName, fieldType, onClose }) => {
           </span>
         </div>
 
-        <div className="border border-gray-200 rounded-lg bg-gray-50 p-4 overflow-y-auto max-h-[250px]">
+        <div className="border border-gray-200 rounded-lg bg-gray-50 p-4 overflow-y-auto">
           <div
-            className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap"
-            dangerouslySetInnerHTML={{ __html: generatedContent }}
+            className="prose prose-sm max-w-none text-gray-800"
+            dangerouslySetInnerHTML={{ __html: markdownToTipTapHtml(generatedContent) }}
           />
         </div>
 

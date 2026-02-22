@@ -7,6 +7,7 @@ Replaces the PyTorch LSTM model with a modern, faster, and more accurate solutio
 
 import json as _json
 import os
+import queue as _queue
 import re
 import time
 import logging
@@ -30,6 +31,18 @@ class _QuestionsList(BaseModel):
     questions: list[_QuestionItem]
 
 logger = logging.getLogger(__name__)
+
+# BEP-themed thinking stage messages shown while waiting for Ollama to warm up
+THINKING_STAGES = [
+    "Parsing ISO 19650 requirements\u2026",
+    "Reviewing information delivery plan\u2026",
+    "Aligning with EIR exchange requirements\u2026",
+    "Consulting BIM execution framework\u2026",
+    "Applying CDE workflow principles\u2026",
+    "Cross-referencing TIDP milestones\u2026",
+    "Structuring Level of Information Need\u2026",
+    "Drafting BIM-compliant content\u2026",
+]
 
 # Thread lock for singleton pattern
 _generator_lock = threading.Lock()
@@ -449,6 +462,117 @@ class OllamaGenerator:
 
         return suggestion
 
+    def suggest_for_field_stream(
+        self,
+        field_type: str,
+        partial_text: str = '',
+        max_length: int = 200,
+        temperature: Optional[float] = None
+    ):
+        """
+        Generator: yields SSE event dicts for streaming field suggestions.
+
+        Event types:
+          {"type": "stage",  "message": "Parsing ISO 19650 requirements…"}
+          {"type": "token",  "text": "The "}
+          {"type": "done",   "fullText": "The complete cleaned text…"}
+          {"type": "error",  "message": "Ollama connection failed"}
+
+        Note: bypasses lru_cache intentionally — streaming results are
+        non-deterministic per call and cannot be cached.
+        """
+        # Input validation
+        if not field_type or not isinstance(field_type, str):
+            yield {"type": "error", "message": "field_type must be a non-empty string"}
+            return
+
+        field_type = field_type.strip()
+        partial_text = (partial_text or '').strip()[:2000]
+
+        # Resolve field config and prompt (identical to suggest_for_field)
+        field_config = self.field_prompts.get(field_type, self.default_prompt)
+        context = field_config.get('context', 'Provide professional BIM content.')
+        context = self._add_table_guidance(context)
+        if temperature is None:
+            temperature = field_config.get('temperature', 0.5)
+
+        if partial_text and len(partial_text) > 10:
+            prompt = f"{context}\n\nContinue this text professionally:\n{partial_text}"
+        else:
+            prompt = f"{context}\n\nGenerate professional content for this section."
+
+        effective_timeout = self._calculate_timeout(max_length)
+        output_q: _queue.Queue = _queue.Queue()
+        first_token_event = threading.Event()
+
+        def _stage_emitter():
+            for msg in THINKING_STAGES:
+                signalled = first_token_event.wait(timeout=0.8)
+                if signalled:
+                    break
+                output_q.put({"type": "stage", "message": msg})
+
+        def _ollama_reader():
+            try:
+                payload = {
+                    "model": self.model,
+                    "prompt": prompt,
+                    "stream": True,
+                    "options": {
+                        "temperature": temperature,
+                        "num_predict": max_length,
+                        "top_p": 0.9,
+                        "top_k": 40,
+                    }
+                }
+                response = requests.post(
+                    f"{self.base_url}/api/generate",
+                    json=payload,
+                    stream=True,
+                    timeout=effective_timeout
+                )
+                response.raise_for_status()
+                accumulated = []
+                for raw_line in response.iter_lines():
+                    if not raw_line:
+                        continue
+                    try:
+                        chunk = _json.loads(raw_line)
+                    except _json.JSONDecodeError:
+                        continue
+                    token = chunk.get("response", "")
+                    if token:
+                        first_token_event.set()
+                        accumulated.append(token)
+                        output_q.put({"type": "token", "text": token})
+                    if chunk.get("done"):
+                        break
+                full_text = self._clean_suggestion("".join(accumulated), partial_text)
+                output_q.put({"type": "done", "fullText": full_text})
+            except Exception as exc:
+                logger.error("Streaming Ollama error: %s", exc)
+                output_q.put({"type": "error", "message": str(exc)})
+            finally:
+                output_q.put(None)  # sentinel
+
+        stage_t = threading.Thread(target=_stage_emitter, daemon=True)
+        ollama_t = threading.Thread(target=_ollama_reader, daemon=True)
+        stage_t.start()
+        ollama_t.start()
+
+        while True:
+            try:
+                item = output_q.get(timeout=effective_timeout + 10)
+            except _queue.Empty:
+                yield {"type": "error", "message": "Generation timed out"}
+                break
+            if item is None:
+                break
+            yield item
+
+        stage_t.join(timeout=2.0)
+        ollama_t.join(timeout=2.0)
+
     def clear_cache(self) -> None:
         """Clear the suggestion cache."""
         self._get_cached_suggestion.cache_clear()
@@ -729,6 +853,123 @@ class OllamaGenerator:
         cleaned = self._clean_suggestion(generated, '')
 
         return cleaned
+
+    def generate_from_answers_stream(
+        self,
+        field_type: str,
+        answers: list,
+        field_context: Optional[dict] = None,
+        field_label: Optional[str] = None
+    ):
+        """
+        Generator: yields SSE event dicts for streaming answer-based content generation.
+        Same interface as suggest_for_field_stream.
+        Falls through to suggest_for_field_stream when all answers are skipped.
+        """
+        label = field_label or field_type
+        answered = [a for a in answers if a.get('answer')]
+
+        if not answered:
+            logger.info("All answers skipped – streaming autonomous generation for %s", field_type)
+            yield from self.suggest_for_field_stream(field_type=field_type, max_length=300)
+            return
+
+        formatted = []
+        for a in answered:
+            formatted.append(f"Q: {a.get('question_text', 'N/A')}\nA: {a['answer']}")
+        answers_block = "\n\n".join(formatted)
+
+        field_config = self.field_prompts.get(field_type, self.default_prompt)
+        system_context = field_config.get('context', 'Provide professional BIM content.')
+
+        prompt = (
+            f"You are a BIM Execution Plan (BEP) expert following ISO 19650 standards.\n\n"
+            f"Generate professional content for the BEP field: \"{label}\" (type: {field_type}).\n\n"
+            f"The user provided the following information through guided questions:\n\n"
+            f"{answers_block}\n\n"
+            f"Additional context: {system_context}\n\n"
+            "Requirements:\n"
+            "1. Incorporate the user's answers naturally into professional BEP content\n"
+            "2. Follow ISO 19650 information management principles\n"
+            "3. Use appropriate technical terminology\n"
+            "4. Structure content clearly (paragraphs/bullets as appropriate)\n"
+            "5. Be specific and quantify where possible\n"
+            "6. Keep professional tone\n"
+            "7. Output ONLY the content without preambles like 'Here is...' or explanations\n\n"
+            "Generate content (150-250 words):"
+        )
+
+        effective_timeout = self._calculate_timeout(400)
+        output_q: _queue.Queue = _queue.Queue()
+        first_token_event = threading.Event()
+
+        def _stage_emitter():
+            for msg in THINKING_STAGES:
+                signalled = first_token_event.wait(timeout=0.8)
+                if signalled:
+                    break
+                output_q.put({"type": "stage", "message": msg})
+
+        def _ollama_reader():
+            try:
+                payload = {
+                    "model": self.model,
+                    "prompt": prompt,
+                    "stream": True,
+                    "options": {
+                        "temperature": 0.5,
+                        "num_predict": 400,
+                        "top_p": 0.9,
+                        "top_k": 40,
+                    }
+                }
+                response = requests.post(
+                    f"{self.base_url}/api/generate",
+                    json=payload,
+                    stream=True,
+                    timeout=effective_timeout
+                )
+                response.raise_for_status()
+                accumulated = []
+                for raw_line in response.iter_lines():
+                    if not raw_line:
+                        continue
+                    try:
+                        chunk = _json.loads(raw_line)
+                    except _json.JSONDecodeError:
+                        continue
+                    token = chunk.get("response", "")
+                    if token:
+                        first_token_event.set()
+                        accumulated.append(token)
+                        output_q.put({"type": "token", "text": token})
+                    if chunk.get("done"):
+                        break
+                full_text = self._clean_suggestion("".join(accumulated), '')
+                output_q.put({"type": "done", "fullText": full_text})
+            except Exception as exc:
+                logger.error("Streaming generate_from_answers error: %s", exc)
+                output_q.put({"type": "error", "message": str(exc)})
+            finally:
+                output_q.put(None)  # sentinel
+
+        stage_t = threading.Thread(target=_stage_emitter, daemon=True)
+        ollama_t = threading.Thread(target=_ollama_reader, daemon=True)
+        stage_t.start()
+        ollama_t.start()
+
+        while True:
+            try:
+                item = output_q.get(timeout=effective_timeout + 10)
+            except _queue.Empty:
+                yield {"type": "error", "message": "Generation timed out"}
+                break
+            if item is None:
+                break
+            yield item
+
+        stage_t.join(timeout=2.0)
+        ollama_t.join(timeout=2.0)
 
 
 # Global instance for singleton pattern

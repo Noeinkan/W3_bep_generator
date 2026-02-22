@@ -10,11 +10,11 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { Modal } from '../../common';
-import axios from 'axios';
 import COMMERCIAL_OFFICE_TEMPLATE from '../../../data/templates/commercialOfficeTemplate';
 import { markdownToTipTapHtml } from '../../../utils/markdownToHtml';
 import FIELD_EXAMPLES from '../../../constants/fieldExamples';
 import AIAssistantTab from './AIAssistantTab';
+import { useAISuggestion } from '../../../hooks/useAISuggestion';
 
 /**
  * SmartHelpDialog - Context-aware help dialog
@@ -46,9 +46,17 @@ const SmartHelpDialog = ({
   const tabs = getTabsConfig();
   const [activeTab, setActiveTab] = useState(tabs[0].id);
 
-  // AI State
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState(null);
+  // AI State — loading/error/streaming from hook, success is local
+  const {
+    isLoading: aiLoading,
+    error: aiError,
+    isStreaming,
+    streamingText,
+    thinkingStage,
+    generateSuggestionStream,
+    generateSuggestion,
+    clearError
+  } = useAISuggestion();
   const [aiSuccess, setAiSuccess] = useState(false);
 
   // AI Improvement options
@@ -74,113 +82,95 @@ const SmartHelpDialog = ({
     onClose();
   };
 
-  // AI Generate (for empty fields)
+  // AI Generate (for empty fields) — streams tokens, falls back to non-streaming on error
   const handleAIGenerate = async () => {
     if (!editor) return;
-
-    setAiLoading(true);
-    setAiError(null);
+    clearError();
     setAiSuccess(false);
 
-    try {
-      const response = await axios.post('/api/ai/suggest', {
-        field_type: fieldType || fieldName,
-        partial_text: '',
-        max_length: 200
-      }, {
-        timeout: 30000
-      });
+    const insertAndClose = (text) => {
+      const htmlContent = markdownToTipTapHtml(text);
+      editor.chain().focus().setContent(htmlContent).run();
+      setAiSuccess(true);
+      setTimeout(() => onClose(), 1500);
+    };
 
-      if (response.data.success) {
-        const suggestion = response.data.text;
-        const htmlContent = markdownToTipTapHtml(suggestion);
-        editor.chain().focus().setContent(htmlContent).run();
-        setAiSuccess(true);
-        setTimeout(() => onClose(), 1500);
-      } else {
-        setAiError(response.data.message || 'Failed to generate content');
+    try {
+      await generateSuggestionStream(fieldType || fieldName, '', 200, {
+        onDone: insertAndClose
+      });
+    } catch {
+      // Streaming failed — try non-streaming fallback
+      try {
+        const text = await generateSuggestion(fieldType || fieldName, '', 200);
+        insertAndClose(text);
+      } catch {
+        // hook already set error state
       }
-    } catch (err) {
-      console.error('AI generate error:', err);
-      setAiError(err.response?.data?.message || 'Cannot connect to AI service');
-    } finally {
-      setAiLoading(false);
     }
   };
 
-  // AI Improve (for existing content)
+  // AI Improve (for existing content) — streams tokens, falls back to non-streaming on error
   const handleAIImprove = async (replaceAll = false) => {
     if (!editor) return;
-
-    setAiLoading(true);
-    setAiError(null);
+    clearError();
     setAiSuccess(false);
 
-    try {
-      const currentContent = replaceAll
-        ? editor.getText()
-        : editor.state.doc.textBetween(
-            editor.state.selection.from,
-            editor.state.selection.to
-          ) || editor.getText();
+    const currentContent = replaceAll
+      ? editor.getText()
+      : editor.state.doc.textBetween(
+          editor.state.selection.from,
+          editor.state.selection.to
+        ) || editor.getText();
 
-      const isTabularCandidate = (text) => {
-        if (!text) return false;
-        const lines = text.split('\n').map((line) => line.trim()).filter(Boolean);
-        const bulletLines = lines.filter((line) => /^([•\-*]|\d+[\.)])\s+/.test(line));
+    const isTabularCandidate = (text) => {
+      if (!text) return false;
+      const lines = text.split('\n').map((line) => line.trim()).filter(Boolean);
+      const bulletLines = lines.filter((line) => /^([•\-*]|\d+[\.)])\s+/.test(line));
+      if (bulletLines.length < 5) return false;
+      const bulletContent = bulletLines.map((line) => line.replace(/^([•\-*]|\d+[\.)])\s+/, '').trim());
+      const withDelimiter = bulletContent.filter((line) => /:\s+|\s+-\s+|\s+–\s+/.test(line));
+      return withDelimiter.length >= Math.max(4, Math.ceil(bulletContent.length * 0.7));
+    };
 
-        if (bulletLines.length < 5) return false;
+    const instructions = [];
+    if (improveOptions.grammar) instructions.push('improve grammar and clarity');
+    if (improveOptions.professional) instructions.push('make more professional');
+    if (improveOptions.iso19650) instructions.push('add ISO 19650 terminology');
+    if (improveOptions.expand) instructions.push('expand with more details');
+    if (improveOptions.concise) instructions.push('make more concise');
 
-        const bulletContent = bulletLines.map((line) => line.replace(/^([•\-*]|\d+[\.)])\s+/, '').trim());
-        const withDelimiter = bulletContent.filter((line) => /:\s+|\s+-\s+|\s+–\s+/.test(line));
+    const tableGuidance = isTabularCandidate(currentContent)
+      ? 'If the content has repeated items with consistent fields, convert it into a concise HTML table with a header row. Limit the table to 15 rows total (including header) and a maximum of 6 columns. Use <table>, <thead>, <tbody>, <tr>, <th>, <td>. Otherwise keep as paragraphs or bullet points.'
+      : 'Only use a table when the content structure clearly implies tabular data. If you use a table, limit it to 15 rows total (including header) and a maximum of 6 columns, and output HTML table tags.';
 
-        return withDelimiter.length >= Math.max(4, Math.ceil(bulletContent.length * 0.7));
-      };
+    const prompt = instructions.length > 0
+      ? `Rewrite the following text to ${instructions.join(', ')}. ${tableGuidance} Output ONLY the improved text without any introduction, explanation, or commentary.\n\nText to improve:\n${currentContent}`
+      : `${tableGuidance}\n\n${currentContent}`;
 
-      // Build improvement instructions
-      const instructions = [];
-      if (improveOptions.grammar) instructions.push('improve grammar and clarity');
-      if (improveOptions.professional) instructions.push('make more professional');
-      if (improveOptions.iso19650) instructions.push('add ISO 19650 terminology');
-      if (improveOptions.expand) instructions.push('expand with more details');
-      if (improveOptions.concise) instructions.push('make more concise');
-
-      const tableGuidance = isTabularCandidate(currentContent)
-        ? 'If the content has repeated items with consistent fields, convert it into a concise HTML table with a header row. Limit the table to 15 rows total (including header) and a maximum of 6 columns. Use <table>, <thead>, <tbody>, <tr>, <th>, <td>. Otherwise keep as paragraphs or bullet points.'
-        : 'Only use a table when the content structure clearly implies tabular data. If you use a table, limit it to 15 rows total (including header) and a maximum of 6 columns, and output HTML table tags.';
-
-      const prompt = instructions.length > 0
-        ? `Rewrite the following text to ${instructions.join(', ')}. ${tableGuidance} Output ONLY the improved text without any introduction, explanation, or commentary.\n\nText to improve:\n${currentContent}`
-        : `${tableGuidance}\n\n${currentContent}`;
-
-      const response = await axios.post('/api/ai/suggest', {
-        field_type: fieldType || fieldName,
-        partial_text: prompt,
-        max_length: 300
-      }, {
-        timeout: 30000
-      });
-
-      if (response.data.success) {
-        const suggestion = response.data.text;
-        const htmlContent = markdownToTipTapHtml(suggestion);
-
-        if (replaceAll) {
-          editor.chain().focus().clearContent().insertContent(htmlContent).run();
-        } else {
-          editor.chain().focus().insertContent(htmlContent).run();
-        }
-
-        setAiSuccess(true);
-        setTimeout(() => onClose(), 1500);
+    const insertAndClose = (text) => {
+      const htmlContent = markdownToTipTapHtml(text);
+      if (replaceAll) {
+        editor.chain().focus().clearContent().insertContent(htmlContent).run();
       } else {
-        setAiError(response.data.message || 'Failed to improve content');
+        editor.chain().focus().insertContent(htmlContent).run();
       }
-    } catch (err) {
-      console.error('AI improve error:', err);
-      setAiError(err.response?.data?.message || 'Cannot connect to AI service');
-    } finally {
-      setAiLoading(false);
+      setAiSuccess(true);
+      setTimeout(() => onClose(), 1500);
+    };
+
+    try {
+      await generateSuggestionStream(fieldType || fieldName, prompt, 300, {
+        onDone: insertAndClose
+      });
+    } catch {
+      // Streaming failed — try non-streaming fallback
+      try {
+        const text = await generateSuggestion(fieldType || fieldName, prompt, 300);
+        insertAndClose(text);
+      } catch {
+        // hook already set error state
+      }
     }
   };
 
@@ -201,6 +191,9 @@ const SmartHelpDialog = ({
           handleAIImprove={handleAIImprove}
           improveOptions={improveOptions}
           setImproveOptions={setImproveOptions}
+          streamingText={streamingText}
+          thinkingStage={thinkingStage}
+          isStreaming={isStreaming}
         />;
 
       case 'examples':

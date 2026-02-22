@@ -35,7 +35,11 @@ const AIAssistantTab = ({
   handleAIGenerate,
   handleAIImprove,
   improveOptions,
-  setImproveOptions
+  setImproveOptions,
+  // Streaming state
+  streamingText,
+  thinkingStage,
+  isStreaming
 }) => {
   // 'pick' = landing with two cards | 'quick' = inline quick flow | 'guided' = wizard
   const [mode, setMode] = useState('pick');
@@ -144,6 +148,8 @@ const AIAssistantTab = ({
             isLoading={aiLoading}
             error={aiError}
             success={aiSuccess}
+            streamingText={streamingText}
+            thinkingStage={thinkingStage}
           />
         ) : (
           <QuickImproveView
@@ -154,6 +160,8 @@ const AIAssistantTab = ({
             isLoading={aiLoading}
             error={aiError}
             success={aiSuccess}
+            streamingText={streamingText}
+            thinkingStage={thinkingStage}
           />
         )}
       </div>
@@ -166,7 +174,7 @@ const AIAssistantTab = ({
 // ============================================================================
 // QUICK GENERATE (empty field)
 // ============================================================================
-const QuickGenerateView = ({ onGenerate, isLoading, error, success }) => (
+const QuickGenerateView = ({ onGenerate, isLoading, error, success, streamingText, thinkingStage }) => (
   <div className="space-y-4">
     <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
       <div className="flex items-start gap-3">
@@ -181,17 +189,34 @@ const QuickGenerateView = ({ onGenerate, isLoading, error, success }) => (
     </div>
 
     {isLoading && (
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="flex items-center gap-3 mb-3">
-          <Loader2 size={20} className="animate-spin text-blue-600" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-blue-900">Generating content...</p>
-            <p className="text-xs text-blue-700 mt-0.5">AI is analysing and creating content for you</p>
+      <div className="space-y-3">
+        {/* Thinking stage banner — shown until first token arrives */}
+        {thinkingStage && !streamingText && (
+          <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-lg flex items-center gap-3">
+            <Loader2 size={16} className="animate-spin text-indigo-500 flex-shrink-0" />
+            <p className="text-sm text-indigo-700 italic">{thinkingStage}</p>
           </div>
-        </div>
-        <div className="w-full bg-blue-200 rounded-full h-2 overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 rounded-full animate-pulse" style={{ width: '100%' }} />
-        </div>
+        )}
+
+        {/* Live token preview — appears once first token arrives */}
+        {streamingText ? (
+          <div className="border border-blue-200 rounded-lg bg-white overflow-hidden">
+            <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border-b border-blue-200">
+              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+              <span className="text-xs font-medium text-blue-700">Generating…</span>
+            </div>
+            <div className="p-3 max-h-48 overflow-y-auto">
+              <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap font-mono">
+                {streamingText}
+                <span className="inline-block w-0.5 h-4 bg-blue-500 animate-pulse ml-0.5 align-text-bottom" />
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="w-full bg-blue-200 rounded-full h-2 overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 rounded-full animate-pulse" style={{ width: '100%' }} />
+          </div>
+        )}
       </div>
     )}
 
@@ -233,7 +258,7 @@ const QuickGenerateView = ({ onGenerate, isLoading, error, success }) => (
 // ============================================================================
 // QUICK IMPROVE (has content / has selection)
 // ============================================================================
-const QuickImproveView = ({ fieldState, improveOptions, setImproveOptions, onImprove, isLoading, error, success }) => {
+const QuickImproveView = ({ fieldState, improveOptions, setImproveOptions, onImprove, isLoading, error, success, streamingText, thinkingStage }) => {
   const [improvementStyle, setImprovementStyle] = useState('quick-polish');
   const [showCustomOptions, setShowCustomOptions] = useState(false);
 
@@ -342,17 +367,34 @@ const QuickImproveView = ({ fieldState, improveOptions, setImproveOptions, onImp
 
       {/* Loading */}
       {isLoading && (
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-center gap-3 mb-3">
-            <Loader2 size={20} className="animate-spin text-blue-600" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-blue-900">Improving content...</p>
-              <p className="text-xs text-blue-700 mt-0.5">AI is enhancing your text with professional improvements</p>
+        <div className="space-y-3">
+          {/* Thinking stage banner */}
+          {thinkingStage && !streamingText && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+              <Loader2 size={16} className="animate-spin text-green-600 flex-shrink-0" />
+              <p className="text-sm text-green-700 italic">{thinkingStage}</p>
             </div>
-          </div>
-          <div className="w-full bg-blue-200 rounded-full h-2 overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-green-500 via-blue-500 to-indigo-500 rounded-full animate-pulse" style={{ width: '100%' }} />
-          </div>
+          )}
+
+          {/* Live token preview */}
+          {streamingText ? (
+            <div className="border border-green-200 rounded-lg bg-white overflow-hidden">
+              <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border-b border-green-200">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-xs font-medium text-green-700">Improving…</span>
+              </div>
+              <div className="p-3 max-h-48 overflow-y-auto">
+                <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap font-mono">
+                  {streamingText}
+                  <span className="inline-block w-0.5 h-4 bg-green-500 animate-pulse ml-0.5 align-text-bottom" />
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="w-full bg-green-200 rounded-full h-2 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-green-500 via-blue-500 to-indigo-500 rounded-full animate-pulse" style={{ width: '100%' }} />
+            </div>
+          )}
         </div>
       )}
 

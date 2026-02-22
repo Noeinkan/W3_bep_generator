@@ -21,6 +21,7 @@ const projectsRoutes = require('./routes/projects');
 const puppeteerPdfService = require('./services/puppeteerPdfService');
 
 const app = require('./app');
+app.set('trust proxy', 1); // Trust Nginx reverse proxy for correct req.ip
 const PORT = process.env.PORT || 3001;
 
 // Security middleware
@@ -30,7 +31,7 @@ app.use(helmet({
 }));
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://77.42.70.26.nip.io']
+    ? (process.env.ALLOWED_ORIGINS || 'https://77.42.70.26.nip.io').split(',')
     : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3001', 'http://127.0.0.1:3001'],
   credentials: true
 }));

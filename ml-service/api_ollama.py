@@ -7,8 +7,10 @@ Uses Ollama's local LLM for high-quality, fast text generation.
 
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
+import json
 import logging
 import os
 import tempfile
@@ -209,6 +211,38 @@ async def suggest_for_field(request: SuggestRequest):
             status_code=500,
             detail=f"Suggestion generation failed: {str(e)}"
         )
+
+
+@app.post("/suggest-stream", tags=["Generation"])
+async def suggest_for_field_stream(request: SuggestRequest):
+    """
+    Stream token-by-token suggestions for a BEP field via SSE.
+
+    Emits server-sent events in this order:
+      {"type":"stage","message":"Parsing ISO 19650 requirements…"}  (cycles until first token)
+      {"type":"token","text":"The "}                                 (one per Ollama token)
+      {"type":"done","fullText":"The complete cleaned text…"}        (final cleaned result)
+      {"type":"error","message":"..."}                               (on failure)
+    """
+    generator = get_ollama_generator(model=request.model or OLLAMA_MODEL)
+
+    def event_stream():
+        try:
+            for event in generator.suggest_for_field_stream(
+                field_type=request.field_type,
+                partial_text=request.partial_text,
+                max_length=request.max_length
+            ):
+                yield f"data: {json.dumps(event)}\n\n"
+        except Exception as exc:
+            logger.error("suggest-stream error: %s", exc)
+            yield f"data: {json.dumps({'type': 'error', 'message': str(exc)})}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    )
 
 
 @app.get("/models", tags=["Models"])
@@ -545,6 +579,41 @@ async def generate_from_answers(request: GenerateFromAnswersRequest):
             status_code=500,
             detail=f"Content generation failed: {str(e)}"
         )
+
+
+@app.post("/generate-from-answers-stream", tags=["Guided AI"])
+async def generate_from_answers_stream(request: GenerateFromAnswersRequest):
+    """
+    Stream BEP content generation from guided answers via SSE.
+    Same SSE event format as /suggest-stream.
+    """
+    generator = get_ollama_generator(model=request.model or OLLAMA_MODEL)
+
+    answers_list = []
+    for a in request.answers:
+        if isinstance(a, dict):
+            answers_list.append(a)
+        else:
+            answers_list.append(a.dict() if hasattr(a, 'dict') else dict(a))
+
+    def event_stream():
+        try:
+            for event in generator.generate_from_answers_stream(
+                field_type=request.field_type,
+                answers=answers_list,
+                field_context=request.field_context.dict() if request.field_context else None,
+                field_label=request.field_label
+            ):
+                yield f"data: {json.dumps(event)}\n\n"
+        except Exception as exc:
+            logger.error("generate-from-answers-stream error: %s", exc)
+            yield f"data: {json.dumps({'type': 'error', 'message': str(exc)})}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    )
 
 
 @app.post("/suggest-from-eir", response_model=SuggestFromEirResponse, tags=["EIR Analysis"])

@@ -544,4 +544,141 @@ router.post('/generate-from-answers', async (req, res) => {
   }
 });
 
+// ============================================================================
+// Streaming SSE Proxy Routes
+// ============================================================================
+
+/**
+ * Stream token-by-token suggestions for a BEP field via SSE
+ *
+ * POST /api/ai/suggest-stream
+ * Body: { field_type, partial_text?, max_length?, model? }
+ *
+ * Emits server-sent events:
+ *   data: {"type":"stage","message":"Parsing ISO 19650 requirements…"}
+ *   data: {"type":"token","text":"The "}
+ *   data: {"type":"done","fullText":"The complete cleaned text…"}
+ *   data: {"type":"error","message":"..."}
+ */
+router.post('/suggest-stream', async (req, res) => {
+  const { field_type, partial_text = '', max_length = 200, model } = req.body;
+
+  if (!field_type || typeof field_type !== 'string') {
+    return res.status(400).json({ error: 'field_type is required and must be a string' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  let upstream = null;
+  try {
+    const mlServiceURL = getMLServiceURL();
+    const upstreamRes = await axios({
+      method: 'post',
+      url: `${mlServiceURL}/suggest-stream`,
+      data: {
+        field_type,
+        partial_text,
+        max_length: Math.min(Math.max(max_length, 50), 1000),
+        ...(model && { model })
+      },
+      responseType: 'stream',
+      timeout: 120000
+    });
+
+    upstream = upstreamRes.data;
+    upstream.pipe(res);
+    upstream.on('end', () => res.end());
+    upstream.on('error', (err) => {
+      console.error('suggest-stream pipe error:', err.message);
+      res.write(`data: ${JSON.stringify({ type: 'error', message: 'Stream interrupted' })}\n\n`);
+      res.end();
+    });
+  } catch (err) {
+    console.error('suggest-stream proxy error:', err.message);
+    if (!res.headersSent) {
+      res.status(503).json({ error: 'ML service unavailable', message: err.message });
+    } else {
+      res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
+      res.end();
+    }
+  }
+
+  req.on('close', () => {
+    if (upstream) upstream.destroy();
+  });
+});
+
+/**
+ * Stream BEP content generation from guided answers via SSE
+ *
+ * POST /api/ai/generate-from-answers-stream
+ * Body: { field_type, answers, field_label?, field_context?, model? }
+ */
+router.post('/generate-from-answers-stream', async (req, res) => {
+  const { field_type, answers, field_label, field_context, model } = req.body;
+
+  if (!field_type || typeof field_type !== 'string') {
+    return res.status(400).json({ error: 'field_type is required and must be a string' });
+  }
+
+  if (!Array.isArray(answers)) {
+    return res.status(400).json({ error: 'answers must be an array' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  const sanitizedAnswers = answers.map(a => ({
+    question_id: a.question_id,
+    question_text: a.question_text,
+    answer: a.answer ? String(a.answer).slice(0, 500) : null
+  }));
+
+  let upstream = null;
+  try {
+    const mlServiceURL = getMLServiceURL();
+    const upstreamRes = await axios({
+      method: 'post',
+      url: `${mlServiceURL}/generate-from-answers-stream`,
+      data: {
+        field_type,
+        field_label: field_label || field_type,
+        answers: sanitizedAnswers,
+        field_context: field_context || null,
+        ...(model && { model })
+      },
+      responseType: 'stream',
+      timeout: 120000
+    });
+
+    upstream = upstreamRes.data;
+    upstream.pipe(res);
+    upstream.on('end', () => res.end());
+    upstream.on('error', (err) => {
+      console.error('generate-from-answers-stream pipe error:', err.message);
+      res.write(`data: ${JSON.stringify({ type: 'error', message: 'Stream interrupted' })}\n\n`);
+      res.end();
+    });
+  } catch (err) {
+    console.error('generate-from-answers-stream proxy error:', err.message);
+    if (!res.headersSent) {
+      res.status(503).json({ error: 'ML service unavailable', message: err.message });
+    } else {
+      res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
+      res.end();
+    }
+  }
+
+  req.on('close', () => {
+    if (upstream) upstream.destroy();
+  });
+});
+
 module.exports = router;

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import axios from 'axios';
 
 // Use relative URLs to leverage the proxy configuration in package.json
@@ -19,7 +19,11 @@ function getPreferredModel() {
  */
 export const useAISuggestion = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingText, setStreamingText] = useState('');
+  const [thinkingStage, setThinkingStage] = useState('');
   const [error, setError] = useState(null);
+  const abortControllerRef = useRef(null);
 
   /**
    * Generate a suggestion for a specific field
@@ -140,6 +144,107 @@ export const useAISuggestion = () => {
   }, []);
 
   /**
+   * Stream token-by-token suggestions for a BEP field.
+   *
+   * @param {string} fieldType - BEP field type
+   * @param {string} partialText - Existing text in the field
+   * @param {number} maxLength - Max tokens to generate
+   * @param {object} callbacks - { onStage, onToken, onDone, onError }
+   * @returns {Promise<string>} - Accumulated text on success
+   */
+  const generateSuggestionStream = useCallback(async (
+    fieldType,
+    partialText = '',
+    maxLength = 200,
+    { onStage, onToken, onDone, onError } = {}
+  ) => {
+    // Cancel any in-flight stream
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
+    setIsStreaming(true);
+    setIsLoading(true);
+    setStreamingText('');
+    setThinkingStage('');
+    setError(null);
+
+    try {
+      const response = await fetch('/api/ai/suggest-stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          field_type: fieldType,
+          partial_text: partialText,
+          max_length: maxLength,
+          model: getPreferredModel()
+        }),
+        signal: abortController.signal
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let accumulated = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        // SSE events are separated by double newline
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop(); // keep incomplete chunk
+
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith('data: ')) continue;
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr) continue;
+
+          let event;
+          try { event = JSON.parse(jsonStr); } catch { continue; }
+
+          if (event.type === 'stage') {
+            setThinkingStage(event.message);
+            onStage?.(event.message);
+          } else if (event.type === 'token') {
+            accumulated += event.text;
+            setStreamingText(accumulated);
+            onToken?.(event.text, accumulated);
+          } else if (event.type === 'done') {
+            setStreamingText(event.fullText);
+            onDone?.(event.fullText);
+            return event.fullText;
+          } else if (event.type === 'error') {
+            throw new Error(event.message);
+          }
+        }
+      }
+
+      return accumulated;
+    } catch (err) {
+      if (err.name === 'AbortError') return '';
+      console.error('AI stream error:', err);
+      const msg = err.message || 'Streaming failed';
+      setError(msg);
+      onError?.(msg);
+      throw err;
+    } finally {
+      setIsStreaming(false);
+      setIsLoading(false);
+      setThinkingStage('');
+      abortControllerRef.current = null;
+    }
+  }, []);
+
+  /**
    * Clear error state
    */
   const clearError = useCallback(() => {
@@ -148,8 +253,12 @@ export const useAISuggestion = () => {
 
   return {
     isLoading,
+    isStreaming,
+    streamingText,
+    thinkingStage,
     error,
     generateSuggestion,
+    generateSuggestionStream,
     generateFromPrompt,
     checkAIHealth,
     clearError
