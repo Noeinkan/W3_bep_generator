@@ -3,9 +3,10 @@ FROM node:20-alpine AS frontend-build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
+COPY index.html ./
 COPY public ./public
 COPY src ./src
-COPY tailwind.config.js postcss.config.js ./
+COPY tailwind.config.js postcss.config.js vite.config.js ./
 RUN npm run build
 
 # Stage 2: Install backend production deps
