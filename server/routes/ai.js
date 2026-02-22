@@ -47,6 +47,25 @@ function getMLClient() {
 }
 
 /**
+ * List available Ollama models
+ * GET /api/ai/models
+ */
+router.get('/models', async (req, res) => {
+  try {
+    const mlClient = getMLClient();
+    const response = await mlClient.get('/models', { timeout: 5000 });
+    res.json(response.data);
+  } catch (error) {
+    console.error('ML models list failed:', error.message);
+    res.status(503).json({
+      success: false,
+      message: 'Could not retrieve model list from ML service',
+      details: error.message
+    });
+  }
+});
+
+/**
  * Health check for ML service
  */
 router.get('/health', async (req, res) => {
@@ -87,7 +106,8 @@ router.post('/generate', async (req, res) => {
       prompt,
       field_type,
       max_length = 200,
-      temperature = 0.7
+      temperature = 0.7,
+      model
     } = req.body;
 
     // Validate request
@@ -113,7 +133,8 @@ router.post('/generate', async (req, res) => {
       prompt,
       field_type,
       max_length: Math.min(Math.max(max_length, 50), 1000),
-      temperature: Math.min(Math.max(temperature, 0.1), 2.0)
+      temperature: Math.min(Math.max(temperature, 0.1), 2.0),
+      ...(model && { model })
     });
 
     res.json({
@@ -165,7 +186,8 @@ router.post('/suggest', async (req, res) => {
     const {
       field_type,
       partial_text = '',
-      max_length = 200
+      max_length = 200,
+      model
     } = req.body;
 
     // Validate request
@@ -183,7 +205,8 @@ router.post('/suggest', async (req, res) => {
     const response = await mlClient.post('/suggest', {
       field_type,
       partial_text,
-      max_length: Math.min(Math.max(max_length, 50), 1000)
+      max_length: Math.min(Math.max(max_length, 50), 1000),
+      ...(model && { model })
     });
 
     res.json({
@@ -269,7 +292,8 @@ router.post('/suggest-from-eir', async (req, res) => {
     const {
       analysis_json,
       field_type,
-      partial_text = ''
+      partial_text = '',
+      model
     } = req.body;
 
     // Validate request
@@ -294,7 +318,8 @@ router.post('/suggest-from-eir', async (req, res) => {
     const response = await mlClient.post('/suggest-from-eir', {
       analysis_json,
       field_type,
-      partial_text
+      partial_text,
+      ...(model && { model })
     }, {
       timeout: 60000 // 60 seconds for EIR suggestions
     });
@@ -349,7 +374,7 @@ router.post('/suggest-from-eir', async (req, res) => {
  */
 router.post('/generate-questions', async (req, res) => {
   try {
-    const { field_type, field_label, field_context } = req.body;
+    const { field_type, field_label, field_context, model } = req.body;
 
     // Validate request
     if (!field_type || typeof field_type !== 'string') {
@@ -374,7 +399,8 @@ router.post('/generate-questions', async (req, res) => {
     const response = await mlClient.post('/generate-questions', {
       field_type,
       field_label,
-      field_context: field_context || null
+      field_context: field_context || null,
+      ...(model && { model })
     }, {
       timeout: 30000 // 30s for question generation
     });
@@ -434,7 +460,7 @@ router.post('/generate-questions', async (req, res) => {
  */
 router.post('/generate-from-answers', async (req, res) => {
   try {
-    const { field_type, field_label, session_id, answers, field_context } = req.body;
+    const { field_type, field_label, session_id, answers, field_context, model } = req.body;
 
     // Validate request
     if (!field_type || typeof field_type !== 'string') {
@@ -469,7 +495,8 @@ router.post('/generate-from-answers', async (req, res) => {
       field_label: field_label || field_type,
       session_id: session_id || null,
       answers: sanitizedAnswers,
-      field_context: field_context || null
+      field_context: field_context || null,
+      ...(model && { model })
     }, {
       timeout: 60000 // 60s for content generation
     });

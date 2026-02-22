@@ -5,6 +5,12 @@ import axios from 'axios';
 // The proxy in package.json forwards /api/* requests to http://localhost:3001
 const API_BASE_URL = '';
 
+const PREFERRED_MODEL_KEY = 'preferredOllamaModel';
+
+function getPreferredModel() {
+  return localStorage.getItem(PREFERRED_MODEL_KEY) || undefined;
+}
+
 /**
  * Custom hook for AI text suggestions
  *
@@ -28,7 +34,8 @@ export const useAISuggestion = () => {
         {
           field_type: fieldType,
           partial_text: partialText,
-          max_length: maxLength
+          max_length: maxLength,
+          model: getPreferredModel()
         },
         {
           timeout: 30000
@@ -76,7 +83,8 @@ export const useAISuggestion = () => {
           prompt,
           field_type: fieldType,
           max_length: maxLength,
-          temperature: 0.7
+          temperature: 0.7,
+          model: getPreferredModel()
         },
         {
           timeout: 30000

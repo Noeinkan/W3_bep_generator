@@ -382,7 +382,8 @@ class EirAnalyzer:
                 prompt=prompt,
                 max_length=2000,  # Reduced from 3000 - JSON structure rarely needs more
                 temperature=0.3,  # Low temperature for structured output
-                num_ctx=8192  # Larger context window to handle bigger documents in one pass
+                num_ctx=8192,  # Larger context window to handle bigger documents in one pass
+                format_schema=EirAnalysis.model_json_schema()  # Native Ollama structured output (v0.5+)
             )
 
             # Parse JSON from response with robust parsing
@@ -483,9 +484,26 @@ class EirAnalyzer:
         return self._merge_analyses(analyses_only)
 
     def _parse_json_response(self, response: str) -> Dict[str, Any]:
-        """Parse JSON from LLM response with robust error handling."""
+        """Parse JSON from LLM response with robust error handling.
+
+        When Ollama structured output (format_schema) is used the response is
+        already valid JSON, so the fast path below succeeds and the repair
+        fallbacks are never reached.  A DEBUG log indicates which path ran.
+        """
         # Clean response
         text = response.strip()
+
+        # Fast path: structured output (Ollama v0.5+) already returns valid JSON
+        try:
+            data = json.loads(text)
+            validated = EirAnalysis.model_validate(data, strict=False)
+            logger.debug("_parse_json_response: fast path (structured output) succeeded")
+            return validated.model_dump()
+        except (json.JSONDecodeError, ValidationError):
+            pass
+
+        # Slow path: free-text with possible markdown fences / repair needed
+        logger.debug("_parse_json_response: falling back to repair pipeline")
 
         # Remove markdown code blocks if present
         text = re.sub(r'^```(?:json)?\s*', '', text)

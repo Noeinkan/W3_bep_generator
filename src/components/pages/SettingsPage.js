@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Lock, Bell, Globe, Palette, Database, Shield, Save } from 'lucide-react';
+import { Lock, Bell, Globe, Palette, Database, Shield, Save, Bot } from 'lucide-react';
+
+const PREFERRED_MODEL_KEY = 'preferredOllamaModel';
+const DEFAULT_MODEL = 'llama3.2:3b';
 
 const SettingsPage = () => {
   const { user } = useAuth();
@@ -24,6 +27,35 @@ const SettingsPage = () => {
   });
 
   const [showSaveMessage, setShowSaveMessage] = useState(false);
+
+  // AI model selection — persisted in localStorage
+  const [selectedModel, setSelectedModel] = useState(
+    () => localStorage.getItem(PREFERRED_MODEL_KEY) || DEFAULT_MODEL
+  );
+  const [availableModels, setAvailableModels] = useState([DEFAULT_MODEL]);
+  const [modelsLoading, setModelsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/ai/models')
+      .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
+      .then(data => {
+        const names = data.available_models || [DEFAULT_MODEL];
+        setAvailableModels(names.length ? names : [DEFAULT_MODEL]);
+        // If persisted selection is no longer available, reset to default
+        if (!names.includes(selectedModel)) {
+          setSelectedModel(DEFAULT_MODEL);
+        }
+      })
+      .catch(() => {
+        // ML service offline — keep the default list, user can still see their saved choice
+      })
+      .finally(() => setModelsLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(PREFERRED_MODEL_KEY, selectedModel);
+  }, [selectedModel]);
 
   const handleSave = () => {
     // TODO: Save to backend
@@ -100,6 +132,32 @@ const SettingsPage = () => {
             </p>
           </div>
         )}
+
+        {/* AI Settings */}
+        <SettingSection icon={Bot} title="AI Model">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ollama Model
+            </label>
+            <p className="text-xs text-gray-500 mb-2">
+              Choose which local model powers AI suggestions and EIR analysis.
+              Pull additional models with <code className="bg-gray-100 px-1 rounded">ollama pull &lt;model&gt;</code>.
+            </p>
+            <select
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              disabled={modelsLoading}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+            >
+              {availableModels.map(name => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+            {modelsLoading && (
+              <p className="text-xs text-gray-400 mt-1">Loading available models…</p>
+            )}
+          </div>
+        </SettingSection>
 
         {/* Notifications */}
         <SettingSection icon={Bell} title="Notifications">

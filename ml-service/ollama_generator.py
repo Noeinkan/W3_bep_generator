@@ -5,6 +5,7 @@ Uses Ollama's local LLM API to generate high-quality BEP content.
 Replaces the PyTorch LSTM model with a modern, faster, and more accurate solution.
 """
 
+import json as _json
 import os
 import re
 import time
@@ -14,8 +15,19 @@ from functools import lru_cache
 from typing import Optional
 
 import requests
+from pydantic import BaseModel
 
 from load_help_content import load_field_prompts_from_help_content
+
+
+class _QuestionItem(BaseModel):
+    id: str
+    text: str
+    hint: str = ""
+
+
+class _QuestionsList(BaseModel):
+    questions: list[_QuestionItem]
 
 logger = logging.getLogger(__name__)
 
@@ -226,7 +238,8 @@ class OllamaGenerator:
         max_length: int = 200,
         temperature: Optional[float] = None,
         retries: int = 2,
-        num_ctx: Optional[int] = None
+        num_ctx: Optional[int] = None,
+        format_schema: Optional[dict] = None
     ) -> str:
         """
         Generate text based on a prompt.
@@ -238,6 +251,9 @@ class OllamaGenerator:
                         default_temperature from config.
             retries: Number of retry attempts for transient errors.
             num_ctx: Context window size (default: 2048, can increase for larger docs).
+            format_schema: Optional JSON schema dict to enforce structured output via
+                          Ollama's native format param (v0.5+). When set, Ollama
+                          generates grammar-constrained JSON matching the schema.
 
         Returns:
             Generated text, or error message if generation fails.
@@ -267,6 +283,8 @@ class OllamaGenerator:
                     "stream": False,
                     "options": options
                 }
+                if format_schema is not None:
+                    payload["format"] = format_schema
 
                 logger.debug(
                     f"Generating text: max_length={max_length}, "
@@ -570,20 +588,23 @@ class OllamaGenerator:
             "3. Keep questions clear and concise\n"
             "4. Each question should gather different information\n"
             "5. Avoid yes/no questions - ask open-ended questions\n\n"
-            "Format your response as a JSON array:\n"
-            '[{"id": "q1", "text": "question text", "hint": "optional hint"}, ...]\n\n'
-            "Output ONLY the JSON array, no other text."
+            'Respond with a JSON object: {"questions": [{"id": "q1", "text": "...", "hint": "..."}, ...]}'
         )
 
-        raw = self.generate_text(prompt=prompt, max_length=400, temperature=0.6)
+        _schema = _QuestionsList.model_json_schema()
+        raw = self.generate_text(
+            prompt=prompt, max_length=400, temperature=0.6, format_schema=_schema
+        )
 
-        # Parse questions from response
+        # Parse questions — structured output makes this reliable; keep fallback for edge cases
         questions = self._parse_questions_json(raw)
 
         # Validate we got at least 2 questions; retry once if not
         if len(questions) < 2:
             logger.warning("First question generation produced < 2 questions, retrying…")
-            raw = self.generate_text(prompt=prompt, max_length=400, temperature=0.7)
+            raw = self.generate_text(
+                prompt=prompt, max_length=400, temperature=0.7, format_schema=_schema
+            )
             questions = self._parse_questions_json(raw)
 
         # Fallback: hardcoded generic questions
@@ -601,20 +622,30 @@ class OllamaGenerator:
         return questions[:5]  # Cap at 5
 
     def _parse_questions_json(self, raw: str) -> list:
-        """Attempt to parse a JSON array of questions from raw LLM output."""
-        import json as _json
+        """Parse a JSON list of questions from raw LLM output.
 
+        Handles three formats:
+        - Structured-output wrapper: {"questions": [...]}
+        - Bare JSON array: [...]
+        - JSON array embedded in surrounding text
+        """
         raw = raw.strip()
 
-        # Try direct parse
+        # Try direct parse — covers both wrapper object and bare array
         try:
             parsed = _json.loads(raw)
-            if isinstance(parsed, list):
-                return [self._normalise_question(q, i) for i, q in enumerate(parsed)]
+            if isinstance(parsed, dict) and "questions" in parsed:
+                items = parsed["questions"]
+            elif isinstance(parsed, list):
+                items = parsed
+            else:
+                items = []
+            if items:
+                return [self._normalise_question(q, i) for i, q in enumerate(items)]
         except _json.JSONDecodeError:
             pass
 
-        # Try to extract JSON array from surrounding text
+        # Fallback: extract JSON array from surrounding text (legacy free-text output)
         match = re.search(r'\[.*\]', raw, re.DOTALL)
         if match:
             try:

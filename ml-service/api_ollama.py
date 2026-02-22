@@ -48,6 +48,7 @@ class GenerateRequest(BaseModel):
     field_type: Optional[str] = Field(None, description="Type of BEP field")
     max_length: int = Field(200, ge=50, le=1000, description="Maximum characters to generate")
     temperature: float = Field(0.7, ge=0.1, le=2.0, description="Sampling temperature")
+    model: Optional[str] = Field(None, description="Ollama model override (defaults to OLLAMA_MODEL env var)")
 
 
 class GenerateResponse(BaseModel):
@@ -128,7 +129,7 @@ async def generate_text(request: GenerateRequest):
     - **temperature**: Sampling temperature (0.1-2.0, higher = more creative)
     """
     try:
-        generator = get_ollama_generator(model=OLLAMA_MODEL)
+        generator = get_ollama_generator(model=request.model or OLLAMA_MODEL)
 
         # Generate text
         if request.field_type:
@@ -153,7 +154,7 @@ async def generate_text(request: GenerateRequest):
         return GenerateResponse(
             text=generated.strip(),
             prompt_used=prompt_used,
-            model=OLLAMA_MODEL
+            model=request.model or OLLAMA_MODEL
         )
 
     except Exception as e:
@@ -169,6 +170,7 @@ class SuggestRequest(BaseModel):
     field_type: str = Field(..., description="Type of BEP field")
     partial_text: str = Field("", description="Existing text in the field")
     max_length: int = Field(200, ge=50, le=1000, description="Maximum characters to generate")
+    model: Optional[str] = Field(None, description="Ollama model override")
 
 
 @app.post("/suggest", response_model=GenerateResponse, tags=["Generation"])
@@ -184,7 +186,7 @@ async def suggest_for_field(request: SuggestRequest):
     - **max_length**: Maximum characters to generate
     """
     try:
-        generator = get_ollama_generator(model=OLLAMA_MODEL)
+        generator = get_ollama_generator(model=request.model or OLLAMA_MODEL)
 
         # Generate field-specific suggestion
         suggestion = generator.suggest_for_field(
@@ -198,7 +200,7 @@ async def suggest_for_field(request: SuggestRequest):
         return GenerateResponse(
             text=suggestion,
             prompt_used=request.partial_text,
-            model=OLLAMA_MODEL
+            model=request.model or OLLAMA_MODEL
         )
 
     except Exception as e:
@@ -214,7 +216,7 @@ async def list_models():
     """List available Ollama models"""
     try:
         import requests
-        response = requests.get("http://localhost:11434/api/tags", timeout=5)
+        response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
 
         if response.status_code == 200:
             data = response.json()
@@ -304,6 +306,7 @@ class AnalyzeEirRequest(BaseModel):
     """Request model for EIR analysis"""
     text: str = Field(..., description="Extracted text from EIR document")
     filename: Optional[str] = Field(None, description="Original filename for context")
+    model: Optional[str] = Field(None, description="Ollama model override")
 
 
 class AnalyzeEirResponse(BaseModel):
@@ -340,7 +343,8 @@ async def analyze_eir(request: AnalyzeEirRequest):
 
         logger.info(f"Starting EIR analysis for: {request.filename or 'unknown'}, text length: {len(request.text)} chars")
 
-        analyzer = get_analyzer(model=OLLAMA_MODEL)
+        effective_model = request.model or OLLAMA_MODEL
+        analyzer = get_analyzer(model=effective_model)
         analysis_json, summary_markdown = analyzer.analyze(
             text=request.text,
             filename=request.filename
@@ -351,7 +355,7 @@ async def analyze_eir(request: AnalyzeEirRequest):
         return AnalyzeEirResponse(
             analysis_json=analysis_json,
             summary_markdown=summary_markdown,
-            model=OLLAMA_MODEL
+            model=effective_model
         )
 
     except HTTPException:
@@ -382,6 +386,7 @@ class SuggestFromEirRequest(BaseModel):
     analysis_json: Dict[str, Any] = Field(..., description="EIR analysis JSON")
     field_type: str = Field(..., description="BEP field type to get suggestion for")
     partial_text: str = Field("", description="Existing text in the field")
+    model: Optional[str] = Field(None, description="Ollama model override")
 
 
 class SuggestFromEirResponse(BaseModel):
@@ -408,6 +413,7 @@ class GenerateQuestionsRequest(BaseModel):
     field_type: str = Field(..., description="Type of BEP field")
     field_label: str = Field(..., description="Human-readable field label")
     field_context: Optional[FieldContext] = Field(None, description="Field context information")
+    model: Optional[str] = Field(None, description="Ollama model override")
 
 
 class QuestionItem(BaseModel):
@@ -438,6 +444,7 @@ class GenerateFromAnswersRequest(BaseModel):
     session_id: Optional[str] = Field(None, description="Session identifier")
     answers: list = Field(..., description="List of answer objects")
     field_context: Optional[FieldContext] = Field(None, description="Field context information")
+    model: Optional[str] = Field(None, description="Ollama model override")
 
 
 class GenerateFromAnswersResponse(BaseModel):
@@ -458,7 +465,7 @@ async def generate_questions(request: GenerateQuestionsRequest):
     that will be used to generate more accurate, project-specific BEP content.
     """
     try:
-        generator = get_ollama_generator(model=OLLAMA_MODEL)
+        generator = get_ollama_generator(model=request.model or OLLAMA_MODEL)
 
         field_context_dict = None
         if request.field_context:
@@ -495,7 +502,7 @@ async def generate_from_answers(request: GenerateFromAnswersRequest):
     BEP content that naturally incorporates the provided information.
     """
     try:
-        generator = get_ollama_generator(model=OLLAMA_MODEL)
+        generator = get_ollama_generator(model=request.model or OLLAMA_MODEL)
 
         field_context_dict = None
         if request.field_context:
@@ -529,7 +536,7 @@ async def generate_from_answers(request: GenerateFromAnswersRequest):
             text=text,
             questions_answered=questions_answered,
             questions_total=questions_total,
-            model=OLLAMA_MODEL
+            model=request.model or OLLAMA_MODEL
         )
 
     except Exception as e:
@@ -557,7 +564,8 @@ async def suggest_from_eir(request: SuggestFromEirRequest):
     information extracted from the client's EIR document.
     """
     try:
-        analyzer = get_analyzer(model=OLLAMA_MODEL)
+        effective_model = request.model or OLLAMA_MODEL
+        analyzer = get_analyzer(model=effective_model)
         suggestion = analyzer.suggest_for_field(
             analysis_json=request.analysis_json,
             field_type=request.field_type,
@@ -569,7 +577,7 @@ async def suggest_from_eir(request: SuggestFromEirRequest):
         return SuggestFromEirResponse(
             suggestion=suggestion,
             field_type=request.field_type,
-            model=OLLAMA_MODEL
+            model=effective_model
         )
 
     except Exception as e:
