@@ -37,6 +37,9 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
   const lastProgressRef = useRef({ value: 0, ts: 0 });
   const uploadAbortedRef = useRef(false);
 
+  // Delete confirmation modal state
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // { docId }
+
   // Progress overlay state
   const [showProgressOverlay, setShowProgressOverlay] = useState(false);
   const [isBackgrounded, setIsBackgrounded] = useState(false);
@@ -47,6 +50,10 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
   const elapsedTimerRef = useRef(null);
   const pollStartRef = useRef(null);
   const isPollingRef = useRef(false);
+  const mountCheckDone = useRef(false);
+
+  // Tracks doc IDs whose status is being re-checked on mount (shows "Checking…" instead of stale spinner)
+  const [checkingDocIds, setCheckingDocIds] = useState(new Set());
 
   const userId = user?.id || 'anonymous';
 
@@ -107,6 +114,60 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
   useEffect(() => {
     loadDocuments();
   }, [loadDocuments]);
+
+  // On first document load, check any docs stuck in 'analyzing' state.
+  // They may have been mid-analysis when the user navigated away — either
+  // resume polling (still running) or surface the outcome (analyzed/error).
+  useEffect(() => {
+    if (mountCheckDone.current || documents.length === 0) return;
+    const staleDocs = documents.filter(d => d.status === 'analyzing');
+    if (staleDocs.length === 0) {
+      mountCheckDone.current = true;
+      return;
+    }
+
+    mountCheckDone.current = true;
+    setCheckingDocIds(new Set(staleDocs.map(d => d.id)));
+
+    staleDocs.forEach(async (doc) => {
+      try {
+        const result = await getDocument(doc.id, userId);
+        if (!result.success) return;
+        const status = result.document.status;
+
+        if (status === 'analyzed') {
+          setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, ...result.document } : d));
+          if (onAnalysisComplete && result.document.analysis_json) {
+            onAnalysisComplete({
+              analysisJson: result.document.analysis_json,
+              summaryMarkdown: result.document.summary_markdown,
+            });
+          }
+        } else if (status === 'error') {
+          setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, ...result.document } : d));
+          setFailedDocId(doc.id);
+          setError(result.document.error_message || 'Previous analysis failed');
+        } else if (status === 'analyzing') {
+          // Backend is still running — resume client-side polling (no overlay, use background banner)
+          setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, ...result.document } : d));
+          setAnalyzing(doc.id);
+          setAnalyzingDocName(doc.original_filename || doc.originalFilename || 'Document');
+          setIsBackgrounded(true);
+          startElapsedTimer();
+          startStatusPolling(doc.id);
+        }
+      } catch (err) {
+        console.error('Mount status check error:', err);
+      } finally {
+        setCheckingDocIds(prev => {
+          const next = new Set(prev);
+          next.delete(doc.id);
+          return next;
+        });
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [documents.length, userId]);
 
   // Handle file selection
   const handleFiles = async (files) => {
@@ -262,10 +323,22 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
   const handleFileInput = (e) => {
     if (e.target.files && e.target.files.length > 0) {
       handleFiles(Array.from(e.target.files));
+      // Reset so the same file can be re-selected after deletion
+      e.target.value = '';
     }
   };
 
   const handleDelete = async (docId) => {
+    const doc = documents.find(d => d.id === docId);
+    if (doc?.status === 'analyzed') {
+      setDeleteConfirm({ docId });
+      return;
+    }
+    await confirmDelete(docId);
+  };
+
+  const confirmDelete = async (docId) => {
+    setDeleteConfirm(null);
     try {
       const result = await deleteDocument(docId, userId);
       if (result.success) {
@@ -504,7 +577,8 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
     }
   };
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status, isChecking = false) => {
+    if (isChecking) return <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />;
     switch (status) {
       case 'analyzed':
         return <CheckCircle className="w-5 h-5 text-green-500" />;
@@ -518,7 +592,8 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
     }
   };
 
-  const getStatusText = (status) => {
+  const getStatusText = (status, isChecking = false) => {
+    if (isChecking) return 'Checking status…';
     switch (status) {
       case 'analyzed':
         return 'Analyzed';
@@ -551,6 +626,39 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
 
   return (
     <div className="max-w-2xl mx-auto">
+      {/* Delete confirmation modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-gray-900">Delete analyzed document?</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  This document has already been analyzed. Removing it will clear the AI suggestions from your BEP.
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => confirmDelete(deleteConfirm.docId)}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Analysis Progress Overlay */}
       <AnalysisProgressOverlay
         isOpen={showProgressOverlay && !isBackgrounded}
@@ -724,15 +832,17 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
         {/* Document list */}
         {documents.length > 0 ? (
           <div role="list" className={`${pendingDocs.length > 0 ? 'mt-3' : 'mt-5'} space-y-3`}>
-            {documents.map((doc) => (
+            {documents.map((doc) => {
+              const isChecking = checkingDocIds.has(doc.id);
+              return (
               <div
                 key={doc.id}
                 className="flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-xl shadow-sm"
                 role="listitem"
-                aria-label={`${doc.original_filename || doc.originalFilename} - ${getStatusText(doc.status)}`}
+                aria-label={`${doc.original_filename || doc.originalFilename} - ${getStatusText(doc.status, isChecking)}`}
               >
                 <div className="flex-shrink-0" aria-hidden="true">
-                  {getStatusIcon(doc.status)}
+                  {getStatusIcon(doc.status, isChecking)}
                 </div>
 
                 <div className="flex-1 min-w-0">
@@ -743,13 +853,13 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
                     {getFileTypeBadge(doc.original_filename || doc.originalFilename)}
                   </div>
                   <p className="text-xs text-gray-400">
-                    {getStatusText(doc.status)}
+                    {getStatusText(doc.status, isChecking)}
                     {doc.file_size && ` \u00b7 ${(doc.file_size / 1024).toFixed(0)} KB`}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {(doc.status === 'uploaded' || doc.status === 'extracted') && (
+                  {!isChecking && (doc.status === 'uploaded' || doc.status === 'extracted') && (
                     <button
                       onClick={(e) => { e.stopPropagation(); handleAnalyze(doc); }}
                       disabled={analyzing === doc.id}
@@ -764,7 +874,7 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
                     </button>
                   )}
 
-                  {doc.status === 'error' && (
+                  {!isChecking && doc.status === 'error' && (
                     <button
                       onClick={(e) => { e.stopPropagation(); handleAnalyze(doc); }}
                       disabled={analyzing === doc.id}
@@ -779,7 +889,7 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
                     </button>
                   )}
 
-                  {doc.status === 'analyzed' && (
+                  {!isChecking && doc.status === 'analyzed' && (
                     <span className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-sm font-medium">
                       <CheckCircle className="w-4 h-4" />
                       Ready
@@ -788,14 +898,16 @@ const EirUploadStep = ({ draftId, onAnalysisComplete, onSkip }) => {
 
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDelete(doc.id); }}
-                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Delete"
+                    disabled={analyzing === doc.id || isChecking}
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    title={analyzing === doc.id ? 'Cannot delete while analyzing' : 'Delete'}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           !uploading && (

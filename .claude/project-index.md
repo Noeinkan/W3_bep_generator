@@ -1,7 +1,7 @@
 # Project Index — BEP Generator
 
 > **Purpose:** Compact codebase map so Claude reads this FIRST instead of exploring.
-> ~150 lines vs ~50,000+ lines of source code.
+> ~160 lines vs ~50,000+ lines of source code.
 
 ## Architecture
 
@@ -33,7 +33,7 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 | `src/components/midp/` | MIDP form, list, evolution dashboard |
 | `src/components/pages/` | HomePage (+ sections: Integration, ISOCompliance, ProductCard, SocialProof), ProjectsPage, BEPGeneratorWrapper, PreviewExportPage, ProfilePage, SettingsPage, TidpEditorPage |
 | `src/components/pages/auth/` | Login, Register, ForgotPassword, ResetPassword, VerifyEmail, VerificationPending pages |
-| `src/components/pages/bep/` | BepLayout, BepStartMenuView, BepSelectTypeView, BepFormView, BepPreviewView, BepDraftsView, BepImportView, BepInfoRequirementsView, BepStructureMapView, BepTemplatesView, BepTypeSelector, ImportBepDialog, TemplateGallery; `components/` subfolder: BepHeader, BepSidebar, BepFooter, SuccessToast |
+| `src/components/pages/bep/` | BepLayout, BepStartMenuView, BepSelectTypeView, BepFormView, BepPreviewView, BepDraftsView, BepImportView, BepInfoRequirementsView, BepStructureMapView, BepTemplatesView, BepTypeSelector, ImportBepDialog, TemplateGallery; `components/` subfolder: BepHeader, BepSidebar, BepFooter, SuccessToast, EirResponsivenessMatrixModal |
 | `src/components/pages/drafts/` | DraftManager, DraftListItem, SaveDraftDialog, SearchAndFilters |
 | `src/components/pages/tidp-midp/` | TIDPMIDPDashboard, TidpMidpManager, RiskRegister, ResourcePlan, QualityGates, DependencyMatrix, CascadingImpact; `dashboard/` subfolder: TIDPsView, MIDPsView, StatisticsCards, MIDPAnalyticsDrawer, MIDPSummaryPanel, HelpModal |
 | `src/components/pages/idrm-manager/` | IDRMDashboard; `dashboard/` subfolder: IMActivitiesView, DeliverablesView, TemplatesView, StatisticsCards, QuickActions, HelpModal |
@@ -47,13 +47,17 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 | `src/data/` | emptyBepData, templateRegistry, helpContentData, cdePlatformLibrary |
 | `src/config/` | bepConfig.js (BEP types, step categories, field mappings) |
 | `src/constants/` | fieldExamples, iso19650ActivitiesTemplate, routes, tidpTemplates |
-| `src/utils/` | cn, complianceCheck, csvHelpers, imageCompression, markdownToHtml, validationUtils |
+| `src/utils/` | cn, complianceCheck, csvHelpers, imageCompression, markdownToHtml, validationUtils, eirResponsivenessMatrix |
 | `server/routes/` | auth, tidp, midp, drafts, ai, export, documents, projects, validation, bep-structure, responsibility-matrix, migrate |
 | `server/services/` | tidpService, midpService, authService, emailService, emailTemplates, projectService, exportService, htmlTemplateService, puppeteerPdfService, bepStructureService, responsibilityMatrixService, eirExportService, tidpSyncService, encryptedSecretService |
 | `server/services/templates/` | bepStyles.css (HTML/CSS templates for PDF/export rendering) |
-| `server/db/` | database.js (better-sqlite3 setup, all table creation) |
+| `server/database.js` | Primary DB entry point — better-sqlite3 setup, all table creation, sample project seeding; writes to `server/db/bep-generator.db` |
+| `server/db/` | SQLite data directory; `database.js` here is legacy (path differs); `.db` file lives here |
 | `server/middleware/` | authMiddleware.js (JWT verify) |
-| `ml-service/` | api_ollama.py (FastAPI), eir_analyzer.py, ollama_generator.py, text_extractor.py |
+| `server/validators/` | authValidator.js, midpValidator.js, tidpValidator.js (request validation) |
+| `server/scripts/` | One-off migration scripts (migrate-add-*, migrate-localStorage-to-db) + audit-orphaned-records, seed-bep-structure, backup-database |
+| `server/__tests__/` | Vitest server-side tests: tidp, midp, projects, htmlTemplateService |
+| `ml-service/` | api_ollama.py (FastAPI), eir_analyzer.py, ollama_generator.py (OLLAMA_MODEL env var, default `llama3.2:3b`), text_extractor.py |
 
 ## Context Providers
 
@@ -103,3 +107,5 @@ users, projects, drafts, tidps, containers, midps, documents, steps, fields, fie
 ## Startup
 
 `npm start` → concurrently runs frontend (:3000) + backend (:3001) + ML service (:8000). Prestart checks ports + starts Ollama.
+
+**Production (Docker/Hetzner):** `bash deploy.sh` → builds images via `docker-compose.yml`, pushes to Hetzner. Services: `backend` (3001), `ml-service` (8000), `frontend` (nginx). SQLite volume: `sqlite-data:/app/server/db`. Configured via `.env.production` (gitignored).
