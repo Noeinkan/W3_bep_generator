@@ -324,6 +324,22 @@ if (!hasEmailVerified) {
   }
 }
 
+// Migration safety: ensure projects table exists on existing DBs that predate its addition.
+// Must run BEFORE the ACC columns migration below, which references this table.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS projects (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    acc_hub_id TEXT,
+    acc_project_id TEXT,
+    acc_default_folder TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
+`);
+
 // Migration: add ACC linkage columns to projects table if missing
 const projectColumns = db.prepare("PRAGMA table_info(projects)").all();
 const hasAccHubId = projectColumns.some(col => col.name === 'acc_hub_id');

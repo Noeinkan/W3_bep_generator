@@ -5,6 +5,27 @@ const db = require('../db/database');
 const emailService = require('./emailService');
 const { verificationEmail, passwordResetEmail } = require('./emailTemplates');
 
+/**
+ * Seed a "Sample Project" for a user if they have no projects yet.
+ * Called server-side so new users always have a project available.
+ * Safe to call multiple times — no-ops if a project already exists.
+ */
+const seedSampleProject = (userId) => {
+  try {
+    const existing = db.prepare('SELECT id FROM projects WHERE user_id = ? LIMIT 1').get(userId);
+    if (!existing) {
+      const id = uuidv4();
+      const now = new Date().toISOString();
+      db.prepare(
+        'INSERT INTO projects (id, name, user_id, acc_hub_id, acc_project_id, acc_default_folder, created_at, updated_at) VALUES (?, ?, ?, NULL, NULL, NULL, ?, ?)'
+      ).run(id, 'Sample Project', userId, now, now);
+      console.log(`Seeded Sample Project for user ${userId}`);
+    }
+  } catch (err) {
+    console.error('Failed to seed Sample Project:', err && err.message);
+  }
+};
+
 // Validate JWT_SECRET is configured
 if (!process.env.JWT_SECRET) {
   if (process.env.NODE_ENV === 'production') {
@@ -121,6 +142,10 @@ const authenticateUser = async (email, password) => {
   const now = new Date().toISOString();
   db.prepare('UPDATE users SET last_login = ? WHERE id = ?').run(now, user.id);
 
+  // Safety net: ensure the user always has a Sample Project, even if seeding
+  // was missed at verification time (e.g. pre-existing users, failed seed).
+  seedSampleProject(user.id);
+
   // Return user without password hash
   const { password_hash, ...userWithoutPassword } = user;
   return userWithoutPassword;
@@ -161,6 +186,9 @@ const verifyEmailToken = (token) => {
 
   // Mark email verified on user
   db.prepare('UPDATE users SET email_verified = 1, updated_at = ? WHERE id = ?').run(new Date().toISOString(), row.user_id);
+
+  // Seed a Sample Project for the user if they don't have one yet
+  seedSampleProject(row.user_id);
 
   // Increment uses and mark used if exceeded
   const newUses = (row.uses || 0) + 1;
