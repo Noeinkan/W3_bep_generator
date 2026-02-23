@@ -96,10 +96,12 @@ class OllamaGenerator:
             verify_on_init: If True, verify Ollama connection on initialization.
                            Set to False for faster startup in tests.
         """
-        self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-        self.model = model or os.getenv("OLLAMA_MODEL", "llama3.2:3b")
-        self.timeout = timeout or int(os.getenv("OLLAMA_TIMEOUT", "60"))
-        self.default_temperature = float(os.getenv("OLLAMA_DEFAULT_TEMPERATURE", "0.7"))
+        self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "").strip() or "http://localhost:11434"
+        self.model = model or os.getenv("OLLAMA_MODEL", "").strip() or "llama3.2:3b"
+        _timeout_str = os.getenv("OLLAMA_TIMEOUT", "").strip()
+        self.timeout = timeout or (int(_timeout_str) if _timeout_str else 60)
+        _temp_str = os.getenv("OLLAMA_DEFAULT_TEMPERATURE", "").strip()
+        self.default_temperature = float(_temp_str) if _temp_str else 0.7
 
         # Connection state
         self._connection_verified = False

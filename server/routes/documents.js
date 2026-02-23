@@ -633,7 +633,7 @@ router.post('/:id/extract-and-analyze', async (req, res) => {
     } catch (analyzeError) {
       console.error(`[${id}] AI analysis failed:`, analyzeError.message);
 
-      let errorMsg = analyzeError.response?.data?.error || analyzeError.message;
+      let errorMsg = analyzeError.response?.data?.error || analyzeError.response?.data?.detail || analyzeError.message;
       let detailedError;
 
       // Categorize errors for better user feedback

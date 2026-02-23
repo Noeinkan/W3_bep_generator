@@ -17,6 +17,7 @@ import { ROUTES } from '../../../constants/routes';
 import { useEir } from '../../../contexts/EirContext';
 import { EirUploadStep, EirAnalysisView } from '../../eir';
 import { bepUi } from './bepUiClasses';
+import toast from 'react-hot-toast';
 
 /**
  * Inner component that renders the form content
@@ -243,8 +244,8 @@ const EirStepWrapper = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { bepType, currentDraft } = useBepForm();
-  const { setEirAnalysis, hasAnalysis, analysis, summary } = useEir();
+  const { bepType, currentDraft, methods } = useBepForm();
+  const { setEirAnalysis, hasAnalysis, analysis, summary, getValueForField, hasDataForField, getValueByPath } = useEir();
 
   // Track if we're showing EIR step (step = -1 in URL or 'eir')
   const [showEirStep, setShowEirStep] = useState(false);
@@ -265,12 +266,83 @@ const EirStepWrapper = ({ children }) => {
     setShowAnalysisView(true);
   }, [setEirAnalysis]);
 
-  // Handle using analysis in BEP
+  // Handle using analysis in BEP — auto-fill all compatible fields then navigate
   const handleUseInBep = useCallback(() => {
-    // Navigate to step 0 of the wizard
+    let filled = 0;
+
+    // Helper: fuzzy-match EIR value(s) against predefined checkbox options
+    const matchOptions = (rawEirValue, predefinedOptions) => {
+      if (!rawEirValue) return [];
+      const eirText = Array.isArray(rawEirValue)
+        ? rawEirValue.join(' ')
+        : String(rawEirValue);
+      const eirValues = Array.isArray(rawEirValue) ? rawEirValue.map(String) : [];
+      return predefinedOptions.filter((option) => {
+        const optLower = option.toLowerCase();
+        const eirLower = eirText.toLowerCase();
+        if (eirLower.includes(optLower)) return true;
+        return eirValues.some(
+          (v) => optLower.includes(v.toLowerCase()) || v.toLowerCase().includes(optLower)
+        );
+      });
+    };
+
+    // 1. Text / Textarea fields
+    const TEXT_FIELDS = [
+      'projectName', 'projectDescription', 'appointingParty',
+      'bimGoals', 'primaryObjectives', 'bimObjectives',
+      'projectInformationRequirements', 'modelValidation',
+      'qualityAssurance', 'informationRisks',
+    ];
+    TEXT_FIELDS.forEach((fieldName) => {
+      if (hasDataForField(fieldName)) {
+        const value = getValueForField(fieldName);
+        if (value) {
+          methods.setValue(fieldName, value, { shouldDirty: true });
+          filled++;
+        }
+      }
+    });
+
+    // 2. Select field: projectType
+    const eirProjectType = getValueByPath('project_info.project_type');
+    if (eirProjectType) {
+      const match =
+        CONFIG.options.projectTypes.find(
+          (opt) => opt.toLowerCase() === String(eirProjectType).toLowerCase()
+        ) ||
+        CONFIG.options.projectTypes.find((opt) =>
+          opt.toLowerCase().includes(String(eirProjectType).toLowerCase())
+        );
+      if (match) {
+        methods.setValue('projectType', match, { shouldDirty: true });
+        filled++;
+      }
+    }
+
+    // 3. Checkbox / Array fields
+    const CHECKBOX_FIELDS = [
+      { fieldName: 'fileFormats',         path: 'standards_protocols.file_formats', options: CONFIG.options.fileFormats },
+      { fieldName: 'informationFormats',  path: 'standards_protocols.file_formats', options: CONFIG.options.fileFormats },
+      { fieldName: 'bimSoftware',         path: 'software_requirements',            options: CONFIG.options.software },
+      { fieldName: 'bimUses',             path: 'bim_objectives',                   options: CONFIG.options.bimUses },
+      { fieldName: 'informationPurposes', path: 'information_requirements',         options: CONFIG.options.informationPurposes },
+    ];
+    CHECKBOX_FIELDS.forEach(({ fieldName, path, options }) => {
+      const raw = getValueByPath(path);
+      const matched = matchOptions(raw, options);
+      if (matched.length > 0) {
+        methods.setValue(fieldName, matched, { shouldDirty: true });
+        filled++;
+      }
+    });
+
+    if (filled > 0) {
+      toast.success(`Auto-filled ${filled} field${filled > 1 ? 's' : ''} from EIR analysis`);
+    }
     const basePath = location.pathname.split('/step/')[0];
     navigate(`${basePath}/step/0`);
-  }, [navigate, location.pathname]);
+  }, [hasDataForField, getValueForField, getValueByPath, methods, navigate, location.pathname]);
 
   // Handle skip EIR step
   const handleSkipEir = useCallback(() => {
