@@ -8,14 +8,14 @@ Windows host, but shell is bash — use Unix syntax (forward slashes, `/dev/null
 
 ## Workflow rules
 
-- **Describe approach first.** Before writing any code, outline the plan and wait for approval. If requirements are ambiguous, ask clarifying questions before touching a file.
-- **Break large tasks into small ones.** If a change touches more than 3 files, stop and break it into smaller, sequential tasks before starting.
-- **After writing code, flag risks.** List what could break and suggest tests to cover it.
-- **Bug workflow: test first.** When fixing a bug, start by writing (or identifying) a test that reproduces it, then fix until it passes.
-- **Learn from corrections.** Whenever a correction is made, add a new rule here so the same mistake doesn't repeat.
+- **Plan before coding.** For any non-trivial task (3+ steps, architectural decisions, or multi-file changes), outline the approach and wait for approval. Ask clarifying questions before touching a file.
+- **Use subagents to protect context.** Offload research, exploration, and parallel analysis to subagents. Keep the main context window clean for implementation. One focused task per subagent.
+- **Verify before done.** Never mark a task complete without proving it works. Run `npm test` after every code change. Diff behavior against main when relevant.
+- **Fix bugs autonomously.** When given a bug report, just fix it — no hand-holding. Identify root cause → write or find a failing test → fix until it passes.
+- **Demand elegance (balanced).** For non-trivial changes, pause and ask "is there a more elegant way?" Skip this for simple, obvious fixes. Don't over-engineer.
+- **Self-improve after corrections.** Whenever a correction is made, record the lesson in the auto memory system (`~/.claude/projects/.../memory/`). Don't repeat the same mistake.
 - **Tailwind semantic token naming.** Use dashed keys/classes only (e.g., `text-ui-text-muted`, `bg-ui-primary-hover`, `bg-ui-success-bg`); never use camelCase token names in Tailwind config or utility classes; when adding new UI tokens, keep config keys and class usage naming style exactly matched.
-- **After code changes,** run `npm test` before considering done.
-- **Stay focused.** Do not perform additional unrequested work like installing packages, creating extra documentation, or expanding scope without explicit user approval.
+- **Stay focused.** Do not install packages, create extra documentation, or expand scope without explicit user approval.
 
 ## Project layout
 
@@ -55,18 +55,17 @@ Before ANY exploration, read `.claude/project-index.md`. It maps every directory
 2. **Grep with a narrow path** — e.g., `Grep pattern="createTIDP" path="server/services/"` not the whole repo.
 3. **Read only the lines you need** — use `offset`/`limit` on Read for files >150 lines. Grep for the function first, then read ±30 lines around it.
 
-### Step 2: Never do these
+### Never do these
 - **No repo-wide Glob/Grep** without a path filter. Always scope to a specific directory.
 - **No speculative file reads.** Don't read a file "just to understand the codebase." Use the index.
 - **No reading entire large files.** If a file is >200 lines, search for the relevant section first.
 - **No re-exploring known paths.** The index already maps: schemas → `src/schemas/`, services → `src/services/`, routes → `server/routes/`, DB → `server/services/`, contexts → `src/contexts/`, hooks → `src/hooks/`, config → `src/config/`, constants → `src/constants/`.
 - **No loading build/, node_modules/, venv/, .db files.**
 
-### Token budget awareness
-- A typical targeted Grep + 30-line Read = ~200 tokens
-- A full file Read = ~2,000-5,000 tokens
-- A repo-wide Grep = ~5,000-20,000 tokens
-- Always choose the smallest operation that answers the question
+### Token budget
+- Targeted Grep + 30-line Read = ~200 tokens
+- Full file Read = ~2,000–5,000 tokens
+- Repo-wide Grep = ~5,000–20,000 tokens
 
 ## Quick reference
 

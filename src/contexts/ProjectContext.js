@@ -34,14 +34,14 @@ export const ProjectProvider = ({ children }) => {
       if (response.success) {
         let projectList = response.projects;
 
-        // Auto-create "Sample Project" if no projects exist (once per session)
+        // Auto-create "Sample Project" if no projects exist (once per successful attempt)
         if (projectList.length === 0 && !seedRunRef.current) {
-          seedRunRef.current = true;
           try {
             const createRes = await apiService.createProject({
               name: 'Sample Project'
             });
             if (createRes.success) {
+              seedRunRef.current = true; // only lock after success so failures allow a retry
               const sampleProject = createRes.project;
               projectList = [sampleProject];
 
