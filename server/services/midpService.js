@@ -2,7 +2,7 @@ const { v4: uuidv4 } = require('uuid');
 const { format, addDays, parseISO, differenceInDays } = require('date-fns');
 const _ = require('lodash');
 const tidpService = require('./tidpService');
-const db = require('../db/database');
+const db = require('../database');
 
 // Safe date parsing helper - returns null for invalid dates
 function safeParseDateForSort(dateValue) {

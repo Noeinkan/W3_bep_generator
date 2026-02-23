@@ -7,7 +7,7 @@
  * Usage: node server/scripts/migrate-add-projects-user-fk.js
  */
 
-const db = require('../db/database');
+const db = require('../database');
 
 function hasUserFk() {
   const fks = db.prepare('PRAGMA foreign_key_list(projects)').all();

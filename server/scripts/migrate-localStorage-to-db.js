@@ -42,7 +42,7 @@ rl.question('Paste your localStorage JSON here (or type "skip" to skip): ', (ans
 
     console.log(`\nFound ${draftKeys.length} draft storage key(s).\n`);
 
-    const db = require('../db/database');
+    const db = require('../database');
     const tidpService = require('../services/tidpService');
 
     let totalMigrated = 0;

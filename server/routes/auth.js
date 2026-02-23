@@ -3,7 +3,7 @@ const router = express.Router();
 const authService = require('../services/authService');
 const emailService = require('../services/emailService');
 const { verificationEmail, passwordResetEmail } = require('../services/emailTemplates');
-const db = require('../db/database');
+const db = require('../database');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const {
   registerSchema,

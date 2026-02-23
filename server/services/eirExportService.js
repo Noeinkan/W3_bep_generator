@@ -92,10 +92,10 @@ class EirExportService {
   renderInformationRequirements(analysis) {
     const info = analysis?.information_requirements || {};
     const sections = [
-      { label: 'OIR', items: info.OIR || [] },
-      { label: 'AIR', items: info.AIR || [] },
-      { label: 'PIR', items: info.PIR || [] },
-      { label: 'EIR Specifics', items: info.EIR_specifics || [] }
+      { label: 'OIR', items: this.toArray(info.OIR) },
+      { label: 'AIR', items: this.toArray(info.AIR) },
+      { label: 'PIR', items: this.toArray(info.PIR) },
+      { label: 'EIR Specifics', items: this.toArray(info.EIR_specifics) }
     ].filter(section => section.items.length > 0);
 
     if (sections.length === 0) return '';
@@ -183,7 +183,7 @@ class EirExportService {
   }
 
   renderRoles(analysis) {
-    const roles = analysis?.roles_responsibilities || [];
+    const roles = this.toArray(analysis?.roles_responsibilities);
     if (!roles.length) return '';
 
     const content = roles.map(role => `
@@ -278,24 +278,33 @@ class EirExportService {
     `;
   }
 
+  toArray(v) {
+    if (!v) return [];
+    if (Array.isArray(v)) return v;
+    if (typeof v === 'string') return v.trim() ? [v] : [];
+    return [];
+  }
+
   renderList(items, compact = false) {
-    if (!items || items.length === 0) return '';
+    const arr = this.toArray(items);
+    if (arr.length === 0) return '';
     const listClass = compact ? 'list compact' : 'list';
     return `
       <ul class="${listClass}">
-        ${items.map(item => `<li>${this.escapeHtml(item)}</li>`).join('')}
+        ${arr.map(item => `<li>${this.escapeHtml(item)}</li>`).join('')}
       </ul>
     `;
   }
 
   renderChipList(title, items) {
-    if (!items || items.length === 0) return '';
+    const arr = this.toArray(items);
+    if (arr.length === 0) return '';
     const header = title ? `<p class="paragraph"><strong>${this.escapeHtml(title)}:</strong></p>` : '';
     return `
       <div class="chip-section">
         ${header}
         <div class="chip-list">
-          ${items.map(item => `<span class="chip">${this.escapeHtml(item)}</span>`).join('')}
+          ${arr.map(item => `<span class="chip">${this.escapeHtml(item)}</span>`).join('')}
         </div>
       </div>
     `;

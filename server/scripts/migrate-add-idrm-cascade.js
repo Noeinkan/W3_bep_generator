@@ -8,7 +8,7 @@
  * Usage: node server/scripts/migrate-add-idrm-cascade.js
  */
 
-const db = require('../db/database');
+const db = require('../database');
 
 function hasProjectCascadeFk(tableName) {
   const fks = db.prepare(`PRAGMA foreign_key_list(${tableName})`).all();

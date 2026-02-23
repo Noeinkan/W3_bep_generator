@@ -8,7 +8,7 @@
  */
 
 const { v4: uuidv4 } = require('uuid');
-const db = require('../db/database');
+const db = require('../database');
 
 // Icon name mapping (Lucide component name to string)
 const ICON_MAP = {

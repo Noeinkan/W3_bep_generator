@@ -47,7 +47,8 @@
       "Bash(Get-Content \"c:\\\\Users\\\\andre\\\\OneDrive\\\\Desktop\\\\03_Coding\\\\W3_bep_generator\\\\server\\\\logs\\\\*.log\" -Tail 50 -ErrorAction SilentlyContinue)",
       "Bash(Test-Path:*)",
       "Bash(npm test:*)",
-      "Bash(npx vitest:*)"
+      "Bash(npx vitest:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

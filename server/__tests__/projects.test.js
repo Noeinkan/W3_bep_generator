@@ -2,7 +2,7 @@ const express = require('express');
 const request = require('supertest');
 const { v4: uuidv4 } = require('uuid');
 const projectsRouter = require('../routes/projects');
-const db = require('../db/database');
+const db = require('../database');
 const { generateToken } = require('../services/authService');
 
 describe('Projects API auth and ownership', () => {

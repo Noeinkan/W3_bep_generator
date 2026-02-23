@@ -1,7 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const { format, addDays, parseISO } = require('date-fns');
 const _ = require('lodash');
-const db = require('../db/database');
+const db = require('../database');
 
 class TIDPService {
   constructor() {

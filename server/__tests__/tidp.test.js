@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../app'); // we'll create this app export
-const db = require('../db/database');
+const db = require('../database');
 
 describe('TIDP API', () => {
   afterAll(() => {

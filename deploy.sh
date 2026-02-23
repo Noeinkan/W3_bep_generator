@@ -63,6 +63,26 @@ ssh "$SERVER" bash -s -- "$NO_BUILD" << 'REMOTE'
   fi
 
   echo ""
+  echo "==> Seeding Sample Projects for verified users with no projects ..."
+  docker exec bep-generator-backend-1 node -e "
+    const db = require('/app/server/database');
+    const { v4: uuidv4 } = require('uuid');
+    const users = db.prepare('SELECT id FROM users WHERE email_verified = 1').all();
+    let seeded = 0;
+    users.forEach(u => {
+      const existing = db.prepare('SELECT id FROM projects WHERE user_id = ? LIMIT 1').get(u.id);
+      if (!existing) {
+        const id = uuidv4();
+        const now = new Date().toISOString();
+        db.prepare('INSERT INTO projects (id, name, user_id, acc_hub_id, acc_project_id, acc_default_folder, created_at, updated_at) VALUES (?, ?, ?, NULL, NULL, NULL, ?, ?)').run(id, 'Sample Project', u.id, now, now);
+        seeded++;
+        console.log('Seeded Sample Project for user', u.id);
+      }
+    });
+    console.log('Seed complete:', seeded, 'project(s) created for', users.length, 'verified user(s)');
+  " || echo "  Seed step failed (non-fatal)"
+
+  echo ""
   echo "==> Container status:"
   docker compose ps
 

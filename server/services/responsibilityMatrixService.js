@@ -1,4 +1,4 @@
-const db = require('../db/database');
+const db = require('../database');
 const { v4: uuidv4 } = require('uuid');
 
 /**

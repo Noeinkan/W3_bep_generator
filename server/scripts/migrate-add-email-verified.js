@@ -1,4 +1,4 @@
-const db = require('../db/database');
+const db = require('../database');
 
 function ensureEmailVerifiedColumn() {
   const cols = db.prepare("PRAGMA table_info(users)").all();

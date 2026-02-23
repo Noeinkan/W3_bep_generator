@@ -11,7 +11,7 @@ const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
 const { createId } = require('@paralleldrive/cuid2');
-const db = require('../db/database');
+const db = require('../database');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
 const router = express.Router();

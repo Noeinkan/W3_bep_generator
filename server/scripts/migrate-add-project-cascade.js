@@ -11,7 +11,7 @@
  * Usage: node server/scripts/migrate-add-project-cascade.js
  */
 
-const db = require('../db/database');
+const db = require('../database');
 
 function migrate() {
   console.log('Starting migration: Add CASCADE foreign keys to project references...');

@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const db = require('../db/database');
+const db = require('../database');
 
 const DEV_FALLBACK_KEY_SEED = 'bep-generator-local-dev-fallback-key';
 

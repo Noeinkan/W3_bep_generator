@@ -1,4 +1,4 @@
-const db = require('../db/database');
+const db = require('../database');
 
 const TABLES = [
   { name: 'drafts', column: 'project_id' },

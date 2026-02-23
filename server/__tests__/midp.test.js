@@ -2,7 +2,7 @@ const express = require('express');
 const request = require('supertest');
 const { v4: uuidv4 } = require('uuid');
 
-const db = require('../db/database');
+const db = require('../database');
 const midpService = require('../services/midpService');
 const tidpService = require('../services/tidpService');
 const midpRouter = require('../routes/midp');

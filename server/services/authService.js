@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
-const db = require('../db/database');
+const db = require('../database');
 const emailService = require('./emailService');
 const { verificationEmail, passwordResetEmail } = require('./emailTemplates');
 

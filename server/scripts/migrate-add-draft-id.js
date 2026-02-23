@@ -7,7 +7,7 @@
  * Usage: node server/scripts/migrate-add-draft-id.js
  */
 
-const db = require('../db/database');
+const db = require('../database');
 
 function migrate() {
   console.log('Starting migration: Add draft_id columns...');

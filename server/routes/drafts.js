@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db/database');
+const db = require('../database');
 const { createId } = require('@paralleldrive/cuid2');
 const bepStructureService = require('../services/bepStructureService');
 const { authenticateToken } = require('../middleware/authMiddleware');
