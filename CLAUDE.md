@@ -4,7 +4,7 @@
 BEP Generator — React 19 + Vite + Express + SQLite tool for building/exporting BEP documents.
 
 ## Environment
-This is a Windows development environment. For bash commands, use PowerShell-compatible syntax and handle output display issues by using explicit print/echo statements or alternative verification methods.
+Windows host, but shell is bash — use Unix syntax (forward slashes, `/dev/null` not NUL, `&&` chaining). Do not use PowerShell syntax.
 
 ## Workflow rules
 
@@ -16,9 +16,6 @@ This is a Windows development environment. For bash commands, use PowerShell-com
 - **Tailwind semantic token naming.** Use dashed keys/classes only (e.g., `text-ui-text-muted`, `bg-ui-primary-hover`, `bg-ui-success-bg`); never use camelCase token names in Tailwind config or utility classes; when adding new UI tokens, keep config keys and class usage naming style exactly matched.
 - **After code changes,** run `npm test` before considering done.
 - **Stay focused.** Do not perform additional unrequested work like installing packages, creating extra documentation, or expanding scope without explicit user approval.
-
-## Workflow Preferences
-- Before starting implementation, briefly confirm the approach with the user rather than diving into extensive codebase exploration. Keep initial exploration focused and minimal.
 
 ## Project layout
 
@@ -42,10 +39,11 @@ This is a Windows development environment. For bash commands, use PowerShell-com
 - **form-builder barrel exports.** Sub-modules have their own barrels: import from `form-builder/field-editor`, `form-builder/step-editor`, etc. The top-level `form-builder/index.js` re-exports `FormBuilderProvider`, `useFormBuilder`, and `BepStructureMap`.
 - better-sqlite3 is synchronous — don't accidentally introduce async patterns around DB calls.
 - Puppeteer (PDF export) is heavy; avoid pulling it into frontend bundles.
-- **Export pipeline:** PDF/DOCX generation uses `htmlTemplateService` (renders HTML with `server/services/templates/bepStyles.css`) → Puppeteer. Temp files go to `server/temp/` and should be cleaned up after export.
+- **PDF export pipeline:** PDF uses `htmlTemplateService` (renders HTML with `server/services/templates/bepStyles.css`) → Puppeteer → temp file in `server/temp/` → cleaned up after export. DOCX is a separate client-side pipeline via `src/services/docxGenerator.js`.
 - Security middleware (Helmet, rate-limit) exists but some is commented out in dev — don't remove it.
 - Vite handles frontend bundling and dev server; keep `vite.config.js` aligned with existing proxy/env behavior.
 - The ML service is a separate Python process — changes there need a separate restart.
+- **`.env` files:** Never commit `.env.*` files (only `.env.example`). Secrets go in environment variables or `encryptedSecretService`. `.env.production` is gitignored — keep it that way.
 
 ## Token optimization — MANDATORY
 
@@ -80,13 +78,16 @@ Before ANY exploration, read `.claude/project-index.md`. It maps every directory
 | Backend only | `npm run start:backend` |
 | Build | `npm run build` |
 | Preview build | `npm run preview` |
+| Deploy (Hetzner) | `bash deploy.sh` (Docker-based, builds + pushes to Hetzner) |
 
 ## Common patterns
 
 - **New API endpoint:** Route in `server/routes/` → Service in `server/services/` → Frontend call in `src/services/apiService.js`
+- **New protected route:** Apply `server/middleware/authMiddleware.js` before the route handler.
 - **New form:** Schema in `src/schemas/` → Component uses `useForm` with `zodResolver`
 - **New page:** Add to `src/components/pages/` → Register route in `App.js`
-- **Export/PDF generation:** Data → `htmlTemplateService.js` (render HTML + CSS from `templates/`) → `puppeteerPdfService.js` (Puppeteer) → temp file in `server/temp/` → stream to client → cleanup
+- **PDF export:** Data → `htmlTemplateService.js` (render HTML + CSS from `templates/`) → `puppeteerPdfService.js` (Puppeteer) → temp file in `server/temp/` → stream to client → cleanup
+- **DOCX export:** Uses `docxGenerator` in `src/services/` (client-side, separate pipeline from PDF).
 
 ## Session Management
 When hitting usage limits mid-task, always save progress by:
