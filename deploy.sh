@@ -25,7 +25,10 @@ ssh "$SERVER" bash -s -- "$NO_BUILD" << 'REMOTE'
 
   echo ""
   echo "==> Pulling latest code from GitHub ..."
+  # Preserve .env.production across pulls (gitignored, must not be overwritten)
+  mv .env.production /tmp/.env.production.bak 2>/dev/null || true
   git pull origin master
+  mv /tmp/.env.production.bak .env.production
 
   if [[ "$NO_BUILD" != "true" ]]; then
     echo ""
