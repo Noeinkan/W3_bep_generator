@@ -35,6 +35,9 @@ Windows host, but shell is bash — use Unix syntax (forward slashes, `/dev/null
 
 ## Things to watch out for
 
+- **BEP config is split into sub-modules.** `bepConfig.js` is now a barrel — edit `bepSteps.js` (step list), `bepTypeDefinitions.js` (pre/post metadata), `bepOptions.js` (option arrays), or `bepFormFields.js` (field definitions). All 13 consumers import `CONFIG` from `bepConfig.js` unchanged.
+- **EIR pre-step lives in the EIR module.** `EirStepWrapper` and `EirFillSummaryModal` are in `src/components/eir/`. The fill logic (`useEirFill`) and document history logic (`useDocumentHistory`) are in `src/hooks/`. Do not put EIR or document-history domain logic back into `BepFormView.js`.
+- **BepFormView is layout-only.** `BepFormView.js` is pure orchestration — it composes hooks and sub-components. Domain logic belongs in hooks (`useEirFill`, `useDocumentHistory`, `useStepNavigation`, `useDraftSave`).
 - **FormBuilderProvider scope.** `useFormBuilder()` only works inside `<FormBuilderProvider>`. If a layout or wrapper component needs `isEditMode`, `steps`, or any editor state, it must be defined *inside* the provider in the JSX tree — you can't read that context from a parent above it. Pattern: define an inner component inside the provider's children.
 - **form-builder barrel exports.** Sub-modules have their own barrels: import from `form-builder/field-editor`, `form-builder/step-editor`, etc. The top-level `form-builder/index.js` re-exports `FormBuilderProvider`, `useFormBuilder`, and `BepStructureMap`.
 - better-sqlite3 is synchronous — don't accidentally introduce async patterns around DB calls.

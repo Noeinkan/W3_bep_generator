@@ -19,7 +19,7 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 |-----------|-------------|
 | `src/components/auth/` | Login, Register, ProtectedRoute |
 | `src/components/common/` | Button, Select, Modal, FormField, ConfirmDialog |
-| `src/components/eir/` | EIR upload, analysis view, suggest button |
+| `src/components/eir/` | EIR upload, analysis view, suggest button, EirStepWrapper (pre-step flow), EirFillSummaryModal |
 | `src/components/export/` | BEP preview renderer, hidden component renderer |
 | `src/components/form-builder/` | Dynamic form structure editor (steps, fields, drag-drop) |
 | `src/components/forms/ai/` | AI assistant tabs, suggestion buttons, smart help |
@@ -43,9 +43,9 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 | `src/contexts/` | AuthContext, ProjectContext, BepFormContext, EirContext |
 | `src/schemas/` | bepValidationSchemas.js, authSchemas.js (Zod) |
 | `src/services/` | apiService, documentService, draftApiService, backendPdfService, bepFormatter, docxGenerator |
-| `src/hooks/` | useAISuggestion, useDrafts, useDraftSave, useDraftFilters, useDraftOperations, useExport, useTidpData, useTIDPFilters, useMidpData, useResponsibilityMatrix, useStepNavigation, useMindmapD3, useOutsideClick, useUndoRedo |
+| `src/hooks/` | useAISuggestion, useDrafts, useDraftSave, useDraftFilters, useDraftOperations, useExport, useTidpData, useTIDPFilters, useMidpData, useResponsibilityMatrix, useStepNavigation, useMindmapD3, useOutsideClick, useUndoRedo, useDocumentHistory, useEirFill |
 | `src/data/` | emptyBepData, templateRegistry, helpContentData, cdePlatformLibrary |
-| `src/config/` | bepConfig.js (BEP types, step categories, field mappings) |
+| `src/config/` | bepConfig.js (barrel — re-exports CONFIG unchanged), bepSteps.js (14-step list + categories), bepTypeDefinitions.js (pre/post-appointment metadata), bepOptions.js (bimUses, fileFormats, software, projectTypes), bepFormFields.js (all field definitions + getFormFields) |
 | `src/constants/` | fieldExamples, iso19650ActivitiesTemplate, routes, tidpTemplates |
 | `src/utils/` | cn, complianceCheck, csvHelpers, imageCompression, markdownToHtml, validationUtils, eirResponsivenessMatrix |
 | `server/routes/` | auth, tidp, midp, drafts, ai, export, documents, projects, validation, bep-structure, responsibility-matrix, migrate |
