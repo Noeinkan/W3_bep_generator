@@ -209,6 +209,47 @@ docker compose up -d
 Verify: curl https://<domain>/health → OK
 Verify: docker compose logs app — no JWT_SECRET errors
 For AI features: ensure Ollama is running on host at port 11434
+
+
+Pulling an Update to the Server
+When you've pushed new code to GitHub and want to deploy it to Hetzner:
+
+1. SSH into the server
+```
+ssh root@77.42.70.26
+```
+
+2. Go to the app directory
+```
+cd /opt/bep-generator   # or wherever you cloned the repo
+```
+
+3. Pull the latest code
+```
+git pull origin master
+```
+
+4. Rebuild and restart the containers
+```
+docker compose up -d --build
+```
+This rebuilds the app image with the new code and restarts only the affected containers. Nginx and volumes are unaffected — no data is lost.
+
+5. Check it's running
+```
+docker compose logs app --tail=50
+```
+Look for "Server running on port 3001" and no error lines.
+
+That's it. The whole update takes ~2-3 minutes (mostly the npm ci + Vite build step).
+
+Notes:
+- If you only changed server code (no frontend), the build is faster but you still need `--build` to rebuild the image.
+- If you changed `.env`, restart without rebuild: `docker compose up -d` (no `--build`).
+- If something goes wrong: `docker compose logs app` to see errors, then fix and re-run step 4.
+
+---
+
 Risks / Notes
 torch in ML service: If torch isn't actually used at inference time, stripping it from the prod requirements reduces image from ~4GB to ~200MB. Worth checking ml-service/api_ollama.py imports before building.
 Puppeteer Chromium path: The PUPPETEER_EXECUTABLE_PATH env var must match the actual chromium binary path in the Debian image (/usr/bin/chromium). Test PDF export after first deploy.

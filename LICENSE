@@ -1,28 +1,38 @@
-Copyright (c) 2025 Noein Ltd
+Copyright (c) 2025–2026 Noein Ltd. All rights reserved.
 
-All rights reserved.
+PROPRIETARY SOFTWARE — SOURCE AVAILABLE
 
-Permission is hereby granted to any person obtaining a copy of this software
-and associated documentation files (the "Software"), to use the Software for
-personal, non-commercial purposes only, subject to the following conditions:
+This software and all associated files (the "Software") are the exclusive
+property of Noein Ltd. No rights are granted except as expressly stated below.
 
-1. The Software may be viewed, studied, and used for personal learning purposes.
+PERMITTED USES
+You may view and study the source code for personal, non-commercial learning
+purposes only.
 
-2. The Software may NOT be used for commercial purposes without explicit written
-   permission from the copyright holder.
+PROHIBITED USES
+Without prior written permission from Noein Ltd, you may NOT:
 
-3. The Software may NOT be copied, modified, merged, published, distributed,
-   sublicensed, or sold without explicit written permission from the copyright holder.
+  1. Use the Software for any commercial purpose or for any public display
+     (commercial or non-commercial);
+  2. Copy, reproduce, or duplicate any portion of the Software;
+  3. Modify, adapt, translate, or create derivative works based on the Software;
+  4. Distribute, publish, sublicense, sell, rent, lease, or otherwise transfer
+     the Software or any rights in it to any third party;
+  5. Remove or alter any proprietary notices, labels, or marks on the Software.
 
-4. Creation of derivative works or products based on this Software is prohibited
-   without explicit written permission from the copyright holder.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+NO WARRANTIES
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
 
-For licensing inquiries, please contact andrea.aita@noein.com.
+LIMITATION OF LIABILITY
+IN NO EVENT SHALL NOEIN LTD BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM
+OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR DEALINGS IN THE SOFTWARE.
+
+GOVERNING LAW
+This License is governed by and construed in accordance with the laws of
+Italy, without regard to its conflict-of-law provisions.
+
+CONTACT
+For licensing inquiries: andrea.aita@noein.com
