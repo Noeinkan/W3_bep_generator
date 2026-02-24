@@ -30,6 +30,22 @@ import {
 import TableInsertDialog from '../dialogs/TableInsertDialog';
 import SmartHelpButton from '../ai/SmartHelpButton';
 
+const ToolbarButton = ({ onClick, active, disabled, children, title }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    title={title}
+    className={`p-2 rounded hover:bg-gray-200 transition-colors ${
+      active ? 'bg-blue-100 text-blue-600' : 'text-gray-700'
+    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+    type="button"
+  >
+    {children}
+  </button>
+);
+
+const ToolbarDivider = () => <div className="w-px h-6 bg-gray-300 mx-1" />;
+
 const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldName, helpContent }) => {
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
@@ -144,22 +160,6 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
     '#85200c', '#990000', '#b45f06', '#bf9000', '#38761d', '#134f5c', '#1155cc', '#0b5394', '#351c75', '#741b47',
     '#5b0f00', '#660000', '#783f04', '#7f6000', '#274e13', '#0c343d', '#1c4587', '#073763', '#20124d', '#4c1130',
   ];
-
-  const ToolbarButton = ({ onClick, active, disabled, children, title }) => (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      className={`p-2 rounded hover:bg-gray-200 transition-colors ${
-        active ? 'bg-blue-100 text-blue-600' : 'text-gray-700'
-      } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-      type="button"
-    >
-      {children}
-    </button>
-  );
-
-  const ToolbarDivider = () => <div className="w-px h-6 bg-gray-300 mx-1" />;
 
   return (
     <div className="tiptap-toolbar border border-gray-300 rounded-t-lg bg-gray-50 p-2 flex flex-wrap gap-1 items-center">

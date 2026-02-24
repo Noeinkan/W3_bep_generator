@@ -17,7 +17,61 @@ import { ROUTES } from '../../../constants/routes';
 import { useEir } from '../../../contexts/EirContext';
 import { EirUploadStep, EirAnalysisView } from '../../eir';
 import { bepUi } from './bepUiClasses';
-import toast from 'react-hot-toast';
+import { CheckCircle } from 'lucide-react';
+import draftApiService from '../../../services/draftApiService';
+import { createDefaultDocumentHistory } from '../../../constants/documentHistory';
+
+const EIR_FIELD_LABELS = {
+  projectName: 'Project Name',
+  projectDescription: 'Project Description',
+  appointingParty: 'Appointing Party',
+  bimGoals: 'BIM Goals',
+  primaryObjectives: 'Primary Objectives',
+  bimObjectives: 'BIM Objectives',
+  projectInformationRequirements: 'Project Information Requirements',
+  modelValidation: 'Model Validation',
+  qualityAssurance: 'Quality Assurance',
+  informationRisks: 'Information Risks',
+  projectType: 'Project Type',
+  fileFormats: 'File Formats',
+  informationFormats: 'Information Formats',
+  bimSoftware: 'BIM Software',
+  bimUses: 'BIM Uses',
+  informationPurposes: 'Information Purposes',
+};
+
+const EirFillSummaryModal = ({ filledFields, onConfirm }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+      <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100">
+        <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+        <h2 className="text-base font-semibold text-gray-900 flex-1">
+          {filledFields.length} field{filledFields.length !== 1 ? 's' : ''} auto-filled from EIR
+        </h2>
+      </div>
+
+      <ul className="divide-y divide-gray-100 max-h-72 overflow-y-auto">
+        {filledFields.map(({ label, preview }) => (
+          <li key={label} className="flex items-start gap-3 px-6 py-3">
+            <span className="w-40 flex-shrink-0 text-xs font-semibold uppercase tracking-wider text-gray-400 pt-0.5">
+              {label}
+            </span>
+            <span className="text-sm text-gray-700 truncate">{preview}</span>
+          </li>
+        ))}
+      </ul>
+
+      <div className="px-6 py-4 bg-gray-50 flex justify-end">
+        <button
+          onClick={onConfirm}
+          className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Go to BEP →
+        </button>
+      </div>
+    </div>
+  </div>
+);
 
 /**
  * Inner component that renders the form content
@@ -57,6 +111,41 @@ const BepFormViewContent = () => {
     setCurrentDraft,
     getFormData,
   } = useBepForm();
+
+  // ── Document History state (ISO 19650 Section 0) ────────────────────────
+  const [documentHistory, setDocumentHistory] = useState(null);
+
+  // Initialise documentHistory when a draft is loaded
+  useEffect(() => {
+    if (!currentDraft?.id) return;
+    if (currentDraft.data?.documentHistory) {
+      setDocumentHistory(currentDraft.data.documentHistory);
+      return;
+    }
+    // Auto-create the first revision on new/legacy drafts
+    const projectName = currentDraft.data?.projectName || currentDraft.name || '';
+    const defaultHistory = createDefaultDocumentHistory(projectName);
+    setDocumentHistory(defaultHistory);
+    // Persist silently – fire-and-forget, non-blocking
+    draftApiService.updateDraft(currentDraft.id, {
+      data: { ...currentDraft.data, documentHistory: defaultHistory },
+    }).catch(() => {});
+    setCurrentDraft(prev => prev ? { ...prev, data: { ...prev.data, documentHistory: defaultHistory } } : prev);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDraft?.id]);
+
+  const handleDocumentHistorySave = useCallback(async (updated) => {
+    if (!currentDraft?.id) return;
+    setDocumentHistory(updated);
+    try {
+      await draftApiService.updateDraft(currentDraft.id, {
+        data: { ...currentDraft.data, documentHistory: updated },
+      });
+      setCurrentDraft(prev => prev ? { ...prev, data: { ...prev.data, documentHistory: updated } } : prev);
+    } catch (err) {
+      console.error('Failed to save document history', err);
+    }
+  }, [currentDraft, setCurrentDraft]);
 
   // Check if FormBuilder context is available for dynamic step count
   const formBuilderContext = useContext(FormBuilderContext);
@@ -166,6 +255,8 @@ const BepFormViewContent = () => {
         tidpData={tidps}
         midpData={midps}
         user={user}
+        documentHistory={documentHistory}
+        onDocumentHistorySave={handleDocumentHistorySave}
       />
 
       {/* Main Content */}
@@ -189,7 +280,7 @@ const BepFormViewContent = () => {
 
         {/* Form Content */}
         <div ref={contentRef} className={cn('flex-1', bepUi.contentScroll, 'bg-ui-canvas')}>
-          <div className={`mx-auto px-6 py-8 ${currentStep === totalSteps - 1 ? 'max-w-[297mm]' : 'max-w-[210mm]'}`}>
+          <div className={`mx-auto px-6 py-8 ${currentStep === totalSteps - 1 ? 'max-w-[327mm]' : 'max-w-[231mm]'}`}>
             <div
               className={cn(
                 bepUi.panel,
@@ -250,6 +341,7 @@ const EirStepWrapper = ({ children }) => {
   // Track if we're showing EIR step (step = -1 in URL or 'eir')
   const [showEirStep, setShowEirStep] = useState(false);
   const [showAnalysisView, setShowAnalysisView] = useState(false);
+  const [filledSummary, setFilledSummary] = useState(null); // Array<{label, preview}> | null
 
   // Check URL for EIR step
   useEffect(() => {
@@ -266,9 +358,9 @@ const EirStepWrapper = ({ children }) => {
     setShowAnalysisView(true);
   }, [setEirAnalysis]);
 
-  // Handle using analysis in BEP — auto-fill all compatible fields then navigate
+  // Handle using analysis in BEP — auto-fill all compatible fields then show summary
   const handleUseInBep = useCallback(() => {
-    let filled = 0;
+    const details = [];
 
     // Helper: fuzzy-match EIR value(s) against predefined checkbox options
     const matchOptions = (rawEirValue, predefinedOptions) => {
@@ -299,7 +391,8 @@ const EirStepWrapper = ({ children }) => {
         const value = getValueForField(fieldName);
         if (value) {
           methods.setValue(fieldName, value, { shouldDirty: true });
-          filled++;
+          const preview = String(value).length > 60 ? String(value).slice(0, 60) + '…' : String(value);
+          details.push({ label: EIR_FIELD_LABELS[fieldName] ?? fieldName, preview });
         }
       }
     });
@@ -316,7 +409,7 @@ const EirStepWrapper = ({ children }) => {
         );
       if (match) {
         methods.setValue('projectType', match, { shouldDirty: true });
-        filled++;
+        details.push({ label: EIR_FIELD_LABELS.projectType, preview: match });
       }
     }
 
@@ -333,16 +426,23 @@ const EirStepWrapper = ({ children }) => {
       const matched = matchOptions(raw, options);
       if (matched.length > 0) {
         methods.setValue(fieldName, matched, { shouldDirty: true });
-        filled++;
+        details.push({ label: EIR_FIELD_LABELS[fieldName] ?? fieldName, preview: matched.join(', ') });
       }
     });
 
-    if (filled > 0) {
-      toast.success(`Auto-filled ${filled} field${filled > 1 ? 's' : ''} from EIR analysis`);
+    if (details.length > 0) {
+      setFilledSummary(details);
+    } else {
+      const basePath = location.pathname.split('/step/')[0];
+      navigate(`${basePath}/step/0`);
     }
+  }, [hasDataForField, getValueForField, getValueByPath, methods, navigate, location.pathname]);
+
+  const handleConfirmApply = useCallback(() => {
+    setFilledSummary(null);
     const basePath = location.pathname.split('/step/')[0];
     navigate(`${basePath}/step/0`);
-  }, [hasDataForField, getValueForField, getValueByPath, methods, navigate, location.pathname]);
+  }, [navigate, location.pathname]);
 
   // Handle skip EIR step
   const handleSkipEir = useCallback(() => {
@@ -376,6 +476,9 @@ const EirStepWrapper = ({ children }) => {
             </div>
           </div>
         </div>
+        {filledSummary && (
+          <EirFillSummaryModal filledFields={filledSummary} onConfirm={handleConfirmApply} />
+        )}
       </div>
     );
   }

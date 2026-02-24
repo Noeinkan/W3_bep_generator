@@ -75,9 +75,17 @@ const Button = React.forwardRef(({
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
       )}
-      {!loading && icon && <span className="mr-2 flex-shrink-0">{icon}</span>}
+      {!loading && icon && (
+        <span className="mr-2 flex-shrink-0">
+          {React.isValidElement(icon) ? icon : React.createElement(icon, { className: 'w-4 h-4' })}
+        </span>
+      )}
       {children}
-      {iconRight && <span className="ml-2 flex-shrink-0">{iconRight}</span>}
+      {iconRight && (
+        <span className="ml-2 flex-shrink-0">
+          {React.isValidElement(iconRight) ? iconRight : React.createElement(iconRight, { className: 'w-4 h-4' })}
+        </span>
+      )}
     </button>
   );
 });

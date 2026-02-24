@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -19,6 +19,9 @@ import TipTapToolbar from './TipTapToolbar';
 import FindReplaceDialog from '../dialogs/FindReplaceDialog';
 import TableBubbleMenu from '../tables/TableBubbleMenu';
 import { getHelpContent } from '../../../data/helpContent';
+import './tiptap.css';
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 const TipTapEditor = ({
   value = '',
@@ -30,21 +33,30 @@ const TipTapEditor = ({
   showToolbar = true,
   autoSaveKey = 'tiptap-autosave',
   minHeight = '200px',
-  fieldName, // Add fieldName prop
-  compactMode = false, // Add compact mode for tables
-  onFocus, // Add focus handler
-  onBlur, // Add blur handler
-  onMouseDown, // Add mousedown handler
+  fieldName,
+  compactMode = false,
+  onFocus,
+  onBlur,
+  onMouseDown,
 }) => {
   const [zoom, setZoom] = useState(100);
   const [showFindReplace, setShowFindReplace] = useState(false);
   const [helpContent, setHelpContent] = useState(null);
 
+  // Keep callback refs current so stale closures in useEditor config always
+  // call the latest prop values without needing to rebuild the editor.
+  const onChangeRef = useRef(onChange);
+  const onFocusRef  = useRef(onFocus);
+  const onBlurRef   = useRef(onBlur);
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+  useEffect(() => { onFocusRef.current  = onFocus;  }, [onFocus]);
+  useEffect(() => { onBlurRef.current   = onBlur;   }, [onBlur]);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         history: {
-          depth: 100, // Robust undo/redo history
+          depth: 100,
         },
         link: false,
         underline: false,
@@ -96,61 +108,53 @@ const TipTapEditor = ({
     content: value,
     editorProps: {
       attributes: {
-        class: 'tiptap-editor prose prose-sm sm:prose lg:prose-lg xl:prose-2xl focus:outline-none',
+        class: 'tiptap-editor prose prose-sm max-w-none focus:outline-none',
         id: id || undefined,
         'aria-required': ariaRequired || undefined,
         'aria-label': 'Rich text editor',
         'aria-multiline': 'true',
         spellcheck: 'true',
       },
-      // Handle focus/blur events
       handleDOMEvents: {
         focus: (_view, event) => {
-          if (onFocus) {
-            onFocus(event);
-          }
+          onFocusRef.current?.(event);
           return false;
         },
         blur: (_view, event) => {
-          if (onBlur) {
-            onBlur(event);
-          }
+          onBlurRef.current?.(event);
           return false;
         },
       },
-      // Handle paste with images
       handlePaste: (view, event) => {
         const items = Array.from(event.clipboardData?.items || []);
         const imageItem = items.find(item => item.type.indexOf('image') === 0);
 
         if (imageItem) {
-          event.preventDefault();
           const file = imageItem.getAsFile();
+          if (!file || file.size > MAX_IMAGE_BYTES) return true; // suppress default, reject oversized
+
+          event.preventDefault();
           const reader = new FileReader();
 
           reader.onload = (e) => {
             const { schema } = view.state;
-            const node = schema.nodes.resizableImage.create({
-              src: e.target.result,
-            });
+            const node = schema.nodes.resizableImage.create({ src: e.target.result });
             const transaction = view.state.tr.replaceSelectionWith(node);
             view.dispatch(transaction);
           };
 
-          if (file) {
-            reader.readAsDataURL(file);
-          }
+          reader.readAsDataURL(file);
           return true;
         }
         return false;
       },
-      // Handle drag and drop images
       handleDrop: (view, event, _slice, moved) => {
         if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
           const file = event.dataTransfer.files[0];
-          const fileType = file.type;
 
-          if (fileType.indexOf('image') === 0) {
+          if (file.type.indexOf('image') === 0) {
+            if (file.size > MAX_IMAGE_BYTES) return true; // reject oversized, suppress default
+
             event.preventDefault();
             const reader = new FileReader();
 
@@ -159,9 +163,7 @@ const TipTapEditor = ({
               const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
 
               if (coordinates) {
-                const node = schema.nodes.resizableImage.create({
-                  src: e.target.result,
-                });
+                const node = schema.nodes.resizableImage.create({ src: e.target.result });
                 const transaction = view.state.tr.insert(coordinates.pos, node);
                 view.dispatch(transaction);
               }
@@ -179,7 +181,6 @@ const TipTapEditor = ({
           const { state } = view;
           const { selection } = state;
 
-          // Check if we're in a table
           const isInTable = state.schema.nodes.table &&
                            selection.$anchor.node(-3) &&
                            selection.$anchor.node(-3).type.name === 'table';
@@ -188,14 +189,12 @@ const TipTapEditor = ({
             event.preventDefault();
 
             if (event.shiftKey) {
-              // Shift+Tab: go to previous cell
               return view.state.schema.nodes.tableCell
-                ? editor.commands.goToPreviousCell()
+                ? editor?.commands.goToPreviousCell()
                 : false;
             } else {
-              // Tab: go to next cell
               return view.state.schema.nodes.tableCell
-                ? editor.commands.goToNextCell()
+                ? editor?.commands.goToNextCell()
                 : false;
             }
           }
@@ -204,8 +203,7 @@ const TipTapEditor = ({
       },
     },
     onUpdate: ({ editor }) => {
-      const html = editor.getHTML();
-      onChange(html);
+      onChangeRef.current(editor.getHTML());
     },
   });
 
@@ -214,9 +212,8 @@ const TipTapEditor = ({
     if (!editor || !autoSaveKey) return;
 
     const timeoutId = setTimeout(() => {
-      const content = editor.getHTML();
-      localStorage.setItem(autoSaveKey, content);
-    }, 1000); // Debounce 1 second
+      localStorage.setItem(autoSaveKey, editor.getHTML());
+    }, 1000);
 
     return () => clearTimeout(timeoutId);
   }, [editor, value, autoSaveKey]);
@@ -226,73 +223,46 @@ const TipTapEditor = ({
     if (!editor || !autoSaveKey) return;
 
     const saved = localStorage.getItem(autoSaveKey);
-    if (saved && saved !== value && editor.isEmpty) {
+    const editorIsBlank = editor.isEmpty || !value || value === '<p></p>';
+    if (saved && saved !== value && editorIsBlank) {
       editor.commands.setContent(saved);
     }
     // eslint-disable-next-line
   }, [editor, autoSaveKey]);
 
-  // Update editor content when value prop changes externally
+  // Update editor content when value prop changes externally.
+  // setContent with emitUpdate=false prevents onUpdate from firing, which
+  // breaks the value → setContent → onUpdate → onChange → value loop.
   useEffect(() => {
     if (editor && value !== editor.getHTML()) {
-      // Preserve focus and cursor position when updating content
-      const { from, to } = editor.state.selection;
-      const wasFocused = editor.isFocused;
-
-      editor.commands.setContent(value);
-
-      // Restore focus and cursor position if editor was focused
-      if (wasFocused) {
-        editor.commands.focus();
-        // Try to restore cursor position if still valid
-        try {
-          editor.commands.setTextSelection({ from, to });
-        } catch (e) {
-          // Position no longer valid, just focus at end
-          editor.commands.focus('end');
-        }
-      }
+      editor.commands.setContent(value, false);
     }
   }, [editor, value]);
 
   // Word and character count
-  const getStats = useCallback(() => {
-    if (!editor) return { words: 0, characters: 0 };
-
-    const text = editor.getText();
-    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-    const characters = editor.storage.characterCount?.characters() || text.length;
-
-    return { words, characters };
-  }, [editor]);
-
-  const stats = getStats();
+  const text = editor?.getText() ?? '';
+  const stats = { // eslint-disable-line no-unused-vars
+    words: text.trim() ? text.trim().split(/\s+/).length : 0,
+    characters: editor?.storage.characterCount?.characters() ?? text.length,
+  };
 
   useEffect(() => {
     let isMounted = true;
 
     if (!fieldName) {
       setHelpContent(null);
-      return () => {
-        isMounted = false;
-      };
+      return () => { isMounted = false; };
     }
 
     getHelpContent(fieldName)
       .then((content) => {
-        if (isMounted) {
-          setHelpContent(content || null);
-        }
+        if (isMounted) setHelpContent(content || null);
       })
       .catch(() => {
-        if (isMounted) {
-          setHelpContent(null);
-        }
+        if (isMounted) setHelpContent(null);
       });
 
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [fieldName]);
 
   if (!editor) {
@@ -300,7 +270,13 @@ const TipTapEditor = ({
   }
 
   return (
-    <div className={`tiptap-wrapper ${className}`}>
+    <div
+      className={`tiptap-wrapper ${className}`}
+      style={{
+        '--tiptap-padding': compactMode ? '0.375rem 0.5rem' : '0.75rem',
+        '--tiptap-min-height': minHeight,
+      }}
+    >
       {/* Toolbar */}
       {showToolbar && (
         <TipTapToolbar
@@ -337,201 +313,6 @@ const TipTapEditor = ({
 
       {/* Table Bubble Menu */}
       <TableBubbleMenu editor={editor} />
-
-
-      {/* Custom Styles */}
-      <style>{`
-        .tiptap-editor {
-          padding: ${compactMode ? '0.375rem 0.5rem' : '0.75rem'};
-          min-height: ${minHeight};
-          outline: none;
-          color: var(--color-ui-text, #1f2937);
-          background: var(--color-ui-surface, #ffffff);
-        }
-
-        .tiptap-editor:focus {
-          outline: none;
-          border: none;
-        }
-
-        .tiptap-editor p.is-editor-empty:first-child::before {
-          color: var(--color-ui-text-muted, #6b7280);
-          content: attr(data-placeholder);
-          float: left;
-          height: 0;
-          pointer-events: none;
-        }
-
-        /* Smooth caret animation */
-        .tiptap-editor .ProseMirror-focused {
-          caret-color: var(--color-ui-primary, #2563eb);
-        }
-
-        /* Table styles */
-        .tiptap-editor table {
-          border-collapse: collapse;
-          table-layout: fixed;
-          width: 100%;
-          margin: 1rem 0;
-          overflow: hidden;
-        }
-
-        .tiptap-editor table td,
-        .tiptap-editor table th {
-          border: 1px solid var(--color-ui-border, #d1d5db);
-          box-sizing: border-box;
-          min-width: 3em;
-          padding: 0.5rem;
-          position: relative;
-          vertical-align: top;
-        }
-
-        .tiptap-editor table th {
-          background-color: var(--color-ui-muted, #f3f4f6);
-          color: var(--color-ui-text, #1f2937);
-          font-weight: 600;
-          text-align: left;
-        }
-
-        .tiptap-editor table .selectedCell {
-          background-color: rgba(37, 99, 235, 0.12) !important;
-          border-color: var(--color-ui-primary, #2563eb) !important;
-          box-shadow: inset 0 0 0 1px var(--color-ui-primary, #2563eb);
-        }
-
-        /* Column resize handle */
-        .tiptap-editor .column-resize-handle {
-          position: absolute;
-          right: -2px;
-          top: 0;
-          bottom: -2px;
-          width: 4px;
-          background-color: var(--color-ui-primary, #2563eb);
-          pointer-events: none;
-          z-index: 20;
-        }
-
-        .tiptap-editor .resize-cursor {
-          cursor: col-resize;
-        }
-
-        /* ProseMirror table resize handle visibility */
-        .tiptap-editor .ProseMirror-table-handle {
-          position: absolute;
-          background-color: var(--color-ui-primary, #2563eb);
-          opacity: 0;
-          transition: opacity 0.2s;
-        }
-
-        .tiptap-editor .ProseMirror-table-handle:hover {
-          opacity: 1;
-        }
-
-        .tiptap-editor table:hover .ProseMirror-table-handle {
-          opacity: 0.5;
-        }
-
-        /* Image styles */
-        .tiptap-image {
-          max-width: 100%;
-          height: auto;
-          border-radius: 0.375rem;
-          margin: 0.5rem 0;
-        }
-
-        .tiptap-image.ProseMirror-selectednode {
-          outline: 3px solid var(--color-ui-primary, #2563eb);
-        }
-
-        /* Link styles */
-        .tiptap-link {
-          color: var(--color-ui-primary, #2563eb);
-          text-decoration: underline;
-          cursor: pointer;
-        }
-
-        .tiptap-link:hover {
-          color: var(--color-ui-text, #1f2937);
-        }
-
-        /* List styles */
-        .tiptap-editor ul,
-        .tiptap-editor ol {
-          padding-left: 1.5rem;
-          margin: 0.5rem 0;
-        }
-
-        .tiptap-editor ul {
-          list-style-type: disc;
-        }
-
-        .tiptap-editor ol {
-          list-style-type: decimal;
-        }
-
-        .tiptap-editor li {
-          margin: 0.25rem 0;
-          display: list-item;
-        }
-
-        /* Heading styles */
-        .tiptap-editor h1 { font-size: 1.75rem; font-weight: 700; margin: 0.75em 0 0.45em; line-height: 1.25; color: var(--color-ui-text, #1f2937); }
-        .tiptap-editor h2 { font-size: 1.5rem; font-weight: 700; margin: 0.8em 0 0.5em; line-height: 1.3; color: var(--color-ui-text, #1f2937); }
-        .tiptap-editor h3 { font-size: 1.25rem; font-weight: 600; margin: 0.9em 0 0.5em; line-height: 1.35; color: var(--color-ui-text, #1f2937); }
-        .tiptap-editor h4 { font-size: 1.125rem; font-weight: 600; margin: 0.95em 0 0.55em; line-height: 1.4; color: var(--color-ui-text, #1f2937); }
-        .tiptap-editor h5 { font-size: 1rem; font-weight: 600; margin: 1em 0 0.6em; line-height: 1.45; color: var(--color-ui-text, #1f2937); }
-        .tiptap-editor h6 { font-size: 0.9375rem; font-weight: 600; margin: 1em 0 0.6em; line-height: 1.45; color: var(--color-ui-text-muted, #6b7280); }
-
-        /* Code and blockquote */
-        .tiptap-editor code {
-          background-color: var(--color-ui-muted, #f3f4f6);
-          color: var(--color-ui-text, #1f2937);
-          border: 1px solid var(--color-ui-border, #d1d5db);
-          border-radius: 0.25rem;
-          padding: 0.125rem 0.25rem;
-          font-family: 'Courier New', monospace;
-        }
-
-        .tiptap-editor pre {
-          background-color: var(--color-ui-muted, #f3f4f6);
-          color: var(--color-ui-text, #1f2937);
-          border: 1px solid var(--color-ui-border, #d1d5db);
-          border-radius: 0.5rem;
-          padding: 1rem;
-          overflow-x: auto;
-        }
-
-        .tiptap-editor pre code {
-          background: transparent;
-          border: 0;
-          padding: 0;
-        }
-
-        .tiptap-editor blockquote {
-          border-left: 3px solid var(--color-ui-border, #d1d5db);
-          padding-left: 1rem;
-          margin: 1rem 0;
-          font-style: italic;
-          color: var(--color-ui-text-muted, #6b7280);
-          background: var(--color-ui-muted, #f3f4f6);
-        }
-
-        /* Highlight styles */
-        .tiptap-editor mark {
-          border-radius: 0.125rem;
-          padding: 0.125rem 0.25rem;
-        }
-
-        /* Smooth typing animation */
-        @keyframes smooth-typing {
-          from { opacity: 0.7; }
-          to { opacity: 1; }
-        }
-
-        .tiptap-editor * {
-          animation: smooth-typing 0.05s ease-in-out;
-        }
-      `}</style>
     </div>
   );
 };

@@ -54,7 +54,30 @@ const CONFIG = {
 
     fileFormats: ['IFC 2x3', 'IFC 4', 'IFC 4.1', 'IFC 4.3', 'DWG', 'DXF', 'PDF', 'PDF/A', 'BCF 2.1', 'BCF 3.0', 'NWD', 'NWC', 'NWF', 'RVT', 'PLN', 'DGN', 'SKP', 'COBie', 'XML', 'JSON', 'CSV', 'XLS', 'XLSX'],
 
-    projectTypes: ['Commercial Building', 'Residential', 'Infrastructure', 'Industrial', 'Healthcare', 'Education', 'Mixed Use', 'Renovation/Retrofit']
+    projectTypes: [
+      'Commercial Building',
+      'Office Building',
+      'Retail / Shopping Centre',
+      'Residential (Single Family)',
+      'Residential (Multi-Family)',
+      'Mixed-Use Development',
+      'Industrial / Warehouse',
+      'Healthcare / Hospital',
+      'Education / School',
+      'Education / University',
+      'Infrastructure / Transport',
+      'Infrastructure / Utilities',
+      'Data Centre',
+      'Hospitality / Hotel',
+      'Cultural / Arts',
+      'Sports & Recreation',
+      'Civic / Government',
+      'Religious',
+      'Renovation / Retrofit',
+      'Conservation / Heritage',
+      'Master Planning',
+      'Landscape',
+    ]
   },
 
   steps: [

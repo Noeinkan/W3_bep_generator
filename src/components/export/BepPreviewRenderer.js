@@ -223,7 +223,7 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
         if (typeof value === 'string' && isLikelyHtml(value)) {
           return (
             <div
-              className="my-2 text-gray-700 rich-text-preview"
+              className="my-2 prose prose-sm max-w-none text-gray-700 [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_h4]:text-sm"
               dangerouslySetInnerHTML={{ __html: sanitizeRichText(value) }}
             />
           );
@@ -296,6 +296,135 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
           </p>
         </div>
       </div>
+
+      {/* Section 0 — Document History & Governance (ISO 19650) */}
+      {formData.documentHistory && (
+        <div className="mb-10">
+          <div className="mb-6 pb-2 border-b-2 border-blue-600">
+            <h2 className="text-2xl font-bold text-gray-900">
+              0. Document History &amp; Governance
+              {formData.documentHistory.documentNumber && (
+                <span className="ml-3 text-sm font-normal text-gray-500">
+                  {formData.documentHistory.documentNumber}
+                </span>
+              )}
+            </h2>
+          </div>
+          <div className="space-y-6">
+            {/* 0.1 Revision History */}
+            <div>
+              <h3 className="text-base font-semibold text-gray-700 mb-2">0.1 — Revision History</h3>
+              <div className="overflow-x-auto rounded border border-gray-200">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-200">
+                      {['Rev.', 'Date', 'Status', 'Author', 'Checked By', 'Description of Change'].map(h => (
+                        <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-600">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(formData.documentHistory.revisions || []).map((r, i) => (
+                      <tr key={i} className="border-b border-gray-100">
+                        <td className="px-3 py-1.5 font-mono font-semibold text-gray-800">{r.revisionCode}</td>
+                        <td className="px-3 py-1.5 text-gray-600 whitespace-nowrap">{r.date}</td>
+                        <td className="px-3 py-1.5"><span className="text-xs font-semibold">{r.statusCode}</span> — <span className="text-xs text-gray-500">{r.statusLabel}</span></td>
+                        <td className="px-3 py-1.5">{r.author}</td>
+                        <td className="px-3 py-1.5">{r.checkedBy}</td>
+                        <td className="px-3 py-1.5">{r.description}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 0.2 Contributors */}
+            {(formData.documentHistory.contributors || []).length > 0 && (
+              <div>
+                <h3 className="text-base font-semibold text-gray-700 mb-2">0.2 — Contributors</h3>
+                <div className="overflow-x-auto rounded border border-gray-200">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        {['Name', 'Company', 'Role'].map(h => (
+                          <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-600">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {formData.documentHistory.contributors.map((c, i) => (
+                        <tr key={i} className="border-b border-gray-100">
+                          <td className="px-3 py-1.5">{c.name}</td>
+                          <td className="px-3 py-1.5">{c.company}</td>
+                          <td className="px-3 py-1.5">{c.role}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* 0.3 Governance Triggers */}
+            {(formData.documentHistory.governanceTriggers || []).length > 0 && (
+              <div>
+                <h3 className="text-base font-semibold text-gray-700 mb-1">
+                  0.3 — Governance Triggers
+                  <span className="ml-2 text-xs font-normal text-gray-400">(ISO 19650-2 §5.1.3)</span>
+                </h3>
+                <div className="overflow-x-auto rounded border border-gray-200">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Trigger Event</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Accountable Party</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {formData.documentHistory.governanceTriggers.map((t, i) => (
+                        <tr key={i} className="border-b border-gray-100">
+                          <td className="px-3 py-1.5">{t.trigger}</td>
+                          <td className="px-3 py-1.5">{t.accountableParty}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* 0.4 RACI Review Record */}
+            {(formData.documentHistory.raciReviewRecord || []).length > 0 && (
+              <div>
+                <h3 className="text-base font-semibold text-gray-700 mb-2">0.4 — RACI Review Record</h3>
+                <div className="overflow-x-auto rounded border border-gray-200">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        {['Function / Role', 'Individual', 'RACI', 'Date', 'Comments'].map(h => (
+                          <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-600">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {formData.documentHistory.raciReviewRecord.map((r, i) => (
+                        <tr key={i} className="border-b border-gray-100">
+                          <td className="px-3 py-1.5">{r.function}</td>
+                          <td className="px-3 py-1.5">{r.individual}</td>
+                          <td className="px-3 py-1.5 font-bold text-center">{r.raci}</td>
+                          <td className="px-3 py-1.5 text-gray-500 whitespace-nowrap">{r.date}</td>
+                          <td className="px-3 py-1.5">{r.comments}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* BEP Content */}
       {CONFIG.steps.map((step, stepIndex) => {

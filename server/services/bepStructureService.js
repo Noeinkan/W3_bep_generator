@@ -33,6 +33,7 @@ class BepStructureService {
     let query = `
       SELECT * FROM bep_step_configs
       WHERE is_deleted = 0 AND project_id ${projectId ? '= ?' : 'IS NULL'}
+      ${!projectId ? 'AND draft_id IS NULL' : ''}
     `;
     const params = projectId ? [projectId] : [];
 

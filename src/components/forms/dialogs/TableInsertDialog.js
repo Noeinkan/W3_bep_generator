@@ -1,41 +1,35 @@
-import React, { useState } from 'react';
-import { Table as TableIcon } from 'lucide-react';
-import BaseTextInput from '../base/BaseTextInput';
+import { useState } from 'react';
+import { Table as TableIcon, ChevronDown } from 'lucide-react';
 import Modal from '../../common/Modal';
 import Button from '../../common/Button';
 
+const GRID_ROWS = 8;
+const GRID_COLS = 8;
+
 const TableInsertDialog = ({ onInsert, onClose }) => {
+  const [hovered, setHovered] = useState({ rows: 0, cols: 0 });
   const [rows, setRows] = useState(3);
   const [cols, setCols] = useState(3);
   const [withHeaderRow, setWithHeaderRow] = useState(true);
+  const [showCustom, setShowCustom] = useState(false);
 
-  const presets = [
-    { label: '2×2', rows: 2, cols: 2, header: false },
-    { label: '3×3', rows: 3, cols: 3, header: true },
-    { label: '4×4', rows: 4, cols: 4, header: true },
-    { label: '5×3', rows: 5, cols: 3, header: true },
-    { label: '3×5', rows: 3, cols: 5, header: true },
-  ];
+  // While hovering, show hover dims; otherwise show committed selection
+  const displayRows = hovered.rows > 0 ? hovered.rows : rows;
+  const displayCols = hovered.cols > 0 ? hovered.cols : cols;
+
+  const handleGridClick = (r, c) => {
+    onInsert({ rows: r, cols: c, withHeaderRow });
+    onClose();
+  };
 
   const handleInsert = () => {
     onInsert({ rows, cols, withHeaderRow });
     onClose();
   };
 
-  const handlePreset = (preset) => {
-    setRows(preset.rows);
-    setCols(preset.cols);
-    setWithHeaderRow(preset.header);
-  };
-
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleInsert();
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      onClose();
-    }
+    if (e.key === 'Enter') { e.preventDefault(); handleInsert(); }
+    else if (e.key === 'Escape') { e.preventDefault(); onClose(); }
   };
 
   return (
@@ -47,69 +41,57 @@ const TableInsertDialog = ({ onInsert, onClose }) => {
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleInsert} icon={TableIcon}>Insert Table</Button>
+          <Button onClick={handleInsert} icon={TableIcon}>
+            Insert {rows} × {cols}
+          </Button>
         </>
       }
     >
       <div onKeyDown={handleKeyDown}>
-        {/* Presets */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Preset Sizes:
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {presets.map((preset) => (
-              <button
-                key={preset.label}
-                onClick={() => handlePreset(preset)}
-                className={`px-4 py-2 rounded-lg border-2 transition-all ${
-                  rows === preset.rows && cols === preset.cols && withHeaderRow === preset.header
-                    ? 'border-blue-600 bg-blue-50 text-blue-700 font-medium'
-                    : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-                }`}
-                type="button"
-              >
-                {preset.label}
-              </button>
-            ))}
+
+        {/* Visual grid picker */}
+        <div className="mb-5">
+          <p className="text-xs text-gray-500 mb-2">Click to select table size</p>
+          <div
+            style={{
+              display: 'inline-grid',
+              gridTemplateColumns: `repeat(${GRID_COLS}, 1.5rem)`,
+              gap: '0.125rem',
+              padding: '0.25rem',
+              backgroundColor: '#f3f4f6',
+              borderRadius: '0.5rem',
+            }}
+            onMouseLeave={() => setHovered({ rows: 0, cols: 0 })}
+          >
+            {Array.from({ length: GRID_ROWS * GRID_COLS }).map((_, idx) => {
+              const r = Math.floor(idx / GRID_COLS) + 1;
+              const c = (idx % GRID_COLS) + 1;
+              const isActive = r <= displayRows && c <= displayCols;
+              return (
+                <div
+                  key={idx}
+                  className={`w-6 h-6 rounded-sm cursor-pointer transition-colors duration-75 ${
+                    isActive
+                      ? 'bg-blue-500 border border-blue-600'
+                      : 'bg-white border border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                  }`}
+                  onMouseEnter={() => setHovered({ rows: r, cols: c })}
+                  onClick={() => handleGridClick(r, c)}
+                />
+              );
+            })}
           </div>
+          <p className="mt-2 text-sm font-semibold text-gray-800">
+            {displayRows} × {displayCols}{' '}
+            <span className="font-normal text-gray-500">table</span>
+          </p>
         </div>
 
-        {/* Custom dimensions */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Custom Dimensions:
-          </label>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Rows</label>
-              <BaseTextInput
-                type="number"
-                min="1"
-                max="20"
-                value={rows}
-                onChange={(e) => setRows(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
-                className="px-3 py-2 border-gray-300"
-                autoFocus
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Columns</label>
-              <BaseTextInput
-                type="number"
-                min="1"
-                max="10"
-                value={cols}
-                onChange={(e) => setCols(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
-                className="px-3 py-2 border-gray-300"
-              />
-            </div>
-          </div>
-        </div>
+        <hr className="border-gray-200 mb-4" />
 
-        {/* Header row option */}
-        <div className="mb-6">
-          <label className="flex items-center gap-2 cursor-pointer">
+        {/* Header row */}
+        <div className="mb-4">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={withHeaderRow}
@@ -120,34 +102,49 @@ const TableInsertDialog = ({ onInsert, onClose }) => {
           </label>
         </div>
 
-        {/* Preview */}
+        {/* Custom / larger size */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Preview:</label>
-          <div className="border border-gray-300 rounded-lg p-3 bg-gray-50 overflow-auto">
-            <table className="w-full border-collapse text-xs">
-              <tbody>
-                {Array.from({ length: rows }).map((_, rowIndex) => (
-                  <tr key={rowIndex}>
-                    {Array.from({ length: cols }).map((_, colIndex) => {
-                      const isHeader = withHeaderRow && rowIndex === 0;
-                      const CellTag = isHeader ? 'th' : 'td';
-                      return (
-                        <CellTag
-                          key={colIndex}
-                          className={`border border-gray-300 px-2 py-1 ${
-                            isHeader ? 'bg-gray-200 font-semibold' : 'bg-white'
-                          }`}
-                        >
-                          {isHeader ? 'Header' : 'Cell'}
-                        </CellTag>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowCustom(!showCustom)}
+            className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
+          >
+            Need a larger table?
+            <ChevronDown
+              size={14}
+              className={`transition-transform duration-150 ${showCustom ? 'rotate-180' : ''}`}
+            />
+          </button>
+
+          {showCustom && (
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Rows (1–30)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="30"
+                  value={rows}
+                  onChange={(e) => setRows(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Columns (1–15)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="15"
+                  value={cols}
+                  onChange={(e) => setCols(Math.max(1, Math.min(15, parseInt(e.target.value) || 1)))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                />
+              </div>
+            </div>
+          )}
         </div>
+
       </div>
     </Modal>
   );

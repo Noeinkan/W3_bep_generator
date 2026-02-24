@@ -13,6 +13,29 @@ import {
   Type,
 } from 'lucide-react';
 
+const ButtonGroup = ({ children, label }) => (
+  <div className="flex flex-col gap-1">
+    {label && <span className="text-xs text-gray-500 px-2">{label}</span>}
+    <div className="flex gap-1">{children}</div>
+  </div>
+);
+
+const MenuButton = ({ onClick, disabled, children, title }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    title={title}
+    className={`p-2 rounded hover:bg-gray-100 transition-colors ${
+      disabled ? 'opacity-30 cursor-not-allowed' : 'text-gray-700'
+    }`}
+    type="button"
+  >
+    {children}
+  </button>
+);
+
+const Divider = () => <div className="w-px h-8 bg-gray-300 mx-1" />;
+
 const TableBubbleMenu = ({ editor }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [showCaptionInput, setShowCaptionInput] = useState(false);
@@ -24,20 +47,29 @@ const TableBubbleMenu = ({ editor }) => {
     if (!editor) return;
 
     const updateMenu = () => {
-      const isInTableCell = editor.isActive('tableCell') || editor.isActive('tableHeader');
+      try {
+        const isInTableCell = editor.isActive('tableCell') || editor.isActive('tableHeader');
 
-      if (isInTableCell) {
-        const { from } = editor.state.selection;
-        const start = editor.view.coordsAtPos(from);
+        if (isInTableCell) {
+          const { from } = editor.state.selection;
+          const start = editor.view.coordsAtPos(from);
 
-        setPosition({
-          top: start.top - 60,
-          left: start.left,
-        });
-        setShowMenu(true);
-      } else {
+          if (!start) {
+            setShowMenu(false);
+            return;
+          }
+
+          setPosition({
+            top: start.top - 60,
+            left: start.left,
+          });
+          setShowMenu(true);
+        } else {
+          setShowMenu(false);
+          setShowCaptionInput(false);
+        }
+      } catch {
         setShowMenu(false);
-        setShowCaptionInput(false);
       }
     };
 
@@ -51,29 +83,6 @@ const TableBubbleMenu = ({ editor }) => {
   }, [editor]);
 
   if (!editor || !showMenu) return null;
-
-  const ButtonGroup = ({ children, label }) => (
-    <div className="flex flex-col gap-1">
-      {label && <span className="text-xs text-gray-500 px-2">{label}</span>}
-      <div className="flex gap-1">{children}</div>
-    </div>
-  );
-
-  const MenuButton = ({ onClick, disabled, children, title }) => (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      className={`p-2 rounded hover:bg-gray-100 transition-colors ${
-        disabled ? 'opacity-30 cursor-not-allowed' : 'text-gray-700'
-      }`}
-      type="button"
-    >
-      {children}
-    </button>
-  );
-
-  const Divider = () => <div className="w-px h-8 bg-gray-300 mx-1" />;
 
   return (
     <div

@@ -114,6 +114,166 @@ const addImageFromBase64 = async (base64String) => {
   }
 };
 
+// ─── Section 0 — Document History & Governance (ISO 19650) ───────────────────
+
+const makeHeaderCell = (text) =>
+  new TableCell({
+    children: [new Paragraph({ children: [new TextRun({ text, bold: true, size: 18 })] })],
+    shading: { type: ShadingType.SOLID, fill: 'F3F4F6' },
+    borders: {
+      top:    { style: BorderStyle.SINGLE, size: 1, color: 'D1D5DB' },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: 'D1D5DB' },
+      left:   { style: BorderStyle.SINGLE, size: 1, color: 'D1D5DB' },
+      right:  { style: BorderStyle.SINGLE, size: 1, color: 'D1D5DB' },
+    },
+  });
+
+const makeDataCell = (text, opts = {}) =>
+  new TableCell({
+    children: [new Paragraph({ children: [new TextRun({ text: String(text ?? ''), ...opts })] })],
+    borders: {
+      top:    { style: BorderStyle.SINGLE, size: 1, color: 'D1D5DB' },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: 'D1D5DB' },
+      left:   { style: BorderStyle.SINGLE, size: 1, color: 'D1D5DB' },
+      right:  { style: BorderStyle.SINGLE, size: 1, color: 'D1D5DB' },
+    },
+  });
+
+const subHeading = (text) =>
+  new Paragraph({
+    children: [new TextRun({ text, bold: true, size: 22, color: '374151' })],
+    spacing: { before: 240, after: 100 },
+  });
+
+const renderDocumentHistoryDocx = (dh) => {
+  if (!dh) return [];
+  const elements = [];
+
+  // Section heading
+  elements.push(
+    new Paragraph({
+      children: [new TextRun({ text: '0. Document History & Governance', bold: true, size: 28, color: '1D4ED8' })],
+      heading: HeadingLevel.HEADING_2,
+      spacing: { before: 400, after: 200 },
+      pageBreakBefore: true,
+    })
+  );
+
+  if (dh.documentNumber) {
+    elements.push(new Paragraph({
+      children: [
+        new TextRun({ text: 'Document Number: ', bold: true, size: 20 }),
+        new TextRun({ text: dh.documentNumber, size: 20 }),
+      ],
+      spacing: { after: 160 },
+    }));
+  }
+
+  // 0.1 Revision History
+  elements.push(subHeading('0.1 — Revision History'));
+  const revisions = dh.revisions || [];
+  elements.push(
+    new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({
+          children: [
+            makeHeaderCell('Rev.'),
+            makeHeaderCell('Date'),
+            makeHeaderCell('Status'),
+            makeHeaderCell('Author'),
+            makeHeaderCell('Checked By'),
+            makeHeaderCell('Description of Change'),
+          ],
+        }),
+        ...revisions.map(r =>
+          new TableRow({
+            children: [
+              makeDataCell(r.revisionCode, { bold: true }),
+              makeDataCell(r.date),
+              makeDataCell(`${r.statusCode} — ${r.statusLabel}`),
+              makeDataCell(r.author),
+              makeDataCell(r.checkedBy),
+              makeDataCell(r.description),
+            ],
+          })
+        ),
+      ],
+    })
+  );
+
+  // 0.2 Contributors
+  const contributors = dh.contributors || [];
+  if (contributors.length > 0) {
+    elements.push(subHeading('0.2 — Contributors'));
+    elements.push(
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          new TableRow({ children: [makeHeaderCell('Name'), makeHeaderCell('Company'), makeHeaderCell('Role')] }),
+          ...contributors.map(c =>
+            new TableRow({ children: [makeDataCell(c.name), makeDataCell(c.company), makeDataCell(c.role)] })
+          ),
+        ],
+      })
+    );
+  }
+
+  // 0.3 Governance Triggers
+  const triggers = dh.governanceTriggers || [];
+  if (triggers.length > 0) {
+    elements.push(subHeading('0.3 — Governance Triggers (ISO 19650-2 §5.1.3)'));
+    elements.push(
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          new TableRow({ children: [makeHeaderCell('Trigger Event'), makeHeaderCell('Accountable Party')] }),
+          ...triggers.map(t =>
+            new TableRow({ children: [makeDataCell(t.trigger), makeDataCell(t.accountableParty)] })
+          ),
+        ],
+      })
+    );
+  }
+
+  // 0.4 RACI Review Record
+  const raci = dh.raciReviewRecord || [];
+  if (raci.length > 0) {
+    elements.push(subHeading('0.4 — RACI Review Record'));
+    elements.push(
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          new TableRow({
+            children: [
+              makeHeaderCell('Function / Role'),
+              makeHeaderCell('Individual'),
+              makeHeaderCell('RACI'),
+              makeHeaderCell('Date'),
+              makeHeaderCell('Comments'),
+            ],
+          }),
+          ...raci.map(r =>
+            new TableRow({
+              children: [
+                makeDataCell(r.function),
+                makeDataCell(r.individual),
+                makeDataCell(r.raci, { bold: true }),
+                makeDataCell(r.date),
+                makeDataCell(r.comments),
+              ],
+            })
+          ),
+        ],
+      })
+    );
+  }
+
+  return elements;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const generateDocx = async (formData, bepType, options = {}) => {
   const { tidpData = [], midpData = [], componentImages = {} } = options;
   const currentDate = new Date();
@@ -149,6 +309,13 @@ export const generateDocx = async (formData, bepType, options = {}) => {
       spacing: { after: 400 }
     })
   );
+
+  // ------------------------------------------------------------------
+  // Section 0 — Document History & Governance (ISO 19650)
+  // ------------------------------------------------------------------
+  if (formData.documentHistory) {
+    sections.push(...renderDocumentHistoryDocx(formData.documentHistory));
+  }
 
   // ------------------------------------------------------------------
   // ISO 19650 Compliance Statement

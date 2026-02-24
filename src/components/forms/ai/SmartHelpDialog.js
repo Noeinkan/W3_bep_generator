@@ -141,12 +141,12 @@ const SmartHelpDialog = ({
     if (improveOptions.concise) instructions.push('make more concise');
 
     const tableGuidance = isTabularCandidate(currentContent)
-      ? 'If the content has repeated items with consistent fields, convert it into a concise HTML table with a header row. Limit the table to 15 rows total (including header) and a maximum of 6 columns. Use <table>, <thead>, <tbody>, <tr>, <th>, <td>. Otherwise keep as paragraphs or bullet points.'
-      : 'Only use a table when the content structure clearly implies tabular data. If you use a table, limit it to 15 rows total (including header) and a maximum of 6 columns, and output HTML table tags.';
+      ? 'Convert this content into a concise HTML table with a header row. Limit the table to 15 rows total (including header) and a maximum of 6 columns. Use <table>, <thead>, <tbody>, <tr>, <th>, <td>. Output ONLY the table — do not repeat or restate the same data as prose, headings, or bullet points after the table.'
+      : 'Only use a table when the content structure clearly implies tabular data. If you include a table, limit it to 15 rows total (including header) and a maximum of 6 columns, use HTML table tags, and output ONLY the table — do not repeat the same information as prose or bullet points after it.';
 
     const prompt = instructions.length > 0
-      ? `Rewrite the following text to ${instructions.join(', ')}. ${tableGuidance} Output ONLY the improved text without any introduction, explanation, or commentary.\n\nText to improve:\n${currentContent}`
-      : `${tableGuidance}\n\n${currentContent}`;
+      ? `Rewrite the following text to ${instructions.join(', ')}. ${tableGuidance} Output ONLY the final result as a single coherent structure — no introduction, explanation, or commentary, and no duplication of content.\n\nText to improve:\n${currentContent}`
+      : `Reformat the following text into a clean, professional structure. ${tableGuidance} Output ONLY the final result — no introduction, commentary, or duplication of content.\n\nText to reformat:\n${currentContent}`;
 
     const insertAndClose = (text) => {
       const htmlContent = markdownToTipTapHtml(text);

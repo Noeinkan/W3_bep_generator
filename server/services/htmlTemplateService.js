@@ -187,6 +187,20 @@ class HtmlTemplateService {
     const sections = [];
     const steps = CONFIG.steps || [];
 
+    // Prepend Section 0 if documentHistory exists
+    if (formData.documentHistory) {
+      sections.push({
+        number: '0',
+        title: 'Document History & Governance',
+        subsections: [
+          { number: '0.1', title: 'Revision History' },
+          { number: '0.2', title: 'Contributors' },
+          { number: '0.3', title: 'Governance Triggers' },
+          { number: '0.4', title: 'RACI Review Record' },
+        ],
+      });
+    }
+
     steps.forEach((step, stepIndex) => {
       const stepConfig = this.getFormFields(bepType, stepIndex);
       if (!stepConfig || !stepConfig.fields) return;
@@ -329,6 +343,11 @@ class HtmlTemplateService {
     // Cover page
     html += this.renderCoverPage(formData, bepType, bepConfig);
 
+    // Section 0 — Document History & Governance (ISO 19650)
+    if (formData.documentHistory) {
+      html += this.renderDocumentHistorySection(formData.documentHistory);
+    }
+
     // Table of Contents
     if (includeToc && sections.length > 0) {
       html += this.renderTableOfContents(sections);
@@ -345,6 +364,116 @@ class HtmlTemplateService {
     html += '</div>';
 
     return html;
+  }
+
+  /**
+   * Render Section 0 — Document History & Governance (ISO 19650)
+   * Placed immediately after the cover page, before the TOC.
+   * @param {Object} dh - documentHistory object
+   * @returns {string} Section 0 HTML
+   */
+  renderDocumentHistorySection(dh) {
+    if (!dh) return '';
+    const e = s => this.escapeHtml(String(s ?? ''));
+
+    const tableStyle = 'width:100%;border-collapse:collapse;margin-bottom:16px;font-size:9pt;';
+    const thStyle    = 'background:#f3f4f6;border:1px solid #d1d5db;padding:6px 8px;text-align:left;font-weight:600;';
+    const tdStyle    = 'border:1px solid #d1d5db;padding:5px 8px;vertical-align:top;';
+
+    // 0.1 Revision History
+    const revRows = (dh.revisions || []).map(r => `
+      <tr>
+        <td style="${tdStyle}">${e(r.revisionCode)}</td>
+        <td style="${tdStyle}">${e(r.date)}</td>
+        <td style="${tdStyle}">${e(r.statusCode)} — ${e(r.statusLabel)}</td>
+        <td style="${tdStyle}">${e(r.author)}</td>
+        <td style="${tdStyle}">${e(r.checkedBy)}</td>
+        <td style="${tdStyle}">${e(r.description)}</td>
+      </tr>`).join('');
+    const revTable = `
+      <table style="${tableStyle}">
+        <thead><tr>
+          <th style="${thStyle}">Rev.</th>
+          <th style="${thStyle}">Date</th>
+          <th style="${thStyle}">Status</th>
+          <th style="${thStyle}">Author</th>
+          <th style="${thStyle}">Checked By</th>
+          <th style="${thStyle}">Description of Change</th>
+        </tr></thead>
+        <tbody>${revRows || '<tr><td colspan="6" style="' + tdStyle + '">—</td></tr>'}</tbody>
+      </table>`;
+
+    // 0.2 Contributors
+    const contRows = (dh.contributors || []).map(c => `
+      <tr>
+        <td style="${tdStyle}">${e(c.name)}</td>
+        <td style="${tdStyle}">${e(c.company)}</td>
+        <td style="${tdStyle}">${e(c.role)}</td>
+      </tr>`).join('');
+    const contTable = contRows ? `
+      <table style="${tableStyle}">
+        <thead><tr>
+          <th style="${thStyle}">Name</th>
+          <th style="${thStyle}">Company</th>
+          <th style="${thStyle}">Role</th>
+        </tr></thead>
+        <tbody>${contRows}</tbody>
+      </table>` : '<p style="color:#6b7280;font-size:9pt;">No contributors listed.</p>';
+
+    // 0.3 Governance Triggers
+    const trigRows = (dh.governanceTriggers || []).map(t => `
+      <tr>
+        <td style="${tdStyle}">${e(t.trigger)}</td>
+        <td style="${tdStyle}">${e(t.accountableParty)}</td>
+      </tr>`).join('');
+    const trigTable = trigRows ? `
+      <table style="${tableStyle}">
+        <thead><tr>
+          <th style="${thStyle}">Trigger Event</th>
+          <th style="${thStyle}">Accountable Party</th>
+        </tr></thead>
+        <tbody>${trigRows}</tbody>
+      </table>` : '';
+
+    // 0.4 RACI Review Record
+    const raciRows = (dh.raciReviewRecord || []).map(r => `
+      <tr>
+        <td style="${tdStyle}">${e(r.function)}</td>
+        <td style="${tdStyle}">${e(r.individual)}</td>
+        <td style="${tdStyle};text-align:center;font-weight:700;">${e(r.raci)}</td>
+        <td style="${tdStyle}">${e(r.date)}</td>
+        <td style="${tdStyle}">${e(r.comments)}</td>
+      </tr>`).join('');
+    const raciTable = raciRows ? `
+      <table style="${tableStyle}">
+        <thead><tr>
+          <th style="${thStyle}">Function / Role</th>
+          <th style="${thStyle}">Individual</th>
+          <th style="${thStyle}">RACI</th>
+          <th style="${thStyle}">Date</th>
+          <th style="${thStyle}">Comments</th>
+        </tr></thead>
+        <tbody>${raciRows}</tbody>
+      </table>` : '<p style="color:#6b7280;font-size:9pt;">No reviewers listed.</p>';
+
+    const docNumber = dh.documentNumber ? `<span style="font-size:9pt;color:#6b7280;margin-left:8px;">${e(dh.documentNumber)}</span>` : '';
+
+    return `
+      <div class="section" style="page-break-before:always;">
+        <div class="section-header">
+          <h2 class="section-title" id="section-0">0. Document History &amp; Governance${docNumber}</h2>
+        </div>
+        <div class="section-content">
+          <h3 style="font-size:10pt;font-weight:600;margin:16px 0 6px;">0.1 &mdash; Revision History</h3>
+          ${revTable}
+          <h3 style="font-size:10pt;font-weight:600;margin:16px 0 6px;">0.2 &mdash; Contributors</h3>
+          ${contTable}
+          <h3 style="font-size:10pt;font-weight:600;margin:16px 0 6px;">0.3 &mdash; Governance Triggers <small style="font-weight:400;color:#6b7280;">(ISO 19650-2 §5.1.3)</small></h3>
+          ${trigTable}
+          <h3 style="font-size:10pt;font-weight:600;margin:16px 0 6px;">0.4 &mdash; RACI Review Record</h3>
+          ${raciTable}
+        </div>
+      </div>`;
   }
 
   /**

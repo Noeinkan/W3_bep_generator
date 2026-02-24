@@ -13,6 +13,7 @@ import { getFieldType } from '../../form-builder/FieldTypeRegistry';
 import FieldHeader from './FieldHeader';
 import FieldError from './FieldError';
 import BaseTextInput from './BaseTextInput';
+import SearchableSelect from './SearchableSelect';
 
 // Shared loading fallback
 const LoadingSpinner = () => (
@@ -65,22 +66,20 @@ const InputField = React.memo(({ field, value, onChange, error, formData = {} })
   }
 
   if (type === 'select') {
-    const optionsList = fieldOptions ? CONFIG.options[fieldOptions] : null;
+    const optionsList = Array.isArray(fieldOptions)
+      ? fieldOptions
+      : (fieldOptions ? CONFIG.options[fieldOptions] : null);
     return (
       <div>
         <FieldHeader fieldName={name} label={label} number={number} required={required} htmlFor={name} />
-        <select
+        <SearchableSelect
           id={name}
-          aria-required={required}
+          name={name}
           value={value || ''}
-          onChange={(e) => onChange(name, e.target.value)}
-          className={baseClasses}
-        >
-          <option value="">Select {label.toLowerCase()}</option>
-          {optionsList?.map(option => (
-            <option key={option} value={option}>{option}</option>
-          ))}
-        </select>
+          onChange={onChange}
+          options={optionsList || []}
+          placeholder={`Select ${label.toLowerCase()}`}
+        />
         <FieldError error={error} />
       </div>
     );

@@ -8,6 +8,7 @@ import { ROUTES } from '../../../../constants/routes';
 import { useEir } from '../../../../contexts/EirContext';
 import { cn } from '../../../../utils/cn';
 import { bepUi } from '../bepUiClasses';
+import DocumentStatusWidget from './DocumentStatusWidget';
 
 /**
  * BEP Form sidebar component with navigation and progress
@@ -34,6 +35,8 @@ const BepSidebar = ({
   tidpData,
   midpData,
   user,
+  documentHistory,
+  onDocumentHistorySave,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -133,6 +136,16 @@ const BepSidebar = ({
           </div>
         )}
       </div>
+
+      {/* Document Status Widget (Section 0 — Document History & Governance) */}
+      {documentHistory && (
+        <div className="pt-2 border-b border-ui-border">
+          <DocumentStatusWidget
+            documentHistory={documentHistory}
+            onSave={onDocumentHistorySave}
+          />
+        </div>
+      )}
 
       {/* Progress Sidebar - Dynamic or Static */}
       <div className="flex-1 overflow-y-auto">

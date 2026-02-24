@@ -10,22 +10,6 @@
 const { v4: uuidv4 } = require('uuid');
 const db = require('../database');
 
-// Icon name mapping (Lucide component name to string)
-const ICON_MAP = {
-  Building: 'Building',
-  FileText: 'FileText',
-  Users: 'Users',
-  Target: 'Target',
-  Database: 'Database',
-  Calendar: 'Calendar',
-  Monitor: 'Monitor',
-  Settings: 'Settings',
-  CheckCircle: 'CheckCircle',
-  Shield: 'Shield',
-  BookOpen: 'BookOpen',
-  AlertCircle: 'AlertCircle'
-};
-
 // Step definitions from bepConfig.js
 const STEPS = [
   { number: 1, title: 'BEP Type & Project Info', icon: 'Building', description: 'Define BEP type and basic project information', category: 'Commercial' },
@@ -212,6 +196,12 @@ const SHARED_FIELDS = {
   ]
 };
 
+function buildFieldConfig(field) {
+  if (field.config) return JSON.stringify(field.config);
+  if (field.options !== undefined) return JSON.stringify({ options: field.options });
+  return null;
+}
+
 function seedBepStructure() {
   const now = new Date().toISOString();
   const forceMode = process.argv.includes('--force');
@@ -248,6 +238,8 @@ function seedBepStructure() {
     (id, project_id, step_id, field_id, label, type, number, order_index, is_visible, is_required, placeholder, help_text, config, default_value, bep_type, created_at, updated_at, is_deleted)
     VALUES (?, NULL, ?, ?, ?, ?, ?, ?, 1, ?, ?, NULL, ?, NULL, ?, ?, ?, 0)
   `);
+
+  const getMaxOrder = db.prepare(`SELECT MAX(order_index) as max FROM bep_field_configs WHERE step_id = ?`);
 
   const transaction = db.transaction(() => {
     // Insert all 14 steps
@@ -287,7 +279,7 @@ function seedBepStructure() {
           fieldIndex,
           field.required ? 1 : 0,
           field.placeholder || null,
-          field.config ? JSON.stringify(field.config) : null,
+          buildFieldConfig(field),
           'pre-appointment',
           now,
           now
@@ -303,7 +295,7 @@ function seedBepStructure() {
       const stepId = stepIdMap[stepIndex];
 
       // Get the current max order_index for this step
-      const maxOrder = db.prepare(`SELECT MAX(order_index) as max FROM bep_field_configs WHERE step_id = ?`).get(stepId);
+      const maxOrder = getMaxOrder.get(stepId);
       const startOrder = (maxOrder.max !== null ? maxOrder.max + 1 : 0);
 
       fields.forEach((field, fieldIndex) => {
@@ -318,7 +310,7 @@ function seedBepStructure() {
           startOrder + fieldIndex,
           field.required ? 1 : 0,
           field.placeholder || null,
-          field.config ? JSON.stringify(field.config) : null,
+          buildFieldConfig(field),
           'post-appointment',
           now,
           now
@@ -345,7 +337,7 @@ function seedBepStructure() {
           fieldIndex,
           field.required ? 1 : 0,
           field.placeholder || null,
-          field.config ? JSON.stringify(field.config) : null,
+          buildFieldConfig(field),
           'shared',
           now,
           now
@@ -361,8 +353,8 @@ function seedBepStructure() {
     console.log('\nBEP structure seeding completed successfully!');
 
     // Print summary
-    const stepCount = db.prepare('SELECT COUNT(*) as count FROM bep_step_configs WHERE project_id IS NULL').get();
-    const fieldCount = db.prepare('SELECT COUNT(*) as count FROM bep_field_configs WHERE project_id IS NULL').get();
+    const stepCount = db.prepare('SELECT COUNT(*) as count FROM bep_step_configs WHERE project_id IS NULL AND draft_id IS NULL').get();
+    const fieldCount = db.prepare('SELECT COUNT(*) as count FROM bep_field_configs WHERE project_id IS NULL AND draft_id IS NULL').get();
     console.log(`\nSummary:`);
     console.log(`  Steps created: ${stepCount.count}`);
     console.log(`  Fields created: ${fieldCount.count}`);

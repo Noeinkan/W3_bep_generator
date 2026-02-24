@@ -17,7 +17,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { FileText, Brain, Sparkles, CheckCircle, Loader2, X, Clock, Info } from 'lucide-react';
+import { FileText, Brain, Sparkles, CheckCircle, Loader2, X, Clock } from 'lucide-react';
 
 // Inject keyframes if not already in global CSS
 if (typeof document !== 'undefined') {
@@ -156,7 +156,7 @@ const AnalysisProgressOverlay = ({
   const currentStageIndex = STATUS_TO_STAGE[currentStatus] ?? 0;
   const currentStage = STAGES[currentStageIndex] ?? STAGES[0];
 
-  // Reset message index when stage changes (CRITICAL FIX)
+  // Reset message index when stage changes
   useEffect(() => {
     setMessageIndex(0);
   }, [currentStageIndex]);
@@ -175,7 +175,7 @@ const AnalysisProgressOverlay = ({
     return () => clearInterval(interval);
   }, [isOpen, currentStage]);
 
-  // Rotate tips every 7 seconds (faster for longer analyses)
+  // Rotate tips every 7 seconds
   useEffect(() => {
     if (!isOpen) return;
 
@@ -186,10 +186,10 @@ const AnalysisProgressOverlay = ({
     return () => clearInterval(interval);
   }, [isOpen]);
 
-  // Calculate progress (CSS handles smooth transitions - BUGGY RAF REMOVED)
+  // Calculate progress
   const baseProgress = currentStageIndex * 25;
   const intraProgress = Math.min(20, (elapsedTime % 60) / 3);
-  const calculatedProgress = Math.min(99, baseProgress + intraProgress); // Cap at 99%
+  const calculatedProgress = Math.min(99, baseProgress + intraProgress);
   const progress = progressOverride ?? calculatedProgress;
 
   // Format elapsed time
@@ -202,7 +202,6 @@ const AnalysisProgressOverlay = ({
   if (!isOpen) return null;
 
   const currentMessage = currentStage?.messages?.[messageIndex] || 'Processing...';
-  const currentChecks = currentStage?.checks || [];
 
   const getEtaSeconds = () => {
     if (!progress || progress <= 1) return null;
@@ -226,24 +225,24 @@ const AnalysisProgressOverlay = ({
         {currentStage.label}: {currentMessage}. Progress {Math.round(progress)} percent.
       </div>
 
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden max-h-[85vh] flex flex-col">
-        {/* Header with gradient */}
-        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-5 py-4 text-white flex-shrink-0">
-          <div className="flex items-center gap-3 justify-between">
-            <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-              <Brain className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 id="analysis-title" className="font-semibold text-lg">Analyzing Document</h3>
-              <p className="text-purple-100 text-sm truncate max-w-xs">{documentName}</p>
-            </div>
+      <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full mx-4 overflow-hidden flex flex-col" style={{ maxHeight: '90vh' }}>
+        {/* Header */}
+        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-5 text-white flex-shrink-0">
+          <div className="flex items-center gap-4 justify-between">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Brain className="w-6 h-6" />
+              </div>
+              <div className="min-w-0">
+                <h3 id="analysis-title" className="font-semibold text-lg leading-tight">Analyzing Document</h3>
+                <p className="text-purple-100 text-sm truncate">{documentName}</p>
+              </div>
             </div>
             {canClose && (
               <button
                 type="button"
                 onClick={onClose}
-                className="inline-flex items-center gap-2 text-xs font-medium bg-white/15 hover:bg-white/25 px-3 py-1.5 rounded-full transition"
+                className="flex-shrink-0 inline-flex items-center gap-2 text-xs font-medium bg-white/15 hover:bg-white/25 px-3 py-1.5 rounded-full transition"
               >
                 <X className="w-3.5 h-3.5" />
                 Continue in background
@@ -252,137 +251,65 @@ const AnalysisProgressOverlay = ({
           </div>
         </div>
 
-        {/* Progress content */}
-        <div className="p-5 overflow-y-auto">
-          {/* Premium Progress Bar with Animations */}
-          <div className="mb-5">
-            <div className="flex justify-between text-sm mb-3">
-              <span className="text-gray-600 font-medium">Analysis Progress</span>
-              <span className="text-purple-600 font-bold text-lg">{Math.round(progress)}%</span>
-            </div>
+        {/* Body */}
+        <div className="p-6 overflow-y-auto">
 
-            {/* Track */}
-            <div className="relative h-5 bg-gray-100 rounded-full overflow-hidden shadow-inner">
-
-              {/* Filled portion with moving gradient + glow */}
-              <div
-                className={`absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out flex items-center justify-end pr-4
-                  bg-gradient-to-r from-purple-600 via-indigo-500 to-purple-600
-                  bg-[length:200%_100%] animate-gradient-flow
-                  shadow-lg shadow-purple-500/50
-                  ${currentStageIndex === 2 ? 'animate-pulse' : ''}`}
-                style={{ width: `${progress}%` }}
-              >
-                {/* Show percentage inside bar when >20% */}
-                {progress > 20 && (
-                  <span className="text-white text-xs font-bold drop-shadow-md">
-                    {Math.round(progress)}%
+          {/* Progress bar */}
+          <div className="mb-7">
+            <div className="flex justify-between items-baseline mb-3">
+              <span className="text-sm font-medium text-gray-600">Analysis Progress</span>
+              <div className="flex items-center gap-3">
+                {etaSeconds !== null && (
+                  <span className="text-xs text-gray-400 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    ~{formatTime(etaSeconds)} remaining
                   </span>
                 )}
+                <span className="text-purple-600 font-bold text-xl tabular-nums">{Math.round(progress)}%</span>
               </div>
+            </div>
 
-              {/* Shimmer overlay - the sweeping shine effect */}
+            <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+              {/* Filled gradient */}
               <div
-                className="absolute inset-y-0 left-0 w-full opacity-40 pointer-events-none"
+                className="absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out bg-gradient-to-r from-purple-600 via-indigo-500 to-purple-600 bg-[length:200%_100%] animate-gradient-flow shadow-lg shadow-purple-500/40"
+                style={{ width: `${progress}%` }}
+              />
+              {/* Shimmer sweep */}
+              <div
+                className="absolute inset-y-0 left-0 opacity-40 pointer-events-none"
                 style={{ width: `${progress}%` }}
               >
-                <div
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent -skew-x-12 animate-shimmer"
-                />
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent -skew-x-12 animate-shimmer" />
               </div>
-
-              {/* Extra sparkles in analyzing stage - floating magic */}
-              {currentStageIndex === 2 && progress > 50 && (
-                <div className="absolute inset-0 flex items-center justify-around px-4 pointer-events-none">
-                  <Sparkles className="w-4 h-4 text-white/60 animate-pulse" style={{ animationDelay: '75ms' }} />
-                  <Sparkles className="w-5 h-5 text-white/80 animate-pulse" />
-                  <Sparkles className="w-4 h-4 text-white/60 animate-pulse" style={{ animationDelay: '150ms' }} />
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Insight + ETA */}
-          <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="rounded-xl border border-purple-100 bg-purple-50/60 p-3">
-              <div className="flex items-center gap-2 text-xs font-semibold text-purple-700">
-                <Sparkles className="w-3.5 h-3.5" />
-                Live insight
-              </div>
-              <p className="mt-1 text-sm text-purple-900">
-                {currentMessage}
-              </p>
-              <p className="mt-1 text-[11px] text-purple-700/80">
-                We match findings to BEP sections as we go.
-              </p>
-            </div>
-            <div className="rounded-xl border border-gray-200 bg-white p-3">
-              <div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
-                <Clock className="w-3.5 h-3.5" />
-                Estimated time remaining
-              </div>
-              <p className="mt-1 text-sm text-gray-900">
-                {etaSeconds !== null ? formatTime(etaSeconds) : 'Calculating...'}
-              </p>
-              <p className="mt-1 text-[11px] text-gray-500">
-                Best‑effort estimate based on document size and model load.
-              </p>
-            </div>
-          </div>
-
-          {/* What we're checking */}
-          <div className="mb-5 rounded-xl border border-gray-200 bg-gray-50 p-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
-              <Info className="w-3.5 h-3.5" />
-              What we’re checking now
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {currentChecks.map((check) => (
-                <span
-                  key={check}
-                  className="text-[11px] text-gray-600 bg-white border border-gray-200 px-2 py-1 rounded-full"
-                >
-                  {check}
-                </span>
-              ))}
-            </div>
-            <p className="mt-2 text-[11px] text-gray-500">
-              Your document stays in this workspace and is only used to generate your analysis.
-            </p>
-          </div>
-
-          {/* Stepper */}
-          <div className="mb-5">
+          {/* Stepper — insight and checks are embedded into the active step */}
+          <div className="mb-7">
             {STAGES.map((stage, index) => {
               const Icon = stage.icon;
               const isCompleted = index < currentStageIndex;
               const isCurrent = index === currentStageIndex;
-              const isPending = index > currentStageIndex;
 
               return (
                 <div key={stage.id}>
                   <div
-                    className={`flex items-center gap-4 p-3 rounded-xl transition-all duration-300 ${
+                    className={`flex items-start gap-4 p-4 rounded-xl transition-all duration-300 ${
                       isCurrent
                         ? 'bg-purple-50 border border-purple-200'
                         : isCompleted
                           ? 'bg-green-50/50'
-                          : 'opacity-50'
+                          : 'opacity-40'
                     }`}
                   >
-                    {/* Step indicator */}
+                    {/* Step icon */}
                     <div className={`
-                      w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0
-                      transition-all duration-300
-                      ${isCompleted
-                        ? 'bg-green-100 text-green-600'
-                        : isCurrent
-                          ? 'bg-purple-100 text-purple-600 animate-pulse'
-                          : 'bg-gray-100 text-gray-400'
-                      }
+                      w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300
+                      ${isCompleted ? 'bg-green-100 text-green-600' : isCurrent ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-400'}
                     `}>
                       {isCompleted ? (
-                        <CheckCircle className="w-6 h-6 transition-transform duration-300" />
+                        <CheckCircle className="w-6 h-6" />
                       ) : isCurrent ? (
                         <Loader2 className="w-6 h-6 animate-spin" />
                       ) : (
@@ -392,27 +319,36 @@ const AnalysisProgressOverlay = ({
 
                     {/* Step content */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`font-medium text-sm ${
-                          isCompleted
-                            ? 'text-green-700'
-                            : isCurrent
-                              ? 'text-purple-900'
-                              : 'text-gray-500'
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`font-semibold text-sm ${
+                          isCompleted ? 'text-green-700' : isCurrent ? 'text-purple-900' : 'text-gray-500'
                         }`}>
                           {stage.label}
                         </span>
                         {isCompleted && (
-                          <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded-full">
+                          <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded-full font-medium">
                             Done
                           </span>
                         )}
                       </div>
-                      <p className={`text-xs mt-0.5 ${
-                        isCurrent ? 'text-purple-600' : 'text-gray-400'
-                      }`}>
+
+                      <p className={`text-sm ${isCurrent ? 'text-purple-700 font-medium' : 'text-gray-400'}`}>
                         {isCurrent ? currentMessage : stage.description}
                       </p>
+
+                      {/* Active step: show what we're checking as pills */}
+                      {isCurrent && (
+                        <div className="mt-2.5 flex flex-wrap gap-1.5">
+                          {stage.checks.map(check => (
+                            <span
+                              key={check}
+                              className="text-[11px] text-purple-600 bg-white border border-purple-200 px-2 py-0.5 rounded-full"
+                            >
+                              {check}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -430,30 +366,30 @@ const AnalysisProgressOverlay = ({
           </div>
 
           {/* Time elapsed */}
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-            <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mb-4">
+            <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" />
             <span>Time elapsed: <span className="font-medium text-gray-700">{formatTime(elapsedTime)}</span></span>
           </div>
 
-          {/* Rotating Tips */}
-          <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-xl transition-all duration-500">
+          {/* Rotating tip */}
+          <div className="p-3.5 bg-amber-50 border border-amber-100 rounded-xl">
             <p className="text-xs text-amber-700 text-center">
-              <span className="font-medium">Tip:</span> {TIPS[tipIndex]}
+              <span className="font-semibold">Tip:</span> {TIPS[tipIndex]}
             </p>
           </div>
 
           {/* Background hint */}
           {showBackgroundHint && (
-            <div className="mt-3 text-[11px] text-gray-500 text-center">
+            <p className="mt-3 text-[11px] text-gray-400 text-center">
               You can continue working — analysis will keep running in the background.
-            </div>
+            </p>
           )}
 
-          {/* Next step hint */}
+          {/* Completion hint */}
           {currentStatus === 'analyzed' && (
-            <div className="mt-3 text-xs text-green-700 text-center">
+            <p className="mt-3 text-xs text-green-700 text-center font-medium">
               All set. Preparing your summary and BEP suggestions now…
-            </div>
+            </p>
           )}
         </div>
       </div>

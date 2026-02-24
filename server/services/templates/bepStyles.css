@@ -226,7 +226,7 @@ body {
 }
 
 .field-label {
-  font-size: 13pt;
+  font-size: 14pt;
   font-weight: 600;
   color: var(--text-light);
   margin-bottom: 10px;
@@ -239,7 +239,7 @@ body {
 }
 
 .subsection-title {
-  font-size: 13pt;
+  font-size: 12pt;
   font-weight: 600;
   color: var(--text-light);
   margin: 25px 0 15px 0;
@@ -383,6 +383,38 @@ body {
 
 .rich-text-content p {
   margin: 8px 0;
+}
+
+.rich-text-content h1 {
+  font-size: 15pt;
+  font-weight: 700;
+  color: var(--heading-color);
+  margin: 14px 0 6px;
+  page-break-after: avoid;
+}
+
+.rich-text-content h2 {
+  font-size: 13pt;
+  font-weight: 600;
+  color: var(--heading-color);
+  margin: 12px 0 5px;
+  page-break-after: avoid;
+}
+
+.rich-text-content h3 {
+  font-size: 12pt;
+  font-weight: 600;
+  color: var(--text-light);
+  margin: 10px 0 4px;
+  page-break-after: avoid;
+}
+
+.rich-text-content h4 {
+  font-size: 11pt;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 8px 0 4px;
+  page-break-after: avoid;
 }
 
 .rich-text-content img,
