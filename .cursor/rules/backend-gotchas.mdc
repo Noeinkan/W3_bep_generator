@@ -1,0 +1,15 @@
+---
+description: Backend — SQLite sync, PDF/DOCX pipelines, security, env
+globs: server/**/*.js
+alwaysApply: false
+---
+
+# Backend — Watch Out
+
+- **better-sqlite3** is synchronous. Do not introduce async patterns around DB calls.
+- **PDF export:** `htmlTemplateService` (HTML + `server/services/templates/bepStyles.css`) → Puppeteer → temp file in `server/temp/` → stream → cleanup. Puppeteer stays server-side; do not pull into frontend.
+- **DOCX:** Client-side via `src/services/docxGenerator.js` (separate from PDF).
+- Security middleware (Helmet, rate-limit) may be commented in dev — do not remove.
+- Keep `vite.config.js` aligned with proxy/env.
+- **ML service:** Separate Python process; changes need a separate restart.
+- **`.env`:** Never commit `.env.*` (only `.env.example`). Secrets via env vars or `encryptedSecretService`. `.env.production` is gitignored.

@@ -1,0 +1,13 @@
+---
+description: BEP config split, EIR pre-step, BepFormView layout-only, FormBuilder scope
+globs: src/config/**/*.js, src/components/eir/**/*, src/components/form-builder/**/*, src/components/pages/bep/**/*, src/hooks/useEirFill*.js, src/hooks/useDocumentHistory*.js
+alwaysApply: false
+---
+
+# BEP / EIR / Form Builder — Watch Out
+
+- **BEP config:** `bepConfig.js` is a barrel. Edit `bepSteps.js`, `bepTypeDefinitions.js`, `bepOptions.js`, or `bepFormFields.js`. Consumers import `CONFIG` from `bepConfig.js` unchanged.
+- **EIR:** `EirStepWrapper`, `EirFillSummaryModal` in `src/components/eir/`. Fill logic in `useEirFill`, document history in `useDocumentHistory` (`src/hooks/`). Do not put EIR/domain logic in `BepFormView.js`.
+- **BepFormView:** Layout/orchestration only. Composes hooks and sub-components; domain logic stays in hooks (`useEirFill`, `useDocumentHistory`, `useStepNavigation`, `useDraftSave`).
+- **FormBuilderProvider:** `useFormBuilder()` works only inside `<FormBuilderProvider>`. Need `isEditMode`/`steps` in a wrapper? Define an inner component inside the provider’s children.
+- **form-builder imports:** Use sub-module barrels: `form-builder/field-editor`, `form-builder/step-editor`, etc. Top-level `form-builder/index.js` re-exports `FormBuilderProvider`, `useFormBuilder`, `BepStructureMap`.

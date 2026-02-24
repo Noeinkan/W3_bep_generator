@@ -1,0 +1,19 @@
+---
+description: Forms, state, API, styles, tests — where things live and how to add new ones
+globs: src/**/*.{js,jsx}, server/**/*.js
+alwaysApply: false
+---
+
+# Conventions
+
+- **Forms:** React Hook Form + Zod. Schemas in `src/schemas/`; component uses `useForm` with `zodResolver`.
+- **State:** React Context + local state only (no Redux/Zustand).
+- **API:** Service layer in `src/services/` (e.g. `apiService.js`). Backend: route in `server/routes/`, logic in `server/services/`.
+- **Styles:** Tailwind CSS. No custom CSS unless necessary.
+- **Tests:** Vitest; frontend in `src/__tests__/`, server in `server/__tests__/`. Run `npm test`.
+- **DB:** SQLite via better-sqlite3 (synchronous). DB in `server/db/`.
+
+**Common patterns:**
+- New API: route → service → frontend call in `src/services/apiService.js`.
+- Protected route: use `server/middleware/authMiddleware.js` before handler.
+- New page: add to `src/components/pages/`, register route in `App.js`.

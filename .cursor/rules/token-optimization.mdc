@@ -1,0 +1,19 @@
+---
+description: Token-efficient exploration — index first, targeted grep/read only
+alwaysApply: true
+---
+
+# Token Optimization
+
+**Step 0:** Read `.claude/project-index.md` before exploration. It maps directories, contexts, API routes, schemas, hooks. Do not use Glob to discover structure — the index already lists it.
+
+**Step 1:** Locate in index → **Grep** with a narrow `path=` (e.g. `path="server/services/"`) to find symbols/lines → **Read** only that region with `offset`/`limit`. For files >150 lines, always Grep first (or search the file) then Read ±30 lines around the hit.
+
+**Prefer:** Grep for exact names/strings; Read with offset/limit. Never read a full file to "find where X is" — Grep with a scoped path.
+
+**Never:**
+- Repo-wide Glob/Grep without a path filter.
+- Full-file Read for exploration; use Grep then Read(offset, limit).
+- Loading paths in `.cursorignore` (node_modules, build, venv, .db, server/temp, uploads).
+
+**Budget:** Grep + 30-line Read ≈ 200 tokens; full file ≈ 2k–5k; repo-wide grep ≈ 5k–20k.

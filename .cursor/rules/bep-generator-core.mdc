@@ -1,0 +1,32 @@
+---
+description: BEP Generator — project overview, workflow, and quick reference
+alwaysApply: true
+---
+
+# BEP Generator — Core
+
+**Stack:** React 19 + Vite (frontend), Express + better-sqlite3 (backend), Python + Ollama (ml-service). All start via `npm start`.
+
+**Environment:** Windows host, bash shell — use Unix syntax (forward slashes, `/dev/null`, `&&`). No PowerShell.
+
+**Workflow:**
+- Plan before coding for non-trivial tasks (3+ steps); get approval before edits.
+- Use subagents for research/exploration; keep main context for implementation.
+- Verify: run `npm test` after code changes.
+- Fix bugs autonomously: root cause → failing test → fix.
+- Stay focused: no new packages or extra docs without approval.
+
+**Quick reference:**
+
+| Task        | Command           |
+|------------|-------------------|
+| Start all  | `npm start`       |
+| Tests      | `npm test`        |
+| Frontend   | `npm run start:frontend` |
+| Backend    | `npm run start:backend`  |
+| Build      | `npm run build`   |
+| Deploy     | `bash deploy.sh`  |
+
+**Layout:** Frontend `src/` (components, hooks, services, schemas); Backend `server/` (routes, services, db); ML `ml-service/`. Read `.claude/project-index.md` first for locations.
+
+**Session limits:** If hitting limits mid-task, document what’s done, list next steps, and note any files with partial edits.
