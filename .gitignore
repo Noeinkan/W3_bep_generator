@@ -35,6 +35,12 @@ nul
 # Server uploads directory (client documents)
 /server/uploads/
 
+# SQLite database — data lives in the Docker volume (sqlite-data:/app/server/db)
+# Never commit the live DB; it may contain real user/project data
+/server/db/*.db
+/server/db/*.db-shm
+/server/db/*.db-wal
+
 # Exclude sensitive deployment notes
 hetzner.md
 .env.production

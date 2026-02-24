@@ -7,6 +7,7 @@ import CONFIG from '../../../config/bepConfig';
 import { useTidpData } from '../../../hooks/useTidpData';
 import { useMidpData } from '../../../hooks/useMidpData';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useProject } from '../../../contexts/ProjectContext';
 import SaveDraftDialog from '../drafts/SaveDraftDialog';
 import HiddenComponentsRenderer from '../../export/HiddenComponentsRenderer';
 import useStepNavigation from '../../../hooks/useStepNavigation';
@@ -39,6 +40,7 @@ const BepFormViewContent = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { currentProject } = useProject();
   const contentRef = useRef(null);
 
   const {
@@ -125,6 +127,7 @@ const BepFormViewContent = () => {
     setCurrentDraft,
     currentStep,
     createDocumentSlug,
+    projectId: currentProject?.id || null,
   });
 
   // Scroll to top when step changes

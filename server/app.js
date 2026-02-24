@@ -15,10 +15,11 @@ const bepStructureRoutes = require('./routes/bep-structure');
 
 const app = express();
 
-// CORS config (match server.js behavior)
+// CORS config (matches server.js — server.js is the real entry point, this config
+// applies only to routes registered directly in app.js before server.js layers on top)
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://yourdomain.com']
+    ? (process.env.ALLOWED_ORIGINS || 'https://77.42.70.26.nip.io').split(',')
     : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3001', 'http://127.0.0.1:3001'],
   credentials: true
 }));

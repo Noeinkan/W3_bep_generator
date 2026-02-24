@@ -98,7 +98,7 @@ export const formFields = {
       fields: [
         { number: '3.1', name: 'organizationalStructure', label: 'Delivery Team\'s Organisational Structure and Composition', type: 'orgchart' },
         { number: '3.2', name: 'leadAppointedPartiesTable', label: 'Lead Appointed Parties and Information Managers', type: 'orgstructure-data-table', readOnly: true },
-        { number: '3.3', name: 'taskTeamsBreakdown', label: 'Task Teams', type: 'table', columns: ['Task Team', 'Discipline', 'Leader', 'Leader Contact', 'Company'] },
+        { number: '3.3', name: 'taskTeamsBreakdown', label: 'Task Teams', type: 'table', columns: ['Task Team', 'Discipline', 'Leader', 'Leader Contact', 'Company'], columnWidths: ['12%', '12%', '15%', '28%', '33%'] },
         {
           number: '3.4',
           name: 'resourceAllocationTable',

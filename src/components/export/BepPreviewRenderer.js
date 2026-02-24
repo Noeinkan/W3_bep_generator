@@ -136,9 +136,10 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
           </div>
         );
 
-      case 'table':
-        if (!Array.isArray(value) || value.length === 0) return null;
-        const columns = field.columns || [];
+      case 'table': {
+        const tableRows = Array.isArray(value) ? value : (value?.data ?? []);
+        const columns = (Array.isArray(value) ? field.columns : (value?.columns || field.columns)) || [];
+        if (tableRows.length === 0) return null;
         return (
           <div className="my-4 overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
@@ -155,11 +156,11 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {value.map((row, rowIdx) => (
+                {tableRows.map((row, rowIdx) => (
                   <tr key={rowIdx} className="hover:bg-gray-50">
                     {columns.map((col, colIdx) => (
                       <td key={colIdx} className="px-4 py-2 text-sm text-gray-900 border-b border-gray-200">
-                        {row[col] || '-'}
+                        {row[col] ?? '-'}
                       </td>
                     ))}
                   </tr>
@@ -168,6 +169,7 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
             </table>
           </div>
         );
+      }
 
       case 'milestones-table':
         if (!Array.isArray(value) || value.length === 0) return null;

@@ -18,8 +18,11 @@ const DraftManager = ({ user, currentFormData, onLoadDraft, onClose, bepType }) 
   const navigate = useNavigate();
   const { currentProject } = useProject();
   const activeProjectId = currentProject?.id || null;
-  // Load and validate drafts (filtered by project)
-  const { rawDrafts, isLoading: loadingDrafts, error: draftsError, isValidComponent, refreshDrafts } = useDrafts(user, currentFormData, onLoadDraft, onClose, activeProjectId);
+  // Load ALL drafts for the user — no server-side project filter here.
+  // Drafts saved from BepFormView have project_id = null and would be hidden
+  // if filtered by activeProjectId. useDraftOperations still stamps activeProjectId
+  // on any new saves initiated from this view.
+  const { rawDrafts, isLoading: loadingDrafts, error: draftsError, isValidComponent, refreshDrafts } = useDrafts(user, currentFormData, onLoadDraft, onClose, null);
   // Filtering, searching, sorting
   const filterHook = useDraftFilters(rawDrafts);
   // Draft operations (stamps projectId on saved drafts)

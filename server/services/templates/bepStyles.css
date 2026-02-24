@@ -296,10 +296,6 @@ body {
   vertical-align: top;
 }
 
-.data-table tbody tr:nth-child(even) {
-  background-color: var(--bg-light);
-}
-
 /* Column width hints - can be overridden per table */
 .data-table .col-narrow {
   width: 15%;

@@ -24,6 +24,7 @@ const useDraftSave = ({
   setCurrentDraft,
   currentStep,
   createDocumentSlug,
+  projectId = null,
 }) => {
   const navigate = useNavigate();
 
@@ -40,7 +41,8 @@ const useDraftSave = ({
     formData,
     bepType,
     () => {}, // onLoadDraft - handled in DraftManager
-    () => {}  // onClose - not needed here
+    () => {}, // onClose - not needed here
+    projectId
   );
 
   // Draft name validation

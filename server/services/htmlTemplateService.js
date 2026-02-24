@@ -644,7 +644,9 @@ class HtmlTemplateService {
 
     if (typeof value === 'object') {
       if (field?.type === 'table') {
-        return Array.isArray(value) && value.length > 0;
+        const rows = value?.data;
+        if (Array.isArray(rows)) return rows.length > 0;
+        return false;
       }
 
       // Special handling for naming conventions - check if it has data
@@ -680,13 +682,19 @@ class HtmlTemplateService {
   /**
    * Render table with improved column handling
    * @param {Object} field - Field configuration
-   * @param {Array} rows - Table rows
+   * @param {Array|{ columns?: string[], data: Array }} rows - Table rows (array or EditableTable shape { columns, data })
    * @returns {string} Table HTML
    */
   renderTable(field, rows) {
-    if (!Array.isArray(rows) || rows.length === 0) return '';
+    const normalized = Array.isArray(rows)
+      ? { columns: field.columns || [], data: rows }
+      : (rows?.data != null ? { columns: rows.columns || field.columns || [], data: rows.data } : { columns: field.columns || [], data: [] });
+    const data = Array.isArray(normalized.data) ? normalized.data : [];
+    const columns = normalized.columns.length ? normalized.columns : (field.columns || []);
 
-    const columns = field.columns || [];
+    if (data.length === 0) return '';
+
+    const effectiveField = { ...field, columns };
     const columnCount = columns.length;
 
     // Calculate column widths based on count
@@ -695,13 +703,13 @@ class HtmlTemplateService {
     let html = '<div class="table-wrapper"><table class="data-table"><thead><tr>';
 
     columns.forEach((col, idx) => {
-      const width = field.columnWidths?.[idx] || `${columnWidth}%`;
+      const width = effectiveField.columnWidths?.[idx] || `${columnWidth}%`;
       html += `<th style="width: ${width}">${this.escapeHtml(col)}</th>`;
     });
 
     html += '</tr></thead><tbody>';
 
-    rows.forEach(row => {
+    data.forEach(row => {
       html += '<tr>';
       columns.forEach(col => {
         const cellValue = row[col];
