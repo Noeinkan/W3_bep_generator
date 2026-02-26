@@ -1,10 +1,18 @@
 const { verifyToken, getUserById } = require('../services/authService');
 
+// TEMPORARY: set to false to re-enable login/auth
+const AUTH_DISABLED = true;
+const MOCK_USER = { id: 1, email: 'dev@local.test', name: 'Dev User', is_active: 1 };
+
 /**
  * Middleware to authenticate JWT token from Authorization header
  * Attaches user object to req.user if valid
  */
 const authenticateToken = (req, res, next) => {
+  if (AUTH_DISABLED) {
+    req.user = MOCK_USER;
+    return next();
+  }
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 

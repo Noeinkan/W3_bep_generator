@@ -2,6 +2,10 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import apiService from '../services/apiService';
 import { runDraftMigrationOnAppLoad } from '../utils/draftMigration';
 
+// TEMPORARY: set to false to re-enable login/auth
+const AUTH_DISABLED = true;
+const MOCK_USER = { id: 1, email: 'dev@local.test', name: 'Dev User' };
+
 const AuthContext = createContext();
 
 export const useAuth = () => {
@@ -18,6 +22,11 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const checkAuth = async () => {
+      if (AUTH_DISABLED) {
+        setUser(MOCK_USER);
+        setLoading(false);
+        return;
+      }
       try {
         const token = localStorage.getItem('authToken');
         if (!token) {
