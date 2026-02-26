@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Save, Plus, Settings } from 'lucide-react';
+import { X, Save, Plus, Settings, ArrowLeft } from 'lucide-react';
 import { Modal, Button } from '../../common';
 import FieldTypeSelector from './FieldTypeSelector';
 import { getFieldType } from '../FieldTypeRegistry';
@@ -40,6 +40,7 @@ export default function FieldEditorModal({
   const [errors, setErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [configureStep, setConfigureStep] = useState(false);
 
   const isEditing = !!field;
 
@@ -70,6 +71,7 @@ export default function FieldEditorModal({
       }
       setErrors({});
       setShowAdvanced(false);
+      if (!field) setConfigureStep(false);
     }
   }, [isOpen, field]);
 
@@ -85,7 +87,7 @@ export default function FieldEditorModal({
     }
   };
 
-  // Handle type selection
+  // Handle type selection — go to configure step (new fields only, no scroll)
   const handleTypeSelect = (type) => {
     const typeDef = getFieldType(type);
     setFormData(prev => ({
@@ -93,6 +95,11 @@ export default function FieldEditorModal({
       type,
       config: typeDef?.defaultConfig || {}
     }));
+    if (!isEditing) setConfigureStep(true);
+  };
+
+  const handleBackToType = () => {
+    setConfigureStep(false);
   };
 
   // Handle config change
@@ -171,13 +178,14 @@ export default function FieldEditorModal({
       onClose={onClose}
       title={isEditing ? 'Edit Field' : 'Add New Field'}
       size="md"
+      compact
       className="max-h-[90vh] overflow-hidden flex flex-col"
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || (!isEditing && !configureStep)}
             loading={isSaving}
             icon={isEditing ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
           >
@@ -187,12 +195,13 @@ export default function FieldEditorModal({
       }
     >
         <div className="space-y-4">
-          {/* Field Type Selector (only for new fields) */}
-          {!isEditing && (
+          {/* Add new field: two steps — choose type, then configure (no scroll) */}
+          {!isEditing && !configureStep && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Field Type <span className="text-red-500">*</span>
               </label>
+              <p className="text-xs text-gray-500 mb-2">Select a type to configure the field.</p>
               <FieldTypeSelector
                 selectedType={formData.type}
                 onSelect={handleTypeSelect}
@@ -201,6 +210,165 @@ export default function FieldEditorModal({
             </div>
           )}
 
+          {!isEditing && configureStep && (
+            <div className="space-y-4">
+              <button
+                type="button"
+                onClick={handleBackToType}
+                className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Change field type
+              </button>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                Type: <span className="font-medium">{fieldTypeDef?.label ?? formData.type}</span>
+              </div>
+
+              {/* Label */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Label <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="label"
+                  value={formData.label}
+                  onChange={handleChange}
+                  className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.label ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="e.g., Project Name"
+                />
+                {errors.label && (
+                  <p className="text-red-500 text-sm mt-1">{errors.label}</p>
+                )}
+              </div>
+
+              {/* Required Toggle */}
+              {fieldTypeDef?.isFormField !== false && (
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="is_required_new"
+                    name="is_required"
+                    checked={formData.is_required}
+                    onChange={handleChange}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="is_required_new" className="ml-2 text-sm text-gray-700">
+                    Required field
+                  </label>
+                </div>
+              )}
+
+              {/* Placeholder (if supported) */}
+              {fieldTypeDef?.hasPlaceholder && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Placeholder
+                  </label>
+                  <input
+                    type="text"
+                    name="placeholder"
+                    value={formData.placeholder}
+                    onChange={handleChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Placeholder text..."
+                  />
+                </div>
+              )}
+
+              {/* Table Columns (if field type has columns) */}
+              {fieldTypeDef?.hasColumns && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Table Columns <span className="text-red-500">*</span>
+                  </label>
+                  <div className="space-y-2">
+                    {(formData.config.columns || []).map((col, index) => (
+                      <div key={index} className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          value={col}
+                          onChange={(e) => {
+                            const newColumns = [...(formData.config.columns || [])];
+                            newColumns[index] = e.target.value;
+                            handleConfigChange('columns', newColumns);
+                          }}
+                          className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder={`Column ${index + 1}`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newColumns = (formData.config.columns || []).filter((_, i) => i !== index);
+                            handleConfigChange('columns', newColumns);
+                          }}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newColumns = [...(formData.config.columns || []), ''];
+                        handleConfigChange('columns', newColumns);
+                      }}
+                      className="text-sm text-blue-600 hover:text-blue-700"
+                    >
+                      + Add Column
+                    </button>
+                  </div>
+                  {errors.columns && (
+                    <p className="text-red-500 text-sm mt-1">{errors.columns}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Advanced Settings Toggle */}
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="flex items-center text-sm text-gray-600 hover:text-gray-800"
+              >
+                <Settings className="w-4 h-4 mr-1" />
+                {showAdvanced ? 'Hide' : 'Show'} Advanced Settings
+              </button>
+
+              {/* Advanced Settings */}
+              {showAdvanced && (
+                <div className="p-4 bg-gray-50 rounded-lg space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Field ID <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="field_id"
+                      value={formData.field_id}
+                      onChange={handleChange}
+                      className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm ${
+                        errors.field_id ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="e.g., project_name"
+                    />
+                    {errors.field_id && (
+                      <p className="text-red-500 text-sm mt-1">{errors.field_id}</p>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      Used to store field data. Auto-generated from label.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Edit mode: flat form (Label, Required, ...) */}
+          {isEditing && (
+            <>
           {/* Label */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -340,6 +508,8 @@ export default function FieldEditorModal({
                 </p>
               </div>
             </div>
+          )}
+            </>
           )}
 
           {/* Error message */}

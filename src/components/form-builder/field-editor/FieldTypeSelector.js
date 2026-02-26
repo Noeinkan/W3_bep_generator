@@ -42,16 +42,16 @@ export default function FieldTypeSelector({
   }, [showUtility]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {Object.entries(fieldTypesByCategory).map(([categoryKey, category]) => (
         <div key={categoryKey}>
           {/* Category Header */}
-          <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+          <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
             {category.name}
           </h4>
 
           {/* Type Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
             {category.types.map((fieldType) => {
               const Icon = fieldType.icon;
               const colors = CATEGORY_COLORS[categoryKey];
@@ -63,7 +63,7 @@ export default function FieldTypeSelector({
                   type="button"
                   onClick={() => onSelect(fieldType.type)}
                   className={`
-                    flex flex-col items-center p-3 rounded-lg border-2 transition-all duration-200
+                    flex flex-col items-center p-2 rounded-lg border-2 transition-all duration-200
                     ${isSelected
                       ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
                       : `${colors.border} ${colors.bg} ${colors.hover}`

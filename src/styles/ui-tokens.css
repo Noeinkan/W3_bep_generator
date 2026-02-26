@@ -1,0 +1,41 @@
+/**
+ * UI design token values. Names must match src/styles/ui-tokens.js.
+ * Import this in index.css; PDF template can reuse these variables for consistency.
+ */
+:root {
+  --ui-canvas: #f8fafc;
+  --ui-surface: #ffffff;
+  --ui-muted: #f1f5f9;
+  --ui-border: #e2e8f0;
+  --ui-border-strong: #cbd5e1;
+  --ui-text: #0f172a;
+  --ui-text-muted: #475569;
+  --ui-text-soft: #64748b;
+  --ui-primary: #2563eb;
+  --ui-primary-hover: #1d4ed8;
+  --ui-primary-gradient-end: #4f46e5;
+  --ui-success: #15803d;
+  --ui-success-bg: #f0fdf4;
+  --ui-warning: #b45309;
+  --ui-warning-bg: #fffbeb;
+}
+
+/* Dark mode: same token names, different values. Enable via class="dark" on html (or body). */
+.dark,
+html.dark {
+  --ui-canvas: #0f172a;
+  --ui-surface: #1e293b;
+  --ui-muted: #334155;
+  --ui-border: #475569;
+  --ui-border-strong: #64748b;
+  --ui-text: #f8fafc;
+  --ui-text-muted: #cbd5e1;
+  --ui-text-soft: #94a3b8;
+  --ui-primary: #60a5fa;
+  --ui-primary-hover: #93c5fd;
+  --ui-primary-gradient-end: #818cf8;
+  --ui-success: #4ade80;
+  --ui-success-bg: #14532d;
+  --ui-warning: #fbbf24;
+  --ui-warning-bg: #422006;
+}
