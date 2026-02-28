@@ -1,10 +1,11 @@
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Zap, FolderOpen, ExternalLink, Upload, Sparkles, CheckCircle } from 'lucide-react';
+import { Zap, FolderOpen, ExternalLink, Upload, Sparkles, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import ProgressSidebar from '../../../forms/controls/ProgressSidebar';
 import { FormBuilderContext, DynamicProgressSidebar } from '../../../form-builder';
 import CONFIG from '../../../../config/bepConfig';
 import { ROUTES } from '../../../../constants/routes';
+import { SIDEBAR_TOGGLE } from '../../../../constants/sidebarUi';
 import { useEir } from '../../../../contexts/EirContext';
 import { cn } from '../../../../utils/cn';
 import { bepUi } from '../bepUiClasses';
@@ -56,8 +57,40 @@ const BepSidebar = ({
     navigate(`${basePath}/step/eir`);
   };
 
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Collapsed: narrow strip with expand button only
+  if (isCollapsed) {
+    return (
+      <div
+        className={cn(
+          'w-14 flex flex-col shrink-0 items-center py-4 border-r border-ui-border bg-ui-surface',
+          bepUi.sidebar,
+          'rounded-none border-l-0 border-y-0 shadow-none'
+        )}
+      >
+        <button
+          type="button"
+          onClick={() => setIsCollapsed(false)}
+          className={SIDEBAR_TOGGLE.buttonCollapsed}
+          title="Expand sidebar"
+          aria-label="Expand sidebar"
+        >
+          <ChevronRight className={SIDEBAR_TOGGLE.iconExpand} />
+        </button>
+        <Zap className="w-5 h-5 text-ui-primary mt-4" aria-hidden />
+      </div>
+    );
+  }
+
   return (
-    <div className={cn('w-80 flex flex-col', bepUi.sidebar, 'rounded-none border-l-0 border-y-0 border-r border-ui-border shadow-none')}>
+    <div
+      className={cn(
+        'w-80 flex flex-col shrink-0 transition-[width] duration-200 ease-out',
+        bepUi.sidebar,
+        'rounded-none border-l-0 border-y-0 border-r border-ui-border shadow-none'
+      )}
+    >
       {/* Header */}
       <div className="p-6 border-b border-ui-border bg-ui-surface">
         <div className="flex items-center justify-between mb-4">
@@ -80,6 +113,14 @@ const BepSidebar = ({
             )}
           </div>
           <div className="flex items-center space-x-1">
+            <button
+              onClick={() => setIsCollapsed(true)}
+              className={SIDEBAR_TOGGLE.buttonExpanded}
+              title="Collapse sidebar"
+              aria-label="Collapse sidebar"
+            >
+              <ChevronLeft className={SIDEBAR_TOGGLE.iconCollapse} />
+            </button>
             <button
               onClick={goToTidpManager}
               className={cn(bepUi.btnSecondary, 'p-2 rounded-md')}

@@ -99,23 +99,26 @@ export function useBepStructure({ projectId = null, draftId = null, bepType = nu
       if (draftId) {
         // Draft-level structure
         const response = await apiCall(`/draft/${draftId}?${params}`, { signal: abortControllerRef.current.signal });
-        structureData = response.data;
-        setHasCustomStructure(response.hasCustomStructure);
+        structureData = Array.isArray(response?.data) ? response.data : [];
+        setHasCustomStructure(response.hasCustomStructure ?? false);
       } else if (projectId) {
         // Project-level structure (deprecated)
         const response = await apiCall(`/project/${projectId}?${params}`, { signal: abortControllerRef.current.signal });
-        structureData = response.data;
-        setHasCustomStructure(response.hasCustomStructure);
+        structureData = Array.isArray(response?.data) ? response.data : [];
+        setHasCustomStructure(response.hasCustomStructure ?? false);
       } else {
         // Default template
         const response = await apiCall(`/template?${params}`, { signal: abortControllerRef.current.signal });
-        structureData = response.data;
+        structureData = Array.isArray(response?.data) ? response.data : [];
         setHasCustomStructure(false);
+      }
+
+      if (!Array.isArray(structureData)) {
+        structureData = [];
       }
 
       // Extract steps and flatten fields
       const allFields = [];
-      console.log('[DEBUG] structureData length:', structureData?.length, 'type:', typeof structureData, 'isArray:', Array.isArray(structureData));
       const stepsData = structureData.map(step => {
         if (step.fields) {
           allFields.push(...step.fields.map(f => ({
@@ -132,7 +135,7 @@ export function useBepStructure({ projectId = null, draftId = null, bepType = nu
 
       // Fetch field types
       const typesResponse = await apiCall('/field-types', { signal: abortControllerRef.current.signal });
-      setFieldTypes(typesResponse.data);
+      setFieldTypes(Array.isArray(typesResponse?.data) ? typesResponse.data : []);
 
     } catch (err) {
       if (isCancellationError(err)) return;

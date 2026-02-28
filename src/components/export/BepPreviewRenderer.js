@@ -163,27 +163,20 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
         const columns = (Array.isArray(value) ? field.columns : (value?.columns || field.columns)) || [];
         if (tableRows.length === 0) return null;
         return (
-          <div className="my-4 overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
-              <thead className="bg-gray-50">
+          <div className="my-4 table-wrapper">
+            <table className="data-table">
+              <thead>
                 <tr>
                   {columns.map((col, idx) => (
-                    <th
-                      key={idx}
-                      className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border-b border-gray-300"
-                    >
-                      {col}
-                    </th>
+                    <th key={idx}>{col}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody>
                 {tableRows.map((row, rowIdx) => (
-                  <tr key={rowIdx} className="hover:bg-gray-50">
+                  <tr key={rowIdx}>
                     {columns.map((col, colIdx) => (
-                      <td key={colIdx} className="px-4 py-2 text-sm text-gray-900 border-b border-gray-200">
-                        {row[col] ?? '-'}
-                      </td>
+                      <td key={colIdx}>{row[col] ?? '-'}</td>
                     ))}
                   </tr>
                 ))}
@@ -201,27 +194,20 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
         const normalizedMilestones = value.map(normalizeMilestoneRow);
 
         return (
-          <div className="my-4 overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
-              <thead className="bg-gray-50">
+          <div className="my-4 table-wrapper">
+            <table className="data-table">
+              <thead>
                 <tr>
                   {milestoneColumns.map((col, idx) => (
-                    <th
-                      key={idx}
-                      className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border-b border-gray-300"
-                    >
-                      {col}
-                    </th>
+                    <th key={idx}>{col}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody>
                 {normalizedMilestones.map((row, rowIdx) => (
-                  <tr key={rowIdx} className="hover:bg-gray-50">
+                  <tr key={rowIdx}>
                     {milestoneColumns.map((col, colIdx) => (
-                      <td key={colIdx} className="px-4 py-2 text-sm text-gray-900 border-b border-gray-200">
-                        {row[col] || '-'}
-                      </td>
+                      <td key={colIdx}>{row[col] || '-'}</td>
                     ))}
                   </tr>
                 ))}
@@ -248,7 +234,7 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
         if (typeof value === 'string' && isLikelyHtml(value)) {
           return (
             <div
-              className="my-2 prose prose-sm max-w-none text-gray-700 [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_h4]:text-sm"
+              className="my-2 prose prose-sm max-w-none text-gray-700 rich-text-content [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_h4]:text-sm"
               dangerouslySetInnerHTML={{ __html: sanitizeRichText(value) }}
             />
           );
@@ -265,27 +251,20 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
               <p className="mb-4 text-gray-700 whitespace-pre-wrap">{value.intro}</p>
             )}
             {value.rows && Array.isArray(value.rows) && value.rows.length > 0 && (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
-                  <thead className="bg-gray-50">
+              <div className="table-wrapper">
+                <table className="data-table">
+                  <thead>
                     <tr>
                       {field.tableColumns?.map((col, idx) => (
-                        <th
-                          key={idx}
-                          className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border-b border-gray-300"
-                        >
-                          {col}
-                        </th>
+                        <th key={idx}>{col}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody>
                     {value.rows.map((row, rowIdx) => (
-                      <tr key={rowIdx} className="hover:bg-gray-50">
+                      <tr key={rowIdx}>
                         {field.tableColumns?.map((col, colIdx) => (
-                          <td key={colIdx} className="px-4 py-2 text-sm text-gray-900 border-b border-gray-200">
-                            {row[col] || '-'}
-                          </td>
+                          <td key={colIdx}>{row[col] || '-'}</td>
                         ))}
                       </tr>
                     ))}
@@ -341,24 +320,24 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
             {/* 0.1 Revision History */}
             <div>
               <h3 className="text-base font-semibold text-gray-700 mb-2">0.1 — Revision History</h3>
-              <div className="overflow-x-auto rounded border border-gray-200">
-                <table className="w-full text-sm">
+              <div className="table-wrapper">
+                <table className="data-table">
                   <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200">
+                    <tr>
                       {['Rev.', 'Date', 'Status', 'Author', 'Checked By', 'Description of Change'].map(h => (
-                        <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-600">{h}</th>
+                        <th key={h}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {(formData.documentHistory.revisions || []).map((r, i) => (
-                      <tr key={i} className="border-b border-gray-100">
-                        <td className="px-3 py-1.5 font-mono font-semibold text-gray-800">{r.revisionCode}</td>
-                        <td className="px-3 py-1.5 text-gray-600 whitespace-nowrap">{r.date}</td>
-                        <td className="px-3 py-1.5"><span className="text-xs font-semibold">{r.statusCode}</span> — <span className="text-xs text-gray-500">{r.statusLabel}</span></td>
-                        <td className="px-3 py-1.5">{r.author}</td>
-                        <td className="px-3 py-1.5">{r.checkedBy}</td>
-                        <td className="px-3 py-1.5">{r.description}</td>
+                      <tr key={i}>
+                        <td className="font-mono font-semibold">{r.revisionCode}</td>
+                        <td className="whitespace-nowrap">{r.date}</td>
+                        <td><span className="text-xs font-semibold">{r.statusCode}</span> — <span className="text-xs text-gray-500">{r.statusLabel}</span></td>
+                        <td>{r.author}</td>
+                        <td>{r.checkedBy}</td>
+                        <td>{r.description}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -370,21 +349,21 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
             {(formData.documentHistory.contributors || []).length > 0 && (
               <div>
                 <h3 className="text-base font-semibold text-gray-700 mb-2">0.2 — Contributors</h3>
-                <div className="overflow-x-auto rounded border border-gray-200">
-                  <table className="w-full text-sm">
+                <div className="table-wrapper">
+                  <table className="data-table">
                     <thead>
-                      <tr className="bg-gray-50 border-b border-gray-200">
+                      <tr>
                         {['Name', 'Company', 'Role'].map(h => (
-                          <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-600">{h}</th>
+                          <th key={h}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {formData.documentHistory.contributors.map((c, i) => (
-                        <tr key={i} className="border-b border-gray-100">
-                          <td className="px-3 py-1.5">{c.name}</td>
-                          <td className="px-3 py-1.5">{c.company}</td>
-                          <td className="px-3 py-1.5">{c.role}</td>
+                        <tr key={i}>
+                          <td>{c.name}</td>
+                          <td>{c.company}</td>
+                          <td>{c.role}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -400,19 +379,19 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
                   0.3 — Governance Triggers
                   <span className="ml-2 text-xs font-normal text-gray-400">(ISO 19650-2 §5.1.3)</span>
                 </h3>
-                <div className="overflow-x-auto rounded border border-gray-200">
-                  <table className="w-full text-sm">
+                <div className="table-wrapper">
+                  <table className="data-table">
                     <thead>
-                      <tr className="bg-gray-50 border-b border-gray-200">
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Trigger Event</th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Accountable Party</th>
+                      <tr>
+                        <th>Trigger Event</th>
+                        <th>Accountable Party</th>
                       </tr>
                     </thead>
                     <tbody>
                       {formData.documentHistory.governanceTriggers.map((t, i) => (
-                        <tr key={i} className="border-b border-gray-100">
-                          <td className="px-3 py-1.5">{t.trigger}</td>
-                          <td className="px-3 py-1.5">{t.accountableParty}</td>
+                        <tr key={i}>
+                          <td>{t.trigger}</td>
+                          <td>{t.accountableParty}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -425,23 +404,23 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
             {(formData.documentHistory.raciReviewRecord || []).length > 0 && (
               <div>
                 <h3 className="text-base font-semibold text-gray-700 mb-2">0.4 — RACI Review Record</h3>
-                <div className="overflow-x-auto rounded border border-gray-200">
-                  <table className="w-full text-sm">
+                <div className="table-wrapper">
+                  <table className="data-table">
                     <thead>
-                      <tr className="bg-gray-50 border-b border-gray-200">
+                      <tr>
                         {['Function / Role', 'Individual', 'RACI', 'Date', 'Comments'].map(h => (
-                          <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-600">{h}</th>
+                          <th key={h}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {formData.documentHistory.raciReviewRecord.map((r, i) => (
-                        <tr key={i} className="border-b border-gray-100">
-                          <td className="px-3 py-1.5">{r.function}</td>
-                          <td className="px-3 py-1.5">{r.individual}</td>
-                          <td className="px-3 py-1.5 font-bold text-center">{r.raci}</td>
-                          <td className="px-3 py-1.5 text-gray-500 whitespace-nowrap">{r.date}</td>
-                          <td className="px-3 py-1.5">{r.comments}</td>
+                        <tr key={i}>
+                          <td>{r.function}</td>
+                          <td>{r.individual}</td>
+                          <td className="font-bold text-center">{r.raci}</td>
+                          <td className="whitespace-nowrap">{r.date}</td>
+                          <td>{r.comments}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -506,23 +485,23 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
               <h3 className="text-lg font-semibold text-gray-800 mb-3">
                 Task Information Delivery Plans (TIDPs)
               </h3>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
-                  <thead className="bg-amber-50">
+              <div className="table-wrapper">
+                <table className="data-table tidp-table">
+                  <thead>
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Task Team</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Discipline</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Team Leader</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Reference</th>
+                      <th>Task Team</th>
+                      <th>Discipline</th>
+                      <th>Team Leader</th>
+                      <th>Reference</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody>
                     {tidpData.map((tidp, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50">
-                        <td className="px-4 py-2 text-sm">{tidp.teamName || tidp.taskTeam || `Task Team ${idx + 1}`}</td>
-                        <td className="px-4 py-2 text-sm">{tidp.discipline || 'N/A'}</td>
-                        <td className="px-4 py-2 text-sm">{tidp.leader || tidp.teamLeader || 'TBD'}</td>
-                        <td className="px-4 py-2 text-sm font-mono">TIDP-{String(idx + 1).padStart(2, '0')}</td>
+                      <tr key={idx}>
+                        <td>{tidp.teamName || tidp.taskTeam || `Task Team ${idx + 1}`}</td>
+                        <td>{tidp.discipline || 'N/A'}</td>
+                        <td>{tidp.leader || tidp.teamLeader || 'TBD'}</td>
+                        <td className="font-mono">TIDP-{String(idx + 1).padStart(2, '0')}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -536,21 +515,21 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
               <h3 className="text-lg font-semibold text-gray-800 mb-3">
                 Master Information Delivery Plan (MIDP)
               </h3>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
-                  <thead className="bg-amber-50">
+              <div className="table-wrapper">
+                <table className="data-table midp-table">
+                  <thead>
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">MIDP Reference</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Version</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase">Status</th>
+                      <th>MIDP Reference</th>
+                      <th>Version</th>
+                      <th>Status</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody>
                     {midpData.map((midp, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50">
-                        <td className="px-4 py-2 text-sm font-mono">MIDP-{String(idx + 1).padStart(2, '0')}</td>
-                        <td className="px-4 py-2 text-sm">{midp.version || '1.0'}</td>
-                        <td className="px-4 py-2 text-sm">{midp.status || 'Active'}</td>
+                      <tr key={idx}>
+                        <td className="font-mono">MIDP-{String(idx + 1).padStart(2, '0')}</td>
+                        <td>{midp.version || '1.0'}</td>
+                        <td>{midp.status || 'Active'}</td>
                       </tr>
                     ))}
                   </tbody>

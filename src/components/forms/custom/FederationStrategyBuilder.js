@@ -1,21 +1,44 @@
 import React, { useEffect } from 'react';
-import { Info, Upload, Download } from 'lucide-react';
+import { Info, Upload, Download, Plus, Trash2 } from 'lucide-react';
 import TipTapEditor from '../editors/TipTapEditor';
 import ClashMatrixHeatmap from './ClashMatrixHeatmap';
 import FieldHeader from '../base/FieldHeader';
 import FieldError from '../base/FieldError';
+import EditableTable from '../base/EditableTable';
+import FederationFlowchartDiagram from '../diagrams/FederationFlowchartDiagram';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 
+/** Default 8-step federation process (benchmark 5.1.5) */
+const defaultFederationProcessSteps = [
+  { title: 'Model submission to CDE', description: 'Discipline models published to Shared area per naming convention' },
+  { title: 'Federation build', description: 'BIM Coordinator creates federated model (NWD/IFC) in coordination tool' },
+  { title: 'Clash detection run', description: 'Automated clash detection using predefined rulesets' },
+  { title: 'Clash report generation', description: 'BCF/issue export for coordination review' },
+  { title: 'Coordination review meeting', description: 'Scheduled review with responsible parties' },
+  { title: 'Issue assignment and resolution', description: 'Clashes assigned; resolution within agreed timeframe' },
+  { title: 'Re-federation and verification', description: 'Updated models federated; clash closure verified' },
+  { title: 'Sign-off and release', description: 'Federated model approved for next stage; see IPMP' }
+];
+
+/** Default issue creation requirements (benchmark 5.1.5) */
+const defaultIssueCreationRequirements = [
+  'Issue ID and source clash reference',
+  'Discipline pair and location',
+  'Description and severity',
+  'Responsible party and due date',
+  'BCF format for tool interoperability'
+];
+
 /**
  * FederationStrategyBuilder
- * Component for Section 9.7: Federation Strategy
+ * Component for Section 9.7 / Section 5.1: Federation Strategy
  *
- * Provides a structured interface for defining:
- * 9.7.1 Overview - Strategic approach to model federation
- * 9.7.2 Clash Detection Matrix Heatmap - Visual matrix of discipline clash relationships
- * 9.7.3 Federation Configuration - Approach, frequency, tools, model breakdown
- * 9.7.4 Coordination Procedures - Clash resolution workflow
+ * Provides structured interface for:
+ * 5.1 Definition and purposes; 5.1.1 Model Breakdown Structure; 5.1.2 Model Register;
+ * 5.1.3 Model Coordination Baseline; 5.1.4 Model Federation Process; 5.1.5 Federation Process Steps;
+ * 9.7.1 Overview; 9.7.2 Clash Matrix; 9.7.3 Configuration; 9.7.4 Coordination Procedures;
+ * Federation Schedule; Coordination by Stage; Clash rulesets A/B/C; Clash responsibilities.
  */
 const FederationStrategyBuilder = ({ field, value = {}, onChange, error, disabled = false }) => {
 
@@ -87,8 +110,57 @@ const FederationStrategyBuilder = ({ field, value = {}, onChange, error, disable
     }
   ];
 
-  // Default structure
+  const defaultModelRegisterColumns = ['Model ID', 'Model Name', 'Discipline', 'Design Package', 'Format', 'Owner', 'Maintenance Responsibility', 'ACC Location', 'Status', 'Notes'];
+  const defaultScheduleColumns = ['Activity', 'Frequency', 'Day/Time', 'Location', 'Responsible'];
+  const defaultCoordinationByStageColumns = ['Stage', 'Federation Frequency', 'Submission Day', 'Review Day', 'Notes'];
+  const defaultClashRespColumns = ['Name', 'Role', 'Run Clash', 'Review', 'Resolve', 'Sign-off', 'Escalate'];
+
+  // Default structure (backward compatible: new fields optional)
   const defaultValue = {
+    definitionAndPurposes: {
+      definition: 'Federation is the process of combining discipline-specific information models into a single coordinated model for spatial coordination, clash detection, and integrated review in accordance with ISO 19650-2.',
+      purposes: [
+        'Spatial coordination across disciplines',
+        'Clash detection and resolution',
+        'Integrated model delivery at milestones',
+        'Single source for coordination review'
+      ]
+    },
+    modelBreakdownStructure: {
+      hierarchyLevels: [
+        { level: 'Asset', description: 'Top-level asset or project' },
+        { level: 'Design Package', description: 'Contract or package boundary' },
+        { level: 'Discipline', description: 'Architecture, Structure, MEP, etc.' }
+      ],
+      principles: {
+        uniclassAlignment: 'Model breakdown aligns with Uniclass 2015 where applicable',
+        maxFileSize: 'Single model file size limits to be agreed (e.g. 500 MB)',
+        ownership: 'Each model has a single responsible task team and originator'
+      }
+    },
+    modelRegister: {
+      columns: defaultModelRegisterColumns,
+      data: []
+    },
+    coordinationBaseline: {
+      sharedLevelsGrids: 'A Shared Levels and Grids model is maintained as the spatial baseline; all discipline models align to this baseline.',
+      geolocationVerification: [
+        'Project base point and shared coordinates verified at project start',
+        'Survey control points documented and shared',
+        'Grid and level consistency checked at each federation',
+        'Coordinate system cross-referenced to Information Standard'
+      ],
+      coordinateSystemRef: 'See Information Standard Section 8.3 (Coordinates)'
+    },
+    federationResponsibility: 'Lead BIM Coordinator',
+    singleFileFormat: 'NWD',
+    federationProcessSteps: defaultFederationProcessSteps,
+    issueCreationRequirements: defaultIssueCreationRequirements,
+    ipmpReference: 'See Information Production Methods and Procedures (IPMP) for detailed workflows',
+    federationSchedule: { columns: defaultScheduleColumns, data: [] },
+    coordinationByStage: { columns: defaultCoordinationByStageColumns, data: [] },
+    clashResponsibilities: { columns: defaultClashRespColumns, data: [] },
+    clashRulesets: { categoryA: [], categoryB: [], categoryC: [] },
     overview: '<p>Federation strategy establishes the framework for coordinating multi-discipline BIM models in compliance with <strong>ISO 19650-2:2018</strong> clause 5.3.2. The approach ensures spatial coordination, clash detection, and integrated model delivery throughout all project phases.</p><p><strong>Key principles:</strong></p><ul><li>Discipline-based federation with clear model ownership</li><li>Weekly federation cycles aligned with project milestones</li><li>Automated clash detection with predefined tolerance matrices</li><li>Structured coordination workflow following ISO 19650-2 protocols</li></ul>',
     clashMatrix: {
       disciplines: [
@@ -134,16 +206,70 @@ const FederationStrategyBuilder = ({ field, value = {}, onChange, error, disable
 
   const { name } = field;
 
-  // Handle different value types
+  // Handle different value types (backward compatible: merge new fields from defaultValue)
   let currentValue = defaultValue;
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     currentValue = {
-      overview: value.overview || defaultValue.overview,
-      clashMatrix: value.clashMatrix || defaultValue.clashMatrix,
-      configuration: value.configuration || defaultValue.configuration,
-      coordinationProcedures: value.coordinationProcedures || defaultValue.coordinationProcedures
+      definitionAndPurposes: value.definitionAndPurposes ?? defaultValue.definitionAndPurposes,
+      modelBreakdownStructure: value.modelBreakdownStructure ?? defaultValue.modelBreakdownStructure,
+      modelRegister: value.modelRegister ?? defaultValue.modelRegister,
+      coordinationBaseline: value.coordinationBaseline ?? defaultValue.coordinationBaseline,
+      federationResponsibility: value.federationResponsibility ?? defaultValue.federationResponsibility,
+      singleFileFormat: value.singleFileFormat ?? defaultValue.singleFileFormat,
+      federationProcessSteps: value.federationProcessSteps ?? defaultValue.federationProcessSteps,
+      issueCreationRequirements: value.issueCreationRequirements ?? defaultValue.issueCreationRequirements,
+      ipmpReference: value.ipmpReference ?? defaultValue.ipmpReference,
+      federationSchedule: value.federationSchedule ?? defaultValue.federationSchedule,
+      coordinationByStage: value.coordinationByStage ?? defaultValue.coordinationByStage,
+      clashResponsibilities: value.clashResponsibilities ?? defaultValue.clashResponsibilities,
+      clashRulesets: value.clashRulesets ?? defaultValue.clashRulesets,
+      overview: value.overview ?? defaultValue.overview,
+      clashMatrix: value.clashMatrix ?? defaultValue.clashMatrix,
+      configuration: value.configuration ?? defaultValue.configuration,
+      coordinationProcedures: value.coordinationProcedures ?? defaultValue.coordinationProcedures
     };
   }
+
+  const update = (key, val) => onChange(name, { ...currentValue, [key]: val });
+
+  const handleDefinitionChange = (v) => update('definitionAndPurposes', { ...currentValue.definitionAndPurposes, definition: v });
+  const handlePurposesChange = (purposes) => update('definitionAndPurposes', { ...currentValue.definitionAndPurposes, purposes });
+  const addPurpose = () => handlePurposesChange([...(currentValue.definitionAndPurposes.purposes || []), '']);
+  const removePurpose = (i) => handlePurposesChange(currentValue.definitionAndPurposes.purposes.filter((_, idx) => idx !== i));
+  const setPurpose = (i, text) => {
+    const p = [...(currentValue.definitionAndPurposes.purposes || [])];
+    p[i] = text;
+    handlePurposesChange(p);
+  };
+
+  const handleModelBreakdownChange = (key, val) => update('modelBreakdownStructure', { ...currentValue.modelBreakdownStructure, [key]: val });
+  const setHierarchyLevel = (idx, field, text) => {
+    const levels = [...(currentValue.modelBreakdownStructure.hierarchyLevels || [])];
+    levels[idx] = { ...levels[idx], [field]: text };
+    handleModelBreakdownChange('hierarchyLevels', levels);
+  };
+  const setPrinciple = (key, text) => handleModelBreakdownChange('principles', { ...currentValue.modelBreakdownStructure.principles, [key]: text });
+
+  const handleModelRegisterChange = (_, val) => update('modelRegister', val && val.data !== undefined ? val : { ...currentValue.modelRegister, ...val });
+  const handleCoordinationBaselineChange = (key, val) => update('coordinationBaseline', { ...currentValue.coordinationBaseline, [key]: val });
+  const setGeolocationItem = (idx, text) => {
+    const list = [...(currentValue.coordinationBaseline.geolocationVerification || [])];
+    list[idx] = text;
+    handleCoordinationBaselineChange('geolocationVerification', list);
+  };
+  const addGeolocationItem = () => handleCoordinationBaselineChange('geolocationVerification', [...(currentValue.coordinationBaseline.geolocationVerification || []), '']);
+  const removeGeolocationItem = (i) => handleCoordinationBaselineChange('geolocationVerification', currentValue.coordinationBaseline.geolocationVerification.filter((_, idx) => idx !== i));
+
+  const handleFederationProcessStepChange = (idx, field, val) => {
+    const steps = [...(currentValue.federationProcessSteps || [])];
+    steps[idx] = { ...(steps[idx] || {}), [field]: val };
+    update('federationProcessSteps', steps);
+  };
+  const handleIssueCreationChange = (idx, text) => {
+    const list = [...(currentValue.issueCreationRequirements || [])];
+    list[idx] = text;
+    update('issueCreationRequirements', list);
+  };
 
   // Handler: Overview change
   const handleOverviewChange = (newValue) => {
@@ -305,7 +431,53 @@ const FederationStrategyBuilder = ({ field, value = {}, onChange, error, disable
       </div>
 
       <div className="space-y-6">
-        {/* 8.6.1 Overview */}
+        {/* 5.1 Definition and purposes */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <FieldHeader fieldName="federationStrategy_definition" label="Definition and Purposes of Federation" number="5.1" asSectionHeader={true} />
+          <p className="text-sm text-gray-600 mb-3">Define federation and its purposes (benchmark Section 5)</p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Definition</label>
+              <textarea
+                value={currentValue.definitionAndPurposes?.definition ?? ''}
+                onChange={(e) => handleDefinitionChange(e.target.value)}
+                disabled={disabled}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Federation is the process of combining discipline-specific models..."
+              />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700">Purposes</label>
+                {!disabled && (
+                  <button type="button" onClick={addPurpose} className="flex items-center gap-1 text-sm text-blue-600 hover:underline">
+                    <Plus className="w-4 h-4" /> Add purpose
+                  </button>
+                )}
+              </div>
+              <ul className="space-y-2">
+                {(currentValue.definitionAndPurposes?.purposes || []).map((p, i) => (
+                  <li key={i} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={p}
+                      onChange={(e) => setPurpose(i, e.target.value)}
+                      disabled={disabled}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g. Spatial coordination across disciplines"
+                    />
+                    {!disabled && (
+                      <button type="button" onClick={() => removePurpose(i)} className="p-2 text-red-600 hover:bg-red-50 rounded" aria-label="Remove"><Trash2 className="w-4 h-4" /></button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* 9.7.1 Overview */}
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <FieldHeader
             fieldName="federationStrategy_overview"
@@ -323,6 +495,141 @@ const FederationStrategyBuilder = ({ field, value = {}, onChange, error, disable
             autoSaveKey="federation-overview"
             fieldName="federationOverview"
           />
+        </div>
+
+        {/* 5.1.1 Model Breakdown Structure */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <FieldHeader fieldName="federationStrategy_modelBreakdown" label="Model Breakdown Structure" number="5.1.1" asSectionHeader={true} />
+          <p className="text-sm text-gray-600 mb-4">3-level hierarchy and principles (Uniclass, file size, ownership)</p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Hierarchy (Asset → Design Package → Discipline)</label>
+              <div className="space-y-2">
+                {(currentValue.modelBreakdownStructure?.hierarchyLevels || []).map((row, idx) => (
+                  <div key={idx} className="flex gap-2 items-center">
+                    <span className="text-sm text-gray-500 w-32">{row.level}</span>
+                    <input
+                      type="text"
+                      value={row.description || ''}
+                      onChange={(e) => setHierarchyLevel(idx, 'description', e.target.value)}
+                      disabled={disabled}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      placeholder="Description"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-3">
+              <label className="block text-sm font-medium text-gray-700">Principles</label>
+              <input type="text" value={currentValue.modelBreakdownStructure?.principles?.uniclassAlignment ?? ''} onChange={(e) => setPrinciple('uniclassAlignment', e.target.value)} disabled={disabled} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Uniclass alignment" />
+              <input type="text" value={currentValue.modelBreakdownStructure?.principles?.maxFileSize ?? ''} onChange={(e) => setPrinciple('maxFileSize', e.target.value)} disabled={disabled} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Max file size" />
+              <input type="text" value={currentValue.modelBreakdownStructure?.principles?.ownership ?? ''} onChange={(e) => setPrinciple('ownership', e.target.value)} disabled={disabled} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Ownership" />
+            </div>
+          </div>
+        </div>
+
+        {/* 5.1.2 Model Register (Federated Model Breakdown) */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <FieldHeader fieldName="federationStrategy_modelRegister" label="Federated Model Breakdown (Model Register)" number="5.1.2" asSectionHeader={true} />
+          <p className="text-sm text-gray-600 mb-4">10-field Model Register; maintenance responsibility; ACC location</p>
+          <EditableTable
+            field={{ name: 'fs_modelRegister', columns: currentValue.modelRegister?.columns || defaultModelRegisterColumns }}
+            value={currentValue.modelRegister}
+            onChange={(_, val) => handleModelRegisterChange(_, val)}
+            error={null}
+          />
+        </div>
+
+        {/* 5.1.3 Model Coordination Baseline */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <FieldHeader fieldName="federationStrategy_coordinationBaseline" label="Model Coordination Baseline" number="5.1.3" asSectionHeader={true} />
+          <p className="text-sm text-gray-600 mb-4">Shared Levels and Grids model; geolocation verification; coordinate system cross-reference</p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Shared Levels and Grids model</label>
+              <textarea value={currentValue.coordinationBaseline?.sharedLevelsGrids ?? ''} onChange={(e) => handleCoordinationBaselineChange('sharedLevelsGrids', e.target.value)} disabled={disabled} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Describe the shared spatial baseline..." />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700">Geolocation verification requirements</label>
+                {!disabled && (
+                  <button type="button" onClick={addGeolocationItem} className="flex items-center gap-1 text-sm text-blue-600 hover:underline"><Plus className="w-4 h-4" /> Add</button>
+                )}
+              </div>
+              <ul className="space-y-2">
+                {(currentValue.coordinationBaseline?.geolocationVerification || []).map((item, i) => (
+                  <li key={i} className="flex gap-2">
+                    <input type="text" value={item} onChange={(e) => setGeolocationItem(i, e.target.value)} disabled={disabled} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Verification requirement" />
+                    {!disabled && <button type="button" onClick={() => removeGeolocationItem(i)} className="p-2 text-red-600 hover:bg-red-50 rounded" aria-label="Remove"><Trash2 className="w-4 h-4" /></button>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Coordinate system cross-reference</label>
+              <input type="text" value={currentValue.coordinationBaseline?.coordinateSystemRef ?? ''} onChange={(e) => handleCoordinationBaselineChange('coordinateSystemRef', e.target.value)} disabled={disabled} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="e.g. See Information Standard Section 8.3" />
+            </div>
+          </div>
+        </div>
+
+        {/* 5.1.4 Model Federation Process */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <FieldHeader fieldName="federationStrategy_federationProcess" label="Model Federation Process" number="5.1.4" asSectionHeader={true} />
+          <p className="text-sm text-gray-600 mb-4">Federation responsibility assignment; single-file-per-federation policy (e.g. NWD/IFC2x3)</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Federation responsibility</label>
+              <input type="text" value={currentValue.federationResponsibility ?? ''} onChange={(e) => update('federationResponsibility', e.target.value)} disabled={disabled} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="e.g. Lead BIM Coordinator" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Single-file-per-federation format</label>
+              <select value={currentValue.singleFileFormat ?? 'NWD'} onChange={(e) => update('singleFileFormat', e.target.value)} disabled={disabled} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                <option value="NWD">NWD (Navisworks)</option>
+                <option value="IFC2x3">IFC 2x3</option>
+                <option value="IFC4">IFC 4</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* 5.1.5 Federation Process Steps */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <FieldHeader fieldName="federationStrategy_processSteps" label="Federation Process Steps" number="5.1.5" asSectionHeader={true} />
+          <p className="text-sm text-gray-600 mb-4">8-step process; ACC/Navisworks; issue creation requirements; IPMP cross-reference</p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Process steps</label>
+              <ol className="list-decimal list-inside space-y-2">
+                {(currentValue.federationProcessSteps || []).map((step, idx) => (
+                  <li key={idx} className="flex gap-2">
+                    <span className="text-gray-500 w-6">{idx + 1}.</span>
+                    <input type="text" value={step.title ?? ''} onChange={(e) => handleFederationProcessStepChange(idx, 'title', e.target.value)} disabled={disabled} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Step title" />
+                    <input type="text" value={step.description ?? ''} onChange={(e) => handleFederationProcessStepChange(idx, 'description', e.target.value)} disabled={disabled} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Description" />
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Issue creation requirements (5 items)</label>
+              <ul className="space-y-2">
+                {(currentValue.issueCreationRequirements || []).map((item, idx) => (
+                  <li key={idx}>
+                    <input type="text" value={item} onChange={(e) => handleIssueCreationChange(idx, e.target.value)} disabled={disabled} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Requirement" />
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">IPMP cross-reference</label>
+              <input type="text" value={currentValue.ipmpReference ?? ''} onChange={(e) => update('ipmpReference', e.target.value)} disabled={disabled} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="See Information Production Methods and Procedures (IPMP)..." />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Figure 5-1 — Federation flowchart</label>
+              <FederationFlowchartDiagram steps={currentValue.federationProcessSteps || []} />
+            </div>
+          </div>
         </div>
 
         {/* 8.6.2 Clash Detection Matrix Heatmap */}
@@ -485,6 +792,77 @@ const FederationStrategyBuilder = ({ field, value = {}, onChange, error, disable
             autoSaveKey="coordination-procedures"
             fieldName="coordinationProcedures"
           />
+        </div>
+
+        {/* Section 9: Federation Schedule */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <FieldHeader fieldName="federationStrategy_schedule" label="Federation Schedule" number="9.1" asSectionHeader={true} />
+          <p className="text-sm text-gray-600 mb-4">Activity, frequency, day/time, location (benchmark Table 9-3)</p>
+          <EditableTable
+            field={{ name: 'fs_schedule', columns: currentValue.federationSchedule?.columns || defaultScheduleColumns }}
+            value={currentValue.federationSchedule}
+            onChange={(_, val) => update('federationSchedule', val && val.data !== undefined ? val : { ...currentValue.federationSchedule, ...val })}
+            error={null}
+          />
+        </div>
+
+        {/* Coordination by Project Stage */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <FieldHeader fieldName="federationStrategy_coordinationByStage" label="Coordination by Project Stage" number="9.2" asSectionHeader={true} />
+          <p className="text-sm text-gray-600 mb-4">Stage, federation frequency, submission day, review day (benchmark Table 9-4)</p>
+          <EditableTable
+            field={{ name: 'fs_coordinationByStage', columns: currentValue.coordinationByStage?.columns || defaultCoordinationByStageColumns }}
+            value={currentValue.coordinationByStage}
+            onChange={(_, val) => update('coordinationByStage', val && val.data !== undefined ? val : { ...currentValue.coordinationByStage, ...val })}
+            error={null}
+          />
+        </div>
+
+        {/* Clash Detection Responsibilities (Table 9-6) */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <FieldHeader fieldName="federationStrategy_clashResponsibilities" label="Clash Detection Responsibilities" number="9.3" asSectionHeader={true} />
+          <p className="text-sm text-gray-600 mb-4">Named individuals with role and responsibility columns</p>
+          <EditableTable
+            field={{ name: 'fs_clashResponsibilities', columns: currentValue.clashResponsibilities?.columns || defaultClashRespColumns }}
+            value={currentValue.clashResponsibilities}
+            onChange={(_, val) => update('clashResponsibilities', val && val.data !== undefined ? val : { ...currentValue.clashResponsibilities, ...val })}
+            error={null}
+          />
+        </div>
+
+        {/* Tiered Clash Rulesets (Category A/B/C) */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <FieldHeader fieldName="federationStrategy_rulesets" label="Clash Detection Rulesets by Severity" number="9.2.3" asSectionHeader={true} />
+          <p className="text-sm text-gray-600 mb-4">Category A (Critical), B (Significant), C (Minor) — ID, discipline pair, description, tolerance</p>
+          <div className="space-y-6">
+            {[
+              { key: 'categoryA', label: 'Category A — Critical', rules: currentValue.clashRulesets?.categoryA || [] },
+              { key: 'categoryB', label: 'Category B — Significant', rules: currentValue.clashRulesets?.categoryB || [] },
+              { key: 'categoryC', label: 'Category C — Minor', rules: currentValue.clashRulesets?.categoryC || [] }
+            ].map(({ key, label, rules }) => (
+              <div key={key}>
+                <h5 className="text-sm font-medium text-gray-700 mb-2">{label}</h5>
+                <div className="space-y-2">
+                  {(rules || []).map((rule, idx) => (
+                    <div key={idx} className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <input type="text" value={rule.id ?? ''} onChange={(e) => { const r = [...(currentValue.clashRulesets?.[key] || [])]; r[idx] = { ...r[idx], id: e.target.value }; update('clashRulesets', { ...currentValue.clashRulesets, [key]: r }); }} disabled={disabled} placeholder="ID" className="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                      <input type="text" value={rule.disciplinePair ?? ''} onChange={(e) => { const r = [...(currentValue.clashRulesets?.[key] || [])]; r[idx] = { ...r[idx], disciplinePair: e.target.value }; update('clashRulesets', { ...currentValue.clashRulesets, [key]: r }); }} disabled={disabled} placeholder="Discipline pair" className="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                      <input type="text" value={rule.description ?? ''} onChange={(e) => { const r = [...(currentValue.clashRulesets?.[key] || [])]; r[idx] = { ...r[idx], description: e.target.value }; update('clashRulesets', { ...currentValue.clashRulesets, [key]: r }); }} disabled={disabled} placeholder="Description" className="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                      <input type="text" value={rule.tolerance ?? ''} onChange={(e) => { const r = [...(currentValue.clashRulesets?.[key] || [])]; r[idx] = { ...r[idx], tolerance: e.target.value }; update('clashRulesets', { ...currentValue.clashRulesets, [key]: r }); }} disabled={disabled} placeholder="Tolerance (mm)" className="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                      {!disabled && (
+                        <button type="button" onClick={() => update('clashRulesets', { ...currentValue.clashRulesets, [key]: (currentValue.clashRulesets?.[key] || []).filter((_, i) => i !== idx) })} className="p-2 text-red-600 hover:bg-red-50 rounded" aria-label="Remove"><Trash2 className="w-4 h-4" /></button>
+                      )}
+                    </div>
+                  ))}
+                  {!disabled && (
+                    <button type="button" onClick={() => update('clashRulesets', { ...currentValue.clashRulesets, [key]: [...(currentValue.clashRulesets?.[key] || []), { id: '', disciplinePair: '', description: '', tolerance: '' }] })} className="flex items-center gap-1 text-sm text-blue-600 hover:underline">
+                      <Plus className="w-4 h-4" /> Add ruleset
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

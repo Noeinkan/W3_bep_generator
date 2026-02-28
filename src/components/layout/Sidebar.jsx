@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { FileText, ChevronLeft, ChevronRight, FolderOpen, ArrowLeftRight } from 'lucide-react';
 import { useProject } from '../../contexts/ProjectContext';
+import { SIDEBAR_TOGGLE } from '../../constants/sidebarUi';
 
 const Sidebar = ({ isCollapsed, setIsCollapsed, navigation }) => {
   const { currentProject } = useProject();
@@ -30,12 +31,12 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, navigation }) => {
             </NavLink>
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-200"
+              className={SIDEBAR_TOGGLE.buttonExpanded}
               aria-label="Collapse sidebar"
               aria-expanded={!isCollapsed}
               title="Collapse sidebar"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className={SIDEBAR_TOGGLE.iconCollapse} />
             </button>
           </>
         ) : (
@@ -45,12 +46,12 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, navigation }) => {
             </div>
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="p-1 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-200"
+              className={SIDEBAR_TOGGLE.buttonCollapsed}
               aria-label="Expand sidebar"
               aria-expanded={!isCollapsed}
               title="Expand sidebar"
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className={SIDEBAR_TOGGLE.iconExpand} />
             </button>
           </div>
         )}

@@ -598,8 +598,13 @@ class HtmlTemplateService {
       return this.renderNamingConventions(value);
     }
 
+    // Federation strategy - render as structured HTML (benchmark Section 5)
+    if (field.type === 'federation-strategy' || field.name === 'federationStrategy') {
+      return this.renderFederationStrategy(value);
+    }
+
     // Custom visual components - use embedded screenshots
-    const visualComponentTypes = ['orgchart', 'orgstructure-data-table', 'cdeDiagram', 'mindmap', 'fileStructure', 'federation-strategy'];
+    const visualComponentTypes = ['orgchart', 'orgstructure-data-table', 'cdeDiagram', 'mindmap', 'fileStructure'];
 
     if (visualComponentTypes.includes(field.type)) {
       return this.renderComponentImage(field.name, componentImages);
@@ -681,22 +686,43 @@ class HtmlTemplateService {
   }
 
   /**
-   * Render Document Hierarchy diagram as HTML (PIR → EIR → BEP → Information Standard → IPMP → branches)
+   * Render Document Hierarchy diagram as HTML (ISO 19650: 3 columns, 2 rows).
+   * Column 1: Interested parties' info requirements (OIR, PIR). Column 2: Appointment info requirements (AIR, EIR). Column 3: Information deliverables (AIM, PIM). Relationship labels: contributes to, encapsulates, specifies.
    * @returns {string} HTML string
    */
   renderDocumentHierarchyDiagramHtml() {
-    const nodes = ['PIR', 'EIR', 'BEP', 'Information Standard', 'IPMP'];
-    const branchLabels = ['Mobilisation Plan', 'Risk Register', 'Information Delivery Plan'];
-    const nodeHtml = nodes.map(n => `<span class="diagram-node" style="display:inline-block;padding:0.35rem 0.75rem;border-radius:0.375rem;background:#f1f5f9;border:1px solid #e2e8f0;font-size:0.875rem;font-weight:500;white-space:nowrap;margin:0 0.25rem;">${this.escapeHtml(n)}</span>`).join('<span style="margin:0 0.25rem;color:#94a3b8;">→</span>');
-    const branchHtml = branchLabels.map(l => `<span class="diagram-node" style="display:block;padding:0.35rem 0.75rem;border-radius:0.375rem;background:#f1f5f9;border:1px solid #e2e8f0;font-size:0.875rem;font-weight:500;white-space:nowrap;margin:0.25rem 0;">${this.escapeHtml(l)}</span>`).join('');
+    const box = 'border:2px solid #334155;background:#fff;border-radius:0.375rem;padding:0.4rem 0.6rem;font-size:0.8rem;font-weight:600;color:#0f172a;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,0.05);';
     return `
-      <div class="static-diagram document-hierarchy" style="border:1px solid #e2e8f0;background:#f8fafc;padding:1rem;border-radius:0.5rem;margin:0.5rem 0;">
-        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:0.5rem;">
-          ${nodeHtml}
-          <span style="margin:0 0.25rem;color:#94a3b8;">→</span>
-          <div style="display:flex;flex-direction:column;gap:0.25rem;">${branchHtml}</div>
+      <div class="static-diagram document-hierarchy" style="border:1px solid #e2e8f0;background:#fff;padding:1rem;border-radius:0.5rem;margin:0.5rem 0;">
+        <div style="display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:0;max-width:580px;margin:0 auto;">
+          <div style="display:flex;flex-direction:column;gap:0.4rem;background:#bae6fd;border:1px solid #7dd3fc;border-radius:0.5rem 0 0 0.5rem;padding:0.6rem;">
+            <p style="font-size:0.6rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:#0c4a6e;text-align:center;margin:0 0 0.2rem 0;">Interested parties' information requirements</p>
+            <div style="${box}">Organizational Information Requirements (OIR)</div>
+            <div style="text-align:center;"><span style="color:#64748b;font-size:0.9rem;">↓</span><br/><span style="font-size:0.6rem;font-weight:500;color:#475569;">contributes to</span></div>
+            <div style="${box}">Project Information Requirements (PIR)</div>
+          </div>
+          <div style="display:flex;flex-direction:column;justify-content:space-around;align-items:center;padding:0 0.4rem;background:#f8fafc;min-height:160px;">
+            <div style="text-align:center;"><span style="font-size:0.6rem;font-weight:500;color:#475569;">encapsulates</span><br/><span style="color:#94a3b8;font-size:1rem;">→</span></div>
+            <div style="text-align:center;"><span style="font-size:0.6rem;font-weight:500;color:#475569;">contributes to</span><br/><span style="color:#94a3b8;font-size:1rem;">→</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.4rem;background:#7dd3fc;border:1px solid #38bdf8;padding:0.6rem;">
+            <p style="font-size:0.6rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:#0c4a6e;text-align:center;margin:0 0 0.2rem 0;">Appointment information requirements</p>
+            <div style="${box}">Asset Information Requirements (AIR)</div>
+            <div style="text-align:center;"><span style="color:#64748b;font-size:0.9rem;">↓</span><br/><span style="font-size:0.6rem;font-weight:500;color:#475569;">contributes to</span></div>
+            <div style="${box}">Exchange Information Requirements (EIR)</div>
+          </div>
+          <div style="display:flex;flex-direction:column;justify-content:space-around;align-items:center;padding:0 0.4rem;background:#f8fafc;min-height:160px;">
+            <div style="text-align:center;"><span style="font-size:0.6rem;font-weight:500;color:#475569;">specifies</span><br/><span style="color:#94a3b8;font-size:1rem;">→</span></div>
+            <div style="text-align:center;"><span style="font-size:0.6rem;font-weight:500;color:#475569;">specifies</span><br/><span style="color:#94a3b8;font-size:1rem;">→</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.4rem;background:#0ea5e9;border:1px solid #0284c7;border-radius:0 0.5rem 0.5rem 0;padding:0.6rem;">
+            <p style="font-size:0.6rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:#fff;text-align:center;margin:0 0 0.2rem 0;">Information deliverables</p>
+            <div style="${box}">Asset Information Model (AIM)</div>
+            <div style="text-align:center;"><span style="color:#64748b;font-size:0.9rem;">↑</span><br/><span style="font-size:0.6rem;font-weight:500;color:#475569;">contributes to</span></div>
+            <div style="${box}">Project Information Model (PIM)</div>
+          </div>
         </div>
-        <p style="margin-top:0.75rem;font-size:0.75rem;color:#64748b;">PIR = Project Information Requirements · EIR = Exchange Information Requirements · BEP = BIM Execution Plan · IPMP = Information Production Methods and Procedures</p>
+        <p style="margin-top:0.75rem;padding-top:0.5rem;border-top:1px solid #e2e8f0;font-size:0.65rem;color:#64748b;">OIR contributes to PIR; OIR encapsulates AIR; AIR and PIR contribute to EIR; EIR specifies PIM; AIR specifies AIM; PIM contributes to AIM.</p>
       </div>
     `;
   }
@@ -1025,6 +1051,170 @@ class HtmlTemplateService {
           </div>
         </div>
       `;
+    }
+
+    html += '</div>';
+    return html;
+  }
+
+  /**
+   * Render federation strategy as structured HTML (benchmark Section 5)
+   * @param {Object} value - federationStrategy object from form
+   * @returns {string} Federation strategy HTML
+   */
+  renderFederationStrategy(value) {
+    if (!value || typeof value !== 'object') {
+      return '<p class="field-value">No federation strategy defined</p>';
+    }
+
+    const e = (s) => this.escapeHtml(String(s ?? ''));
+    const subsection = (title, content) => content ? `<div class="subsection"><h4 class="subsection-title">${e(title)}</h4>${content}</div>` : '';
+    const tableHtml = (field, rows) => {
+      if (!rows?.data?.length) return '';
+      return this.renderTable(field, rows);
+    };
+
+    let html = '<div class="federation-strategy-section">';
+
+    // 5.1 Definition and purposes
+    const def = value.definitionAndPurposes;
+    if (def?.definition || (def?.purposes && def.purposes.length > 0)) {
+      let block = '';
+      if (def.definition) block += `<p>${e(def.definition)}</p>`;
+      if (Array.isArray(def.purposes) && def.purposes.some((p) => p && String(p).trim())) {
+        block += '<ul>';
+        def.purposes.filter((p) => p && String(p).trim()).forEach((p) => { block += `<li>${e(p)}</li>`; });
+        block += '</ul>';
+      }
+      if (block) html += subsection('5.1 Definition and Purposes of Federation', block);
+    }
+
+    // 9.7.1 Overview (rich text)
+    if (value.overview) {
+      const sanitized = this.isLikelyHtml(value.overview) ? this.sanitizeRichTextHtml(value.overview) : `<p>${e(value.overview)}</p>`;
+      html += subsection('9.7.1 Federation Overview', `<div class="rich-text-content">${sanitized}</div>`);
+    }
+
+    // 5.1.1 Model Breakdown Structure
+    const mbs = value.modelBreakdownStructure;
+    if (mbs?.hierarchyLevels?.length || mbs?.principles) {
+      let block = '';
+      if (mbs.hierarchyLevels?.length) {
+        block += '<p><strong>Hierarchy:</strong></p><ul>';
+        mbs.hierarchyLevels.forEach((row) => { block += `<li>${e(row.level)}${row.description ? ` — ${e(row.description)}` : ''}</li>`; });
+        block += '</ul>';
+      }
+      if (mbs.principles && (mbs.principles.uniclassAlignment || mbs.principles.maxFileSize || mbs.principles.ownership)) {
+        block += '<p><strong>Principles:</strong></p><ul>';
+        if (mbs.principles.uniclassAlignment) block += `<li>${e(mbs.principles.uniclassAlignment)}</li>`;
+        if (mbs.principles.maxFileSize) block += `<li>${e(mbs.principles.maxFileSize)}</li>`;
+        if (mbs.principles.ownership) block += `<li>${e(mbs.principles.ownership)}</li>`;
+        block += '</ul>';
+      }
+      if (block) html += subsection('5.1.1 Model Breakdown Structure', block);
+    }
+
+    // 5.1.2 Model Register
+    if (value.modelRegister?.data?.length) {
+      html += subsection('5.1.2 Federated Model Breakdown (Model Register)', tableHtml({ columns: value.modelRegister.columns || [] }, value.modelRegister));
+    }
+
+    // 5.1.3 Model Coordination Baseline
+    const cb = value.coordinationBaseline;
+    if (cb?.sharedLevelsGrids || (cb?.geolocationVerification?.length) || cb?.coordinateSystemRef) {
+      let block = '';
+      if (cb.sharedLevelsGrids) block += `<p>${e(cb.sharedLevelsGrids)}</p>`;
+      if (Array.isArray(cb.geolocationVerification) && cb.geolocationVerification.some((v) => v && String(v).trim())) {
+        block += '<p><strong>Geolocation verification:</strong></p><ul>';
+        cb.geolocationVerification.filter((v) => v && String(v).trim()).forEach((v) => { block += `<li>${e(v)}</li>`; });
+        block += '</ul>';
+      }
+      if (cb.coordinateSystemRef) block += `<p><strong>Coordinate system:</strong> ${e(cb.coordinateSystemRef)}</p>`;
+      if (block) html += subsection('5.1.3 Model Coordination Baseline', block);
+    }
+
+    // 5.1.4 Model Federation Process
+    if (value.federationResponsibility || value.singleFileFormat) {
+      let block = '<p>';
+      if (value.federationResponsibility) block += `Federation responsibility: ${e(value.federationResponsibility)}. `;
+      if (value.singleFileFormat) block += `Single-file-per-federation format: ${e(value.singleFileFormat)}.`;
+      block += '</p>';
+      html += subsection('5.1.4 Model Federation Process', block);
+    }
+
+    // 5.1.5 Federation Process Steps
+    const steps = value.federationProcessSteps;
+    if (Array.isArray(steps) && steps.length > 0) {
+      let block = '<ol>';
+      steps.forEach((s, i) => {
+        block += `<li><strong>${e(s.title || `Step ${i + 1}`)}</strong>${s.description ? ` — ${e(s.description)}` : ''}</li>`;
+      });
+      block += '</ol>';
+      if (value.issueCreationRequirements?.length) {
+        block += '<p><strong>Issue creation requirements:</strong></p><ul>';
+        value.issueCreationRequirements.filter((r) => r && String(r).trim()).forEach((r) => { block += `<li>${e(r)}</li>`; });
+        block += '</ul>';
+      }
+      if (value.ipmpReference) block += `<p><strong>IPMP cross-reference:</strong> ${e(value.ipmpReference)}</p>`;
+      html += subsection('5.1.5 Federation Process Steps', block);
+    }
+
+    // 9.7.2 Clash matrix summary (disciplines + count of clashes)
+    const cm = value.clashMatrix;
+    if (cm?.disciplines?.length && cm?.clashes?.length) {
+      let block = `<p>Disciplines: ${e((cm.disciplines || []).join(', '))}. Clash pairs defined: ${(cm.clashes || []).length}.</p>`;
+      html += subsection('9.7.2 Clash Detection Matrix', block);
+    }
+
+    // 9.7.3 Configuration
+    const config = value.configuration;
+    if (config) {
+      let block = '<p>';
+      if (config.approach) block += `Approach: ${e(config.approach)}. `;
+      if (config.frequency) block += `Frequency: ${e(config.frequency)}. `;
+      if (config.tools?.length) block += `Tools: ${e(config.tools.join(', '))}. `;
+      if (config.modelBreakdown?.length) block += `Model breakdown: ${e(config.modelBreakdown.join(', '))}.`;
+      block += '</p>';
+      html += subsection('9.7.3 Federation Configuration', block);
+    }
+
+    // 9.7.4 Coordination Procedures (rich text)
+    if (value.coordinationProcedures) {
+      const sanitized = this.isLikelyHtml(value.coordinationProcedures) ? this.sanitizeRichTextHtml(value.coordinationProcedures) : `<p>${e(value.coordinationProcedures)}</p>`;
+      html += subsection('9.7.4 Coordination Procedures', `<div class="rich-text-content">${sanitized}</div>`);
+    }
+
+    // Federation Schedule
+    if (value.federationSchedule?.data?.length) {
+      html += subsection('Federation Schedule', tableHtml({ columns: value.federationSchedule.columns || [] }, value.federationSchedule));
+    }
+
+    // Coordination by Stage
+    if (value.coordinationByStage?.data?.length) {
+      html += subsection('Coordination by Project Stage', tableHtml({ columns: value.coordinationByStage.columns || [] }, value.coordinationByStage));
+    }
+
+    // Clash Detection Responsibilities
+    if (value.clashResponsibilities?.data?.length) {
+      html += subsection('Clash Detection Responsibilities', tableHtml({ columns: value.clashResponsibilities.columns || [] }, value.clashResponsibilities));
+    }
+
+    // Tiered rulesets
+    const rulesets = value.clashRulesets;
+    if (rulesets && (rulesets.categoryA?.length || rulesets.categoryB?.length || rulesets.categoryC?.length)) {
+      let block = '';
+      ['categoryA', 'categoryB', 'categoryC'].forEach((key) => {
+        const arr = rulesets[key];
+        const label = key === 'categoryA' ? 'Category A — Critical' : key === 'categoryB' ? 'Category B — Significant' : 'Category C — Minor';
+        if (Array.isArray(arr) && arr.length > 0) {
+          block += `<p><strong>${label}</strong></p><table class="data-table"><thead><tr><th>ID</th><th>Discipline pair</th><th>Description</th><th>Tolerance</th></tr></thead><tbody>`;
+          arr.forEach((r) => {
+            block += `<tr><td>${e(r.id)}</td><td>${e(r.disciplinePair)}</td><td>${e(r.description)}</td><td>${e(r.tolerance)}</td></tr>`;
+          });
+          block += '</tbody></table>';
+        }
+      });
+      if (block) html += subsection('Clash Detection Rulesets by Severity', block);
     }
 
     html += '</div>';
@@ -1541,6 +1731,51 @@ class HtmlTemplateService {
         margin: 12px 0;
         border: 1px solid #e5e7eb;
         border-radius: 4px;
+      }
+
+      .rich-text-content table,
+      table.tiptap-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid #d1d5db;
+        page-break-inside: auto;
+        table-layout: fixed;
+        margin: 20px 0;
+      }
+      .rich-text-content table thead,
+      table.tiptap-table thead {
+        display: table-header-group;
+        background-color: #f3f4f6;
+      }
+      .rich-text-content table tr,
+      table.tiptap-table tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+      }
+      .rich-text-content table th,
+      table.tiptap-table th {
+        padding: 10px 12px;
+        text-align: left;
+        font-size: 9pt;
+        font-weight: 600;
+        color: #374151;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid #d1d5db;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+      }
+      .rich-text-content table td,
+      table.tiptap-table td {
+        padding: 10px 12px;
+        font-size: 10pt;
+        color: #111827;
+        border-bottom: 1px solid #e5e7eb;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+        vertical-align: top;
       }
 
       .monospace {

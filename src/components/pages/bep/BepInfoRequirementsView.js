@@ -28,8 +28,7 @@ const BepInfoRequirementsView = () => {
             Do you have EIR or other information requirements?
           </h2>
           <p className="mt-2 text-gray-600 max-w-2xl mx-auto">
-            Under ISO 19650, EIR can include information requirements such as OIR, AIR, and PIR.
-            We can analyze them with AI to provide suggestions inside the BEP.
+            Under ISO 19650, the information requirements hierarchy runs from appointing party documents (OIR, PIR, AIR/EIR) to delivery team responses (pre- and post-appointment BEP). OIR and AIR sit upstream of PIR and feed into it; the EIR you receive typically reflects these. We can analyze your documents with AI to suggest content for your BEP.
           </p>
         </div>
 
@@ -37,10 +36,10 @@ const BepInfoRequirementsView = () => {
           <div className="p-4 border border-gray-200 rounded-xl bg-gray-50">
             <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
               <Building2 className="w-4 h-4 text-purple-600" />
-              OIR (Organizational Information Requirements)
+              OIR (Organisational Information Requirements)
             </div>
             <p className="text-sm text-gray-600 mt-2">
-              Organization-level information requirements tied to strategic objectives.
+              <strong>Appointing party.</strong> Organisation-level information requirements tied to strategic objectives; in ISO 19650-1 they sit upstream of PIR and feed into it.
             </p>
           </div>
 
@@ -50,7 +49,7 @@ const BepInfoRequirementsView = () => {
               AIR (Asset Information Requirements)
             </div>
             <p className="text-sm text-gray-600 mt-2">
-              Information needed to operate and maintain the asset throughout its lifecycle.
+              <strong>Appointing party.</strong> Information needed to operate and maintain the asset; like OIR, they feed into the PIR and are often reflected in the EIR.
             </p>
           </div>
 
@@ -60,7 +59,7 @@ const BepInfoRequirementsView = () => {
               PIR (Project Information Requirements)
             </div>
             <p className="text-sm text-gray-600 mt-2">
-              Project-specific information requirements for delivery.
+              <strong>Appointing party.</strong> Project-specific information requirements for delivery, informed by OIR and AIR where applicable.
             </p>
           </div>
 
@@ -70,7 +69,7 @@ const BepInfoRequirementsView = () => {
               EIR (Exchange Information Requirements)
             </div>
             <p className="text-sm text-gray-600 mt-2">
-              Appointment-level requirements that govern information exchange with suppliers.
+              <strong>Appointing party.</strong> Appointment-level requirements governing information exchange; delivery teams respond via the BEP (pre- and post-appointment).
             </p>
           </div>
         </div>
@@ -79,8 +78,7 @@ const BepInfoRequirementsView = () => {
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-purple-700">
-              You can upload PDF or DOCX. The analysis uses existing modules
-              in `ml-service/eir_analyzer.py` to extract objectives, requirements, and standards.
+              Upload PDF or DOCX. We analyse them to extract objectives, requirements, and standards so you can respond clearly in your BEP. For multi-partner setups (e.g. GGP), each delivery team typically produces its own BEP in response to the same appointing party requirements.
             </p>
           </div>
         </div>

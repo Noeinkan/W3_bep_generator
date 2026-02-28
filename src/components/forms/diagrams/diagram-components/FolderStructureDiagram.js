@@ -16,6 +16,9 @@ import {
 import FieldHeader from '../../base/FieldHeader';
 import FieldError from '../../base/FieldError';
 
+/** Generate a unique id for folder nodes to avoid React key collisions. */
+const uniqueFolderId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
 // Tooltip Component
 const Tooltip = ({ children, content, position = 'top' }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -202,7 +205,7 @@ const FolderStructureDiagram = ({ field, value, onChange, error }) => {
           }
 
           const folder = {
-            id: Date.now() + Math.random(),
+            id: uniqueFolderId(),
             name: cleanName,
             children: []
           };
@@ -416,7 +419,7 @@ const FolderStructureDiagram = ({ field, value, onChange, error }) => {
 
     if (parentNode) {
       const newFolder = {
-        id: Date.now() + Math.random(),
+        id: uniqueFolderId(),
         name: 'New Folder',
         children: []
       };
@@ -989,7 +992,7 @@ const FolderStructureDiagram = ({ field, value, onChange, error }) => {
               <button
                 onClick={() => {
                   const newFolder = {
-                    id: Date.now() + Math.random(),
+                    id: uniqueFolderId(),
                     name: 'New CDE Level',
                     children: []
                   };

@@ -96,9 +96,32 @@ export const collaborationSchema = z.object({
   changeManagement: optionalString,
 });
 
-// Federation Strategy Schema (complex object)
+// Federation Strategy Schema (complex object — benchmark Section 5 + Section 9)
 const federationStrategySchema = z.object({
   overview: optionalString,
+  definitionAndPurposes: z.object({
+    definition: optionalString,
+    purposes: z.array(z.string()).optional(),
+  }).optional(),
+  modelBreakdownStructure: z.any().optional(),
+  modelRegister: z.object({
+    columns: z.array(z.string()).optional(),
+    data: z.array(z.any()).optional(),
+  }).optional(),
+  coordinationBaseline: z.any().optional(),
+  federationResponsibility: optionalString,
+  singleFileFormat: optionalString,
+  federationProcessSteps: z.array(z.any()).optional(),
+  issueCreationRequirements: z.array(z.string()).optional(),
+  ipmpReference: optionalString,
+  federationSchedule: z.object({ columns: z.array(z.string()).optional(), data: z.array(z.any()).optional() }).optional(),
+  coordinationByStage: z.object({ columns: z.array(z.string()).optional(), data: z.array(z.any()).optional() }).optional(),
+  clashResponsibilities: z.object({ columns: z.array(z.string()).optional(), data: z.array(z.any()).optional() }).optional(),
+  clashRulesets: z.object({
+    categoryA: z.array(z.any()).optional(),
+    categoryB: z.array(z.any()).optional(),
+    categoryC: z.array(z.any()).optional(),
+  }).optional(),
   clashMatrix: z.object({
     disciplines: z.array(z.string()).optional(),
     clashes: z.array(z.any()).optional(),

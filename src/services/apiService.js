@@ -50,7 +50,8 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     const duration = error.config?.metadata ? new Date() - error.config.metadata.startTime : 0;
-    console.error(`❌ API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url} (${duration}ms)`, error.response?.data);
+    const errorDetail = error.response?.data ?? error.message ?? '(no response)';
+    console.error(`❌ API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url} (${duration}ms)`, errorDetail);
 
     // Handle common HTTP errors
     if (error.response?.status === 401) {

@@ -217,11 +217,11 @@ const CheckboxGroup = React.memo(({ field, value, onChange, error }) => {
             <p className="text-sm">Click "Add Custom Option" to create your first option</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 p-4 max-h-96 overflow-y-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 p-4">
             {allOptions.map((option, index) => (
               <div
                 key={option}
-                className={`group relative flex items-center gap-2 p-3 border rounded-lg transition-all ${
+                className={`group relative flex items-start gap-2 p-3 border rounded-lg transition-all min-w-0 ${
                   selectedValues.includes(option)
                     ? 'bg-blue-50 border-blue-300'
                     : 'bg-white border-gray-200 hover:border-gray-300'
@@ -263,18 +263,18 @@ const CheckboxGroup = React.memo(({ field, value, onChange, error }) => {
                   <>
                     <label 
                       htmlFor={`${name}-${option}`}
-                      className="flex-1 flex items-center gap-2 cursor-pointer"
+                      className="flex-1 flex items-start gap-2 cursor-pointer min-w-0"
                     >
                       <input
                         id={`${name}-${option}`}
                         type="checkbox"
                         checked={selectedValues.includes(option)}
                         onChange={() => handleCheckboxChange(option)}
-                        className="rounded text-blue-600 focus:ring-2 focus:ring-blue-500"
+                        className="rounded text-blue-600 focus:ring-2 focus:ring-blue-500 shrink-0 mt-0.5"
                       />
-                      <span className="text-sm select-none">{option}</span>
+                      <span className="text-sm select-none break-words min-w-0">{option}</span>
                       {isPreset(option) && (
-                        <span className="ml-auto text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">
+                        <span className="shrink-0 text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">
                           Preset
                         </span>
                       )}

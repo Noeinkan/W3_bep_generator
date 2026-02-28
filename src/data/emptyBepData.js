@@ -157,6 +157,54 @@ const EMPTY_BEP_DATA = {
   communicationProtocols: '',
   federationStrategy: {
     overview: '',
+    definitionAndPurposes: {
+      definition: '',
+      purposes: []
+    },
+    modelBreakdownStructure: {
+      hierarchyLevels: [
+        { level: 'Asset', description: '' },
+        { level: 'Design Package', description: '' },
+        { level: 'Discipline', description: '' }
+      ],
+      principles: {
+        uniclassAlignment: '',
+        maxFileSize: '',
+        ownership: ''
+      }
+    },
+    modelRegister: {
+      columns: ['Model ID', 'Model Name', 'Discipline', 'Design Package', 'Format', 'Owner', 'Maintenance Responsibility', 'ACC Location', 'Status', 'Notes'],
+      data: []
+    },
+    coordinationBaseline: {
+      sharedLevelsGrids: '',
+      geolocationVerification: [],
+      coordinateSystemRef: ''
+    },
+    federationResponsibility: '',
+    singleFileFormat: '',
+    federationProcessSteps: [],
+    issueCreationRequirements: [],
+    ipmpReference: '',
+    federationFlowchart: null,
+    federationSchedule: {
+      columns: ['Activity', 'Frequency', 'Day/Time', 'Location', 'Responsible'],
+      data: []
+    },
+    coordinationByStage: {
+      columns: ['Stage', 'Federation Frequency', 'Submission Day', 'Review Day', 'Notes'],
+      data: []
+    },
+    clashResponsibilities: {
+      columns: ['Name', 'Role', 'Run Clash', 'Review', 'Resolve', 'Sign-off', 'Escalate'],
+      data: []
+    },
+    clashRulesets: {
+      categoryA: [],
+      categoryB: [],
+      categoryC: []
+    },
     clashMatrix: {
       disciplines: [
         'Architecture',
