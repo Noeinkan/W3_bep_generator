@@ -26,14 +26,15 @@ const InputFieldRHF = ({ field, error }) => {
     return null;
   }
 
-  // Section headers don't need a name (they're not form fields)
-  if (!field.name && field.type !== 'section-header') {
-    console.warn('InputFieldRHF: field.name is missing for non-section-header field', field);
+  // Display-only types that don't need a name or form control
+  const displayOnlyTypes = ['section-header', 'info-banner', 'static-diagram'];
+  if (!field.name && !displayOnlyTypes.includes(field.type)) {
+    console.warn('InputFieldRHF: field.name is missing for non-display-only field', field);
     return null;
   }
 
-  // Section headers don't need form control - render directly
-  if (field.type === 'section-header') {
+  // Section headers, info-banner, and static-diagram don't need form control - render directly
+  if (displayOnlyTypes.includes(field.type)) {
     return (
       <InputField
         field={field}

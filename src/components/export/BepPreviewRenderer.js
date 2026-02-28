@@ -7,50 +7,72 @@ import VolumeStrategyMindmap from '../forms/diagrams/diagram-components/VolumeSt
 import FolderStructureDiagram from '../forms/diagrams/diagram-components/FolderStructureDiagram';
 import NamingConventionBuilder from '../forms/custom/NamingConventionBuilder';
 import FederationStrategyBuilder from '../forms/custom/FederationStrategyBuilder';
+import DocumentHierarchyDiagram from '../forms/diagrams/DocumentHierarchyDiagram';
+import PartyInterfaceDiagram from '../forms/diagrams/PartyInterfaceDiagram';
 import CONFIG from '../../config/bepConfig';
+
+// Module-level constants — defined once, not re-created on every render
+const noop = () => {};
+
+const isLikelyHtml = (value) => typeof value === 'string' && /<\/?[a-z][^>]*>/i.test(value);
+
+const sanitizeRichText = (html) => DOMPurify.sanitize(html, {
+  FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed'],
+  ADD_ATTR: ['class', 'data-caption', 'target', 'rel']
+});
+
+const normalizeMilestoneRow = (row) => {
+  if (!row || typeof row !== 'object') {
+    return {
+      'Stage/Phase': '',
+      'Milestone Description': '',
+      Deliverables: '',
+      'Due Date': ''
+    };
+  }
+
+  const getFirstValue = (keys) => {
+    for (const key of keys) {
+      if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
+        return row[key];
+      }
+    }
+    return '';
+  };
+
+  return {
+    'Stage/Phase': getFirstValue(['Stage/Phase', 'Stage', 'Phase', 'stage', 'phase']),
+    'Milestone Description': getFirstValue(['Milestone Description', 'milestoneDescription', 'Description', 'description']),
+    Deliverables: getFirstValue(['Deliverables', 'deliverables']),
+    'Due Date': getFirstValue(['Due Date', 'dueDate', 'Date', 'date'])
+  };
+};
 
 /**
  * BEP Preview Renderer - Displays BEP content with React components
  * Shows both regular fields and custom visual components
  */
 const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] }) => {
-  const noop = () => {}; // No-op onChange for preview mode
-
-  const isLikelyHtml = (value) => typeof value === 'string' && /<\/?[a-z][\s\S]*>/i.test(value);
-
-  const sanitizeRichText = (html) => DOMPurify.sanitize(html, {
-    FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed'],
-    ADD_ATTR: ['class', 'data-caption', 'target', 'rel']
-  });
-
-  const normalizeMilestoneRow = (row) => {
-    if (!row || typeof row !== 'object') {
-      return {
-        'Stage/Phase': '',
-        'Milestone Description': '',
-        Deliverables: '',
-        'Due Date': ''
-      };
-    }
-
-    const getFirstValue = (keys) => {
-      for (const key of keys) {
-        if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
-          return row[key];
-        }
-      }
-      return '';
-    };
-
-    return {
-      'Stage/Phase': getFirstValue(['Stage/Phase', 'Stage', 'Phase', 'stage', 'phase']),
-      'Milestone Description': getFirstValue(['Milestone Description', 'milestoneDescription', 'Description', 'description']),
-      Deliverables: getFirstValue(['Deliverables', 'deliverables']),
-      'Due Date': getFirstValue(['Due Date', 'dueDate', 'Date', 'date'])
-    };
-  };
 
   const renderFieldValue = (field, value) => {
+    // Display-only fields (no form value)
+    if (field.type === 'info-banner') {
+      return (
+        <div className="my-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-gray-800">
+          {field.label}
+        </div>
+      );
+    }
+    if (field.type === 'static-diagram') {
+      const diagramKey = field.diagramKey || field.config?.diagramKey || 'documentHierarchy';
+      const Diagram = diagramKey === 'partyInterface' ? PartyInterfaceDiagram : DocumentHierarchyDiagram;
+      return (
+        <div className="my-4 rounded-lg border border-gray-200 bg-gray-50 p-4 overflow-x-auto">
+          <Diagram />
+        </div>
+      );
+    }
+
     if (!value) return null;
 
     // Handle custom visual components
@@ -171,7 +193,7 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
         );
       }
 
-      case 'milestones-table':
+      case 'milestones-table': {
         if (!Array.isArray(value) || value.length === 0) return null;
         const milestoneColumns = field.columns?.length
           ? field.columns
@@ -207,6 +229,7 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
             </table>
           </div>
         );
+      }
 
       case 'checkbox':
         if (!Array.isArray(value) || value.length === 0) return null;
@@ -277,11 +300,13 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
         return (
           <p className="my-2 text-gray-700">
             <span className="font-medium">{field.label}: </span>
-            {String(value)}
+            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
           </p>
         );
     }
   };
+
+  const generatedAt = new Date();
 
   return (
     <div className="max-w-4xl mx-auto bg-white">
@@ -294,7 +319,7 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
           <p className="text-lg"><strong>Project:</strong> {formData.projectName || 'Not specified'}</p>
           <p className="text-lg"><strong>Project Number:</strong> {formData.projectNumber || 'Not specified'}</p>
           <p className="text-sm mt-4 opacity-75">
-            Generated: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}
+            Generated: {generatedAt.toLocaleDateString()} {generatedAt.toLocaleTimeString()}
           </p>
         </div>
       </div>
@@ -448,13 +473,16 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
                 if (field.type === 'section-header') return null;
 
                 const value = formData[field.name];
-                if (!value) return null;
+                const isDisplayOnly = field.type === 'static-diagram' || field.type === 'info-banner';
+                if (!isDisplayOnly && !value) return null;
 
                 return (
-                  <div key={fieldIndex} className="pl-4">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                      {field.number && `${field.number} `}{field.label}
-                    </h3>
+                  <div key={field.name || fieldIndex} className="pl-4">
+                    {field.label && (
+                      <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                        {field.number && `${field.number} `}{field.label}
+                      </h3>
+                    )}
                     {renderFieldValue(field, value)}
                   </div>
                 );

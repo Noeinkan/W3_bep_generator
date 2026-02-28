@@ -24,7 +24,10 @@ import {
   GitMerge,
   Heading,
   Link,
-  Grid3X3
+  Grid3X3,
+  Image,
+  Info,
+  GitBranch
 } from 'lucide-react';
 
 // Lazy load components for better performance
@@ -47,6 +50,7 @@ const TidpReferenceField = React.lazy(() => import('../forms/specialized/TidpRef
 const TidpSectionField = React.lazy(() => import('../forms/specialized/TidpSectionField'));
 const DeliverablesMatrixField = React.lazy(() => import('../forms/specialized/DeliverablesMatrixField'));
 const ImActivitiesMatrixField = React.lazy(() => import('../forms/specialized/ImActivitiesMatrixField'));
+const ImageUploadField = React.lazy(() => import('../forms/base/ImageUploadField'));
 
 /**
  * Field Type Categories
@@ -418,6 +422,51 @@ export const FIELD_TYPE_REGISTRY = {
     hasOptions: false,
     hasColumns: false,
     isFormField: false,
+    fullWidth: true,
+    defaultConfig: {}
+  },
+
+  'static-diagram': {
+    component: null, // Rendered inline by InputField using diagramKey
+    category: 'utility',
+    icon: GitBranch,
+    label: 'Static Diagram',
+    description: 'Read-only diagram (document hierarchy or party interfaces)',
+    hasPlaceholder: false,
+    hasOptions: false,
+    hasColumns: false,
+    isFormField: false,
+    fullWidth: true,
+    defaultConfig: { diagramKey: 'documentHierarchy' }
+  },
+
+  'info-banner': {
+    component: null, // Rendered inline (styled callout)
+    category: 'utility',
+    icon: Info,
+    label: 'Info Banner',
+    description: 'Styled information callout (no user input)',
+    hasPlaceholder: false,
+    hasOptions: false,
+    hasColumns: false,
+    isFormField: false,
+    fullWidth: true,
+    defaultConfig: {}
+  },
+
+  // ========================================
+  // IMAGE UPLOAD (for Section 2 project map, etc.)
+  // ========================================
+  'image-upload': {
+    component: ImageUploadField,
+    category: 'specialized',
+    icon: Image,
+    label: 'Image Upload',
+    description: 'Upload image with preview and compression (PNG/JPG/SVG)',
+    hasPlaceholder: false,
+    hasOptions: false,
+    hasColumns: false,
+    isFormField: true,
     fullWidth: true,
     defaultConfig: {}
   }

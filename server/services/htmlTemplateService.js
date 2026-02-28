@@ -544,7 +544,8 @@ class HtmlTemplateService {
         if (field.type === 'section-header') return;
 
         const value = formData[field.name];
-        if (!this.hasRenderableValue(field, value)) return;
+        const isDisplayOnly = field.type === 'static-diagram' || field.type === 'info-banner';
+        if (!isDisplayOnly && !this.hasRenderableValue(field, value)) return;
 
         // Generate ID for subsection (if it has a number)
         const fieldId = field.number ? this.generateSectionId(field.number, field.label) : '';
@@ -574,6 +575,22 @@ class HtmlTemplateService {
    * @returns {string} Field value HTML
    */
   renderFieldValue(field, value, componentImages) {
+    // Display-only: info-banner (styled callout)
+    if (field.type === 'info-banner') {
+      const label = (field.label || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      return `
+        <div class="export-info-banner" style="border: 1px solid #93c5fd; background: #eff6ff; padding: 0.75rem 1rem; border-radius: 0.5rem; margin: 0.5rem 0; font-size: 0.875rem; color: #1e3a5f;">
+          ${label}
+        </div>
+      `;
+    }
+
+    // Display-only: static-diagram (document hierarchy or party interface)
+    if (field.type === 'static-diagram') {
+      const diagramKey = field.diagramKey || (field.config && field.config.diagramKey) || 'documentHierarchy';
+      return diagramKey === 'partyInterface' ? this.renderPartyInterfaceDiagramHtml() : this.renderDocumentHierarchyDiagramHtml();
+    }
+
     // Special handling for naming-conventions - render as HTML instead of screenshot
     // Check both field.type and field.name for robustness (in case CONFIG doesn't load)
     if (field.type === 'naming-conventions' || field.name === 'namingConventions') {
@@ -617,6 +634,9 @@ class HtmlTemplateService {
    * @returns {boolean} True when value should be rendered
    */
   hasRenderableValue(field, value) {
+    // Display-only fields are always included in export
+    if (field?.type === 'static-diagram' || field?.type === 'info-banner') return true;
+
     if (value === null || value === undefined) return false;
 
     if (typeof value === 'string') {
@@ -658,6 +678,49 @@ class HtmlTemplateService {
     }
 
     return Boolean(value);
+  }
+
+  /**
+   * Render Document Hierarchy diagram as HTML (PIR → EIR → BEP → Information Standard → IPMP → branches)
+   * @returns {string} HTML string
+   */
+  renderDocumentHierarchyDiagramHtml() {
+    const nodes = ['PIR', 'EIR', 'BEP', 'Information Standard', 'IPMP'];
+    const branchLabels = ['Mobilisation Plan', 'Risk Register', 'Information Delivery Plan'];
+    const nodeHtml = nodes.map(n => `<span class="diagram-node" style="display:inline-block;padding:0.35rem 0.75rem;border-radius:0.375rem;background:#f1f5f9;border:1px solid #e2e8f0;font-size:0.875rem;font-weight:500;white-space:nowrap;margin:0 0.25rem;">${this.escapeHtml(n)}</span>`).join('<span style="margin:0 0.25rem;color:#94a3b8;">→</span>');
+    const branchHtml = branchLabels.map(l => `<span class="diagram-node" style="display:block;padding:0.35rem 0.75rem;border-radius:0.375rem;background:#f1f5f9;border:1px solid #e2e8f0;font-size:0.875rem;font-weight:500;white-space:nowrap;margin:0.25rem 0;">${this.escapeHtml(l)}</span>`).join('');
+    return `
+      <div class="static-diagram document-hierarchy" style="border:1px solid #e2e8f0;background:#f8fafc;padding:1rem;border-radius:0.5rem;margin:0.5rem 0;">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:0.5rem;">
+          ${nodeHtml}
+          <span style="margin:0 0.25rem;color:#94a3b8;">→</span>
+          <div style="display:flex;flex-direction:column;gap:0.25rem;">${branchHtml}</div>
+        </div>
+        <p style="margin-top:0.75rem;font-size:0.75rem;color:#64748b;">PIR = Project Information Requirements · EIR = Exchange Information Requirements · BEP = BIM Execution Plan · IPMP = Information Production Methods and Procedures</p>
+      </div>
+    `;
+  }
+
+  /**
+   * Render Party Interface diagram as HTML (Appointing Party ↔ LAP ↔ Task Teams, IPDT note)
+   * @returns {string} HTML string
+   */
+  renderPartyInterfaceDiagramHtml() {
+    return `
+      <div class="static-diagram party-interface" style="border:1px solid #e2e8f0;background:#f8fafc;padding:1rem;border-radius:0.5rem;margin:0.5rem 0;">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:0.75rem;">
+          <span style="padding:0.5rem 1rem;border-radius:0.375rem;background:#f1f5f9;border:1px solid #e2e8f0;font-size:0.875rem;font-weight:500;">Appointing Party</span>
+          <span style="color:#94a3b8;">↔</span>
+          <span style="padding:0.5rem 1rem;border-radius:0.375rem;background:#f1f5f9;border:1px solid #e2e8f0;font-size:0.875rem;font-weight:500;">Lead Appointed Party (LAP)</span>
+          <span style="color:#94a3b8;">↔</span>
+          <span style="padding:0.5rem 1rem;border-radius:0.375rem;background:#f1f5f9;border:1px solid #e2e8f0;font-size:0.875rem;font-weight:500;">Task Teams</span>
+        </div>
+        <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px dashed #e2e8f0;text-align:center;">
+          <span style="font-size:0.75rem;font-weight:500;color:#64748b;text-transform:uppercase;">IPDT (Integrated Project Delivery Team) spans all parties</span>
+        </div>
+        <p style="margin-top:0.5rem;font-size:0.75rem;color:#64748b;">ISO 19650-2:2018 — Interfaces between Appointing Party, Lead Appointed Party and Task Teams</p>
+      </div>
+    `;
   }
 
   /**

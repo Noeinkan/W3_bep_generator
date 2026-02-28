@@ -3,8 +3,8 @@
  *
  * Resolves the field type via FieldTypeRegistry and renders the
  * appropriate component wrapped in Suspense.  Only text, select,
- * textarea, and section-header are handled inline; everything else
- * delegates to the registry's lazy-loaded component.
+ * textarea, section-header, info-banner, and static-diagram are handled
+ * inline; everything else delegates to the registry's lazy-loaded component.
  */
 
 import React, { Suspense } from 'react';
@@ -14,6 +14,15 @@ import FieldHeader from './FieldHeader';
 import FieldError from './FieldError';
 import BaseTextInput from './BaseTextInput';
 import SearchableSelect from './SearchableSelect';
+
+// Lazy-loaded static diagram components (display-only, keyed by diagramKey)
+const DocumentHierarchyDiagram = React.lazy(() => import('../diagrams/DocumentHierarchyDiagram'));
+const PartyInterfaceDiagram = React.lazy(() => import('../diagrams/PartyInterfaceDiagram'));
+
+const DIAGRAM_COMPONENTS = {
+  documentHierarchy: DocumentHierarchyDiagram,
+  partyInterface: PartyInterfaceDiagram
+};
 
 // Shared loading fallback
 const LoadingSpinner = () => (
@@ -45,6 +54,30 @@ const InputField = React.memo(({ field, value, onChange, error, formData = {} })
         required={required}
         asSectionHeader
       />
+    );
+  }
+
+  if (type === 'info-banner') {
+    return (
+      <div className="rounded-lg border border-ui-primary/30 bg-ui-primary/5 p-4 text-ui-text">
+        {label && <p className="text-sm font-medium text-ui-text">{label}</p>}
+      </div>
+    );
+  }
+
+  if (type === 'static-diagram') {
+    const diagramKey = field.diagramKey || 'documentHierarchy';
+    const DiagramComponent = DIAGRAM_COMPONENTS[diagramKey];
+    if (!DiagramComponent) return null;
+    return (
+      <div>
+        {label && (
+          <FieldHeader fieldName={field.name || `diagram-${diagramKey}`} label={label} number={number} required={false} />
+        )}
+        <Suspense fallback={<LoadingSpinner />}>
+          <DiagramComponent />
+        </Suspense>
+      </div>
     );
   }
 

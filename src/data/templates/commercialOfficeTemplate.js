@@ -3,6 +3,24 @@ import { RESOURCE_COLUMNS_PRE, RESOURCE_COLUMNS_POST } from '../emptyBepData';
 // Commercial Office BEP Template
 // Contains pre-filled data for a typical commercial office project
 const COMMERCIAL_OFFICE_TEMPLATE = {
+  // Section 1 Introduction
+  eirPirReference: 'This BEP is prepared in response to the Exchange Information Requirements (EIR) ref. EIR-GF-2024-017 issued by ABC Development Corporation and the Project Information Requirements (PIR) ref. PIR-Greenfield-Phase2 dated March 2024. It sets out the appointed delivery team\'s approach to meeting those requirements in accordance with ISO 19650-2:2018.',
+  signpostedDocuments: [
+    { 'Document': 'Information Standard (IS)', 'Reference / Title': 'GF-IS-01 Project Information Standard', 'Location / CDE Path': '/Project/01-Standards/', 'Status': 'Approved' },
+    { 'Document': 'Information Production Methods and Procedures (IPMP)', 'Reference / Title': 'IPMP Rev 1.0', 'Location / CDE Path': '/Project/01-Standards/IPMP/', 'Status': 'In development' },
+    { 'Document': 'Master Information Delivery Plan (MIDP)', 'Reference / Title': 'MIDP Greenfield Phase 2', 'Location / CDE Path': '/Project/02-Planning/', 'Status': 'Draft' },
+    { 'Document': 'Information Risk Register', 'Reference / Title': 'Information Risk Register', 'Location / CDE Path': '/Project/06-Risk/', 'Status': 'Live' },
+    { 'Document': 'Mobilisation Plan', 'Reference / Title': 'BIM Mobilisation Plan', 'Location / CDE Path': '/Project/02-Planning/', 'Status': 'Draft' },
+    { 'Document': 'Federation Strategy', 'Reference / Title': 'Federation and Clash Matrix', 'Location / CDE Path': '/Project/01-Standards/', 'Status': 'Approved' }
+  ],
+  iso19650Definitions: [
+    { 'Term': 'Task Team', 'ISO 19650 Definition': 'Appointed party or lead appointed party responsible for producing information (ISO 19650-2).', 'Role on This Project': 'Architecture: Smith & Associates; Structural: Engineering Excellence Ltd.; MEP: Advanced Systems Group' },
+    { 'Term': 'Appointed Party', 'ISO 19650 Definition': 'Organisation or individual appointed by the appointing party to contribute to the delivery of the project (ISO 19650-2).', 'Role on This Project': 'Smith & Associates Architects Ltd. (Lead); Engineering Excellence Ltd.; Advanced Systems Group; Curtain Wall Experts Ltd.' },
+    { 'Term': 'Lead Appointed Party (LAP)', 'ISO 19650 Definition': 'Appointed party with responsibility for leading the delivery of the information management function (ISO 19650-2).', 'Role on This Project': 'Smith & Associates Architects Ltd.' },
+    { 'Term': 'Integrated Project Delivery Team (IPDT)', 'ISO 19650 Definition': 'Collaborative team spanning appointing party, lead appointed party and task teams (ISO 19650-2).', 'Role on This Project': 'ABC Development Corporation, Smith & Associates, Engineering Excellence, Advanced Systems Group, Curtain Wall Experts' },
+    { 'Term': 'Appointing Party', 'ISO 19650 Definition': 'Organisation or individual that initiates the project and appoints other parties to contribute to it (ISO 19650-2).', 'Role on This Project': 'ABC Development Corporation' }
+  ],
+
   // Common fields for both BEP types
   projectName: 'Greenfield Office Complex Phase 2',
   projectNumber: 'GF-2024-017',

@@ -38,10 +38,16 @@ const PRE_APPOINTMENT_FIELDS = {
     { name: 'projectNumber', label: 'Project Number', type: 'text', placeholder: 'GF-2024-017' },
     { name: 'projectType', label: 'Project Type', required: true, type: 'select', options: 'projectTypes' },
     { name: 'appointingParty', label: 'Appointing Party', required: true, type: 'text', placeholder: 'ABC Development Corporation' },
+    { name: 'eirPirReference', label: 'BEP Purpose — Response to EIR and PIR', type: 'textarea', config: { rows: 3 }, placeholder: 'This BEP is prepared in response to the Exchange Information Requirements (EIR) ref. [EIR-REF] issued by [Appointing Party] and the Project Information Requirements (PIR) ref. [PIR-REF] dated [date]. It sets out the appointed delivery team\'s approach to meeting those requirements in accordance with ISO 19650-2:2018.' },
+    { name: 'documentHierarchyDiagram', label: 'Information Requirements Document Hierarchy', type: 'static-diagram', config: { diagramKey: 'documentHierarchy' } },
+    { name: 'signpostedDocuments', label: 'Related Documents Signposted by this BEP', type: 'table', config: { columns: ['Document', 'Reference / Title', 'Location / CDE Path', 'Status'] } },
+    { name: 'appointmentNoteBanner', label: 'ISO 19650 Requirement: A separate BEP must be prepared and maintained for each direct appointment within the project. This document covers the appointment of [Appointed Party] only.', type: 'info-banner' },
+    { name: 'iso19650Definitions', label: 'ISO 19650 Party Definitions', type: 'table', config: { columns: ['Term', 'ISO 19650 Definition', 'Role on This Project'] } },
+    { name: 'partyInterfaceDiagram', label: 'ISO 19650-2:2018 — Interfaces Between Parties', type: 'static-diagram', config: { diagramKey: 'partyInterface' } },
     { name: 'proposedTimeline', label: 'Proposed Project Timeline', type: 'timeline', placeholder: '24 months (Jan 2025 - Dec 2026)' },
     { name: 'estimatedBudget', label: 'Estimated Project Budget', type: 'budget', placeholder: '£12.5 million' },
-    { name: 'projectDescription', label: 'Project Description', type: 'textarea', rows: 4, placeholder: 'A modern 8-storey office complex featuring sustainable design principles...' },
-    { name: 'tenderApproach', label: 'Our Proposed Approach', type: 'textarea', rows: 3, placeholder: 'Our approach emphasizes collaborative design coordination through advanced BIM workflows...' }
+    { name: 'projectDescription', label: 'Project Description', type: 'textarea', config: { rows: 4 }, placeholder: 'A modern 8-storey office complex featuring sustainable design principles...' },
+    { name: 'tenderApproach', label: 'Our Proposed Approach', type: 'textarea', config: { rows: 3 }, placeholder: 'Our approach emphasizes collaborative design coordination through advanced BIM workflows...' }
   ],
   1: [
     { name: 'projectContext', label: 'Project Context and Overview', required: true, type: 'textarea', rows: 4, placeholder: 'This BEP outlines our comprehensive approach to delivering the project using advanced BIM methodologies...' },
@@ -70,10 +76,16 @@ const POST_APPOINTMENT_FIELDS = {
     { name: 'projectNumber', label: 'Project Number', type: 'text', placeholder: 'GF-2024-017' },
     { name: 'projectType', label: 'Project Type', required: true, type: 'select', options: 'projectTypes' },
     { name: 'appointingParty', label: 'Appointing Party', required: true, type: 'text', placeholder: 'ABC Development Corporation' },
+    { name: 'eirPirReference', label: 'BEP Purpose — Confirmed response to EIR and PIR', type: 'textarea', config: { rows: 3 }, placeholder: 'This BEP confirms our response to the Exchange Information Requirements (EIR) ref. [EIR-REF] issued by [Appointing Party] and the Project Information Requirements (PIR) ref. [PIR-REF] dated [date]. It sets out the delivery team\'s approach to meeting those requirements in accordance with ISO 19650-2:2018.' },
+    { name: 'documentHierarchyDiagram', label: 'Information Requirements Document Hierarchy', type: 'static-diagram', config: { diagramKey: 'documentHierarchy' } },
+    { name: 'signpostedDocuments', label: 'Related Documents Signposted by this BEP', type: 'table', config: { columns: ['Document', 'Reference / Title', 'Location / CDE Path', 'Status'] } },
+    { name: 'appointmentNoteBanner', label: 'ISO 19650 Requirement: A separate BEP must be prepared and maintained for each direct appointment within the project. This document covers the appointment of [Appointed Party] only.', type: 'info-banner' },
+    { name: 'iso19650Definitions', label: 'ISO 19650 Party Definitions', type: 'table', config: { columns: ['Term', 'ISO 19650 Definition', 'Role on This Project'] } },
+    { name: 'partyInterfaceDiagram', label: 'ISO 19650-2:2018 — Interfaces Between Parties', type: 'static-diagram', config: { diagramKey: 'partyInterface' } },
     { name: 'confirmedTimeline', label: 'Confirmed Project Timeline', type: 'timeline', placeholder: '24 months (Jan 2025 - Dec 2026)' },
     { name: 'confirmedBudget', label: 'Confirmed Project Budget', type: 'budget', placeholder: '£12.5 million' },
-    { name: 'projectDescription', label: 'Project Description', type: 'textarea', rows: 4, placeholder: 'A modern 8-storey office complex featuring sustainable design principles...' },
-    { name: 'deliveryApproach', label: 'Confirmed Delivery Approach', type: 'textarea', rows: 3, placeholder: 'Our delivery approach implements collaborative design coordination through advanced BIM workflows...' }
+    { name: 'projectDescription', label: 'Project Description', type: 'textarea', config: { rows: 4 }, placeholder: 'A modern 8-storey office complex featuring sustainable design principles...' },
+    { name: 'deliveryApproach', label: 'Confirmed Delivery Approach', type: 'textarea', config: { rows: 3 }, placeholder: 'Our delivery approach implements collaborative design coordination through advanced BIM workflows...' }
   ],
   1: [
     { name: 'projectContext', label: 'Project Context and Overview', required: true, type: 'textarea', rows: 4, placeholder: 'This BEP confirms our comprehensive approach to delivering the project using advanced BIM methodologies...' },

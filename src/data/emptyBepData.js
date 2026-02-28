@@ -7,7 +7,31 @@ export const RESOURCE_COLUMNS_POST = ['Role', 'Assigned Personnel', 'Key Compete
  * Clone via `getEmptyBepData()` in templateRegistry.js before mutating.
  * @type {Object}
  */
+// Default rows for Section 1 signposted documents (emptyBepData and template merge)
+const SIGNPOSTED_DOCUMENTS_DEFAULT = [
+  { 'Document': 'Information Standard (IS)', 'Reference / Title': '', 'Location / CDE Path': '', 'Status': '' },
+  { 'Document': 'Information Production Methods and Procedures (IPMP)', 'Reference / Title': '', 'Location / CDE Path': '', 'Status': '' },
+  { 'Document': 'Master Information Delivery Plan (MIDP)', 'Reference / Title': '', 'Location / CDE Path': '', 'Status': '' },
+  { 'Document': 'Information Risk Register', 'Reference / Title': '', 'Location / CDE Path': '', 'Status': '' },
+  { 'Document': 'Mobilisation Plan', 'Reference / Title': '', 'Location / CDE Path': '', 'Status': '' },
+  { 'Document': 'Federation Strategy', 'Reference / Title': '', 'Location / CDE Path': '', 'Status': '' }
+];
+
+// Default rows for ISO 19650 Party Definitions (Term + Definition pre-filled; Role on This Project empty)
+const ISO_19650_DEFINITIONS_DEFAULT = [
+  { 'Term': 'Task Team', 'ISO 19650 Definition': 'Appointed party or lead appointed party responsible for producing information (ISO 19650-2).', 'Role on This Project': '' },
+  { 'Term': 'Appointed Party', 'ISO 19650 Definition': 'Organisation or individual appointed by the appointing party to contribute to the delivery of the project (ISO 19650-2).', 'Role on This Project': '' },
+  { 'Term': 'Lead Appointed Party (LAP)', 'ISO 19650 Definition': 'Appointed party with responsibility for leading the delivery of the information management function (ISO 19650-2).', 'Role on This Project': '' },
+  { 'Term': 'Integrated Project Delivery Team (IPDT)', 'ISO 19650 Definition': 'Collaborative team spanning appointing party, lead appointed party and task teams (ISO 19650-2).', 'Role on This Project': '' },
+  { 'Term': 'Appointing Party', 'ISO 19650 Definition': 'Organisation or individual that initiates the project and appoints other parties to contribute to it (ISO 19650-2).', 'Role on This Project': '' }
+];
+
 const EMPTY_BEP_DATA = {
+  // Section 1 Introduction fields
+  eirPirReference: '',
+  signpostedDocuments: [...SIGNPOSTED_DOCUMENTS_DEFAULT],
+  iso19650Definitions: [...ISO_19650_DEFINITIONS_DEFAULT],
+
   // Common fields for both BEP types
   projectName: '',
   projectNumber: '',
