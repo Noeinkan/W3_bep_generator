@@ -24,7 +24,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Get model and base URL from environment or use defaults
-OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.2:3b')
+OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.1:8b')
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
 
 # Create FastAPI app

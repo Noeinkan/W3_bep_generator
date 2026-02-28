@@ -3,10 +3,11 @@ const db = require('../database');
 
 class ProjectService {
   getAllProjects(userId) {
+    const uid = userId != null ? String(userId) : '';
     const stmt = db.prepare(
       'SELECT * FROM projects WHERE user_id = ? ORDER BY updated_at DESC'
     );
-    return stmt.all(userId);
+    return stmt.all(uid);
   }
 
   getProject(id) {
@@ -17,12 +18,13 @@ class ProjectService {
   createProject(userId, name, options = {}) {
     const id = uuidv4();
     const now = new Date().toISOString();
+    const uid = userId != null ? String(userId) : '';
     const { accHubId = null, accProjectId = null, accDefaultFolder = null } = options;
 
     const stmt = db.prepare(
       'INSERT INTO projects (id, name, user_id, acc_hub_id, acc_project_id, acc_default_folder, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     );
-    stmt.run(id, name, userId, accHubId, accProjectId, accDefaultFolder, now, now);
+    stmt.run(id, name, uid, accHubId, accProjectId, accDefaultFolder, now, now);
 
     return this.getProject(id);
   }

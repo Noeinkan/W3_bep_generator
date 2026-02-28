@@ -57,7 +57,7 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 | `server/validators/` | authValidator.js, midpValidator.js, tidpValidator.js (request validation) |
 | `server/scripts/` | One-off migration scripts (migrate-add-*, migrate-localStorage-to-db) + audit-orphaned-records, seed-bep-structure, backup-database |
 | `server/__tests__/` | Vitest server-side tests: tidp, midp, projects, htmlTemplateService |
-| `ml-service/` | api_ollama.py (FastAPI), eir_analyzer.py, ollama_generator.py (OLLAMA_MODEL env var, default `llama3.2:3b`), text_extractor.py |
+| `ml-service/` | api_ollama.py (FastAPI), eir_analyzer.py, ollama_generator.py (OLLAMA_MODEL env var, default `llama3.1:8b`), text_extractor.py |
 
 ## Context Providers
 

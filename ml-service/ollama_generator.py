@@ -54,7 +54,7 @@ class OllamaGenerator:
 
     Configuration can be provided via constructor arguments or environment variables:
         - OLLAMA_BASE_URL: API base URL (default: http://localhost:11434)
-        - OLLAMA_MODEL: Model name (default: llama3.2:3b)
+        - OLLAMA_MODEL: Model name (default: llama3.1:8b)
         - OLLAMA_TIMEOUT: Request timeout in seconds (default: 60)
         - OLLAMA_DEFAULT_TEMPERATURE: Default temperature (default: 0.7)
     """
@@ -89,15 +89,15 @@ class OllamaGenerator:
         Args:
             base_url: Ollama API base URL. Falls back to OLLAMA_BASE_URL env var
                      or 'http://localhost:11434'.
-            model: Model name to use (e.g., 'llama3.2:3b', 'mistral:7b').
-                  Falls back to OLLAMA_MODEL env var or 'llama3.2:3b'.
+            model: Model name to use (e.g., 'llama3.1:8b', 'mistral:7b').
+                  Falls back to OLLAMA_MODEL env var or 'llama3.1:8b'.
             timeout: Request timeout in seconds. Falls back to OLLAMA_TIMEOUT
                     env var or 60.
             verify_on_init: If True, verify Ollama connection on initialization.
                            Set to False for faster startup in tests.
         """
         self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "").strip() or "http://localhost:11434"
-        self.model = model or os.getenv("OLLAMA_MODEL", "").strip() or "llama3.2:3b"
+        self.model = model or os.getenv("OLLAMA_MODEL", "").strip() or "llama3.1:8b"
         _timeout_str = os.getenv("OLLAMA_TIMEOUT", "").strip()
         self.timeout = timeout or (int(_timeout_str) if _timeout_str else 60)
         _temp_str = os.getenv("OLLAMA_DEFAULT_TEMPERATURE", "").strip()

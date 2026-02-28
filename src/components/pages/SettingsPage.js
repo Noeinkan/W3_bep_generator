@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Lock, Bell, Globe, Palette, Database, Shield, Save, Bot } from 'lucide-react';
 
 const PREFERRED_MODEL_KEY = 'preferredOllamaModel';
-const DEFAULT_MODEL = 'llama3.2:3b';
+const DEFAULT_MODEL = 'llama3.1:8b';
 
 const SettingsPage = () => {
   const { user } = useAuth();

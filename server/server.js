@@ -103,19 +103,23 @@ if (process.env.NODE_ENV === 'production') {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  const message = (err && typeof err.message === 'string') ? err.message : 'Internal Server Error';
+  console.error('Error:', message, err);
 
-  if (err.isJoi) {
+  if (err && err.isJoi) {
     return res.status(400).json({
       error: 'Validation Error',
       details: err.details.map(detail => detail.message)
     });
   }
 
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
+  const status = (err && err.status) || 500;
+  const body = {
+    error: message,
+    success: false,
+    ...(process.env.NODE_ENV === 'development' && err && { stack: err.stack })
+  };
+  res.status(status).json(body);
 });
 
 // 404 handler
