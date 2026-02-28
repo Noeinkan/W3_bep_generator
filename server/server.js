@@ -142,10 +142,19 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 if (require.main === module) {
-  app.listen(PORT, '0.0.0.0', async () => {
-    console.log(`Server running on port ${PORT}`);
+  (async function start() {
+    const { loadBepConfigAsync } = require('./services/loadBepConfig');
+    const configResult = await loadBepConfigAsync();
+    if (configResult.success) {
+      console.log('✓ BEP config loaded successfully');
+    } else {
+      console.warn('⚠️  BEP config not loaded; GET /template and BEP form structure may fail until restart');
+    }
 
-    // Validate critical environment variables
+    app.listen(PORT, '0.0.0.0', async () => {
+      console.log(`Server running on port ${PORT}`);
+
+      // Validate critical environment variables
     console.log('\n🔐 Security Check:');
     if (!process.env.JWT_SECRET) {
       if (process.env.NODE_ENV === 'production') {
@@ -183,6 +192,10 @@ if (require.main === module) {
       console.error('   PDF generation will not be available until server restart');
     }
     console.log(''); // blank line for readability
+    });
+  })().catch((err) => {
+    console.error('Server startup failed:', err);
+    process.exit(1);
   });
 }
 

@@ -20,7 +20,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/setupTests.js',
     pool: 'forks', // Changed from 'threads' to fix Windows timeout issues
-    include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
+    include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}', 'server/**/*.{test,spec}.{js,ts}'],
     css: true,
     coverage: {
       provider: 'v8',

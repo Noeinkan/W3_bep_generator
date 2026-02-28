@@ -1,5 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const db = require('../database');
+const { getConfig, isConfigLoaded } = require('./loadBepConfig');
 
 const parseConfigSafe = (configValue, context = {}) => {
   if (!configValue) return null;
@@ -465,11 +466,80 @@ class BepStructureService {
   }
 
   // ============================================
-  // TEMPLATE OPERATIONS
+  // TEMPLATE OPERATIONS (CONFIG AS SINGLE SOURCE OF TRUTH)
   // ============================================
 
   /**
-   * Get the default template (steps and fields where project_id IS NULL)
+   * Map a config field (from bepFormFields.js) to API/DB field shape.
+   * @param {Object} f - Config field { name, label, type, number, required, placeholder, rows, columns, options, diagramKey, ... }
+   * @param {string} stepId - Synthetic step id (for synthetic field id)
+   * @param {number} orderIndex - Order index
+   * @returns {Object} Field in API shape (field_id, label, type, number, order_index, is_required, placeholder, config, id)
+   */
+  configFieldToApiField(f, stepId, orderIndex) {
+    const config = {};
+    if (f.rows != null) config.rows = f.rows;
+    if (f.columns) config.columns = f.columns;
+    if (f.options) config.options = f.options;
+    if (f.diagramKey) config.diagramKey = f.diagramKey;
+    if (f.introPlaceholder != null) config.introPlaceholder = f.introPlaceholder;
+    if (f.tableColumns) config.tableColumns = f.tableColumns;
+    return {
+      id: `config-${stepId}-${f.name || orderIndex}`,
+      field_id: f.name || `field_${orderIndex}`,
+      label: f.label || '',
+      type: f.type || 'text',
+      number: f.number != null && f.number !== '' ? String(f.number) : null,
+      order_index: orderIndex,
+      is_visible: 1,
+      is_required: f.required ? 1 : 0,
+      placeholder: f.placeholder || null,
+      config: Object.keys(config).length ? config : null
+    };
+  }
+
+  /**
+   * Build the default template from CONFIG (bepFormFields.js + bepSteps.js).
+   * Single source of truth: no DB read for default template.
+   * @param {string} bepType - 'pre-appointment' or 'post-appointment'
+   * @returns {Array} Steps with nested fields (same shape as getDefaultTemplate)
+   * @throws {Error} If CONFIG cannot be loaded
+   */
+  getDefaultTemplateFromConfig(bepType = 'post-appointment') {
+    if (!isConfigLoaded()) {
+      throw new Error('Could not load BEP config (src/config/bepFormFields.js and bepSteps.js). Default template unavailable.');
+    }
+    const config = getConfig();
+    const steps = config.steps;
+    const effectiveType = bepType === 'pre-appointment' ? 'pre-appointment' : 'post-appointment';
+
+    return steps.map((stepDef, stepIndex) => {
+      const stepId = `config-step-${stepIndex}`;
+      const stepConfig = config.getFormFields(effectiveType, stepIndex);
+      const fields = (stepConfig && stepConfig.fields)
+        ? stepConfig.fields.map((f, fi) => this.configFieldToApiField(f, stepId, fi))
+        : [];
+
+      return {
+        id: stepId,
+        project_id: null,
+        draft_id: null,
+        step_number: String(stepDef.number ?? stepIndex + 1),
+        title: stepDef.title || `Step ${stepIndex + 1}`,
+        description: stepDef.description || null,
+        category: stepDef.category || 'Management',
+        order_index: stepIndex,
+        is_visible: 1,
+        icon: typeof stepDef.icon === 'string' ? stepDef.icon : null,
+        bep_type: 'both',
+        fields
+      };
+    });
+  }
+
+  /**
+   * Get the default template from DB (steps/fields where project_id IS NULL).
+   * Prefer getDefaultTemplateFromConfig() for the canonical default.
    * @param {string|null} bepType - Filter by BEP type
    * @returns {Object} Template with steps and nested fields
    */
@@ -483,30 +553,46 @@ class BepStructureService {
   }
 
   /**
-   * Clone the default template to a project
+   * Clone the default template (from CONFIG) to a project
    * @param {string} projectId - Project ID to clone to
+   * @param {string} [bepType='post-appointment'] - BEP type for template structure
    * @returns {Object} Cloned structure
    */
-  cloneTemplateToProject(projectId) {
-    const template = this.getDefaultTemplate();
+  cloneTemplateToProject(projectId, bepType = 'post-appointment') {
+    const template = this.getDefaultTemplateFromConfig(bepType);
     const stepIdMap = {}; // Maps old step IDs to new step IDs
 
     const transaction = db.transaction(() => {
-      // Clone steps
       template.forEach(step => {
         const newStep = this.createStep({
-          ...step,
-          project_id: projectId
+          project_id: projectId,
+          draft_id: null,
+          step_number: step.step_number,
+          title: step.title,
+          description: step.description,
+          category: step.category,
+          order_index: step.order_index,
+          is_visible: step.is_visible,
+          icon: step.icon,
+          bep_type: step.bep_type
         });
         stepIdMap[step.id] = newStep.id;
 
-        // Clone fields for this step
         step.fields.forEach(field => {
           this.createField({
-            ...field,
             project_id: projectId,
+            draft_id: null,
             step_id: newStep.id,
-            config: field.config // Already parsed
+            field_id: field.field_id,
+            label: field.label,
+            type: field.type,
+            number: field.number,
+            order_index: field.order_index,
+            is_visible: field.is_visible,
+            is_required: field.is_required,
+            placeholder: field.placeholder,
+            config: field.config,
+            bep_type: 'shared'
           });
         });
       });
@@ -551,7 +637,7 @@ class BepStructureService {
   }
 
   /**
-   * Get structure for a project (uses project-specific if exists, otherwise default)
+   * Get structure for a project (uses project-specific if exists, otherwise CONFIG-built default)
    * @param {string} projectId - Project ID
    * @param {string|null} bepType - Filter by BEP type
    * @returns {Array} Steps with nested fields
@@ -564,7 +650,7 @@ class BepStructureService {
         fields: this.getFieldsForStep(step.id, bepType)
       }));
     }
-    return this.getDefaultTemplate(bepType);
+    return this.getDefaultTemplateFromConfig(bepType || 'post-appointment');
   }
 
   // ============================================
@@ -609,7 +695,7 @@ class BepStructureService {
   }
 
   /**
-   * Get structure for a draft (uses draft-specific if exists, otherwise default)
+   * Get structure for a draft (uses draft-specific if exists, otherwise CONFIG-built default)
    * @param {string} draftId - Draft ID
    * @param {string|null} bepType - Filter by BEP type
    * @returns {Array} Steps with nested fields
@@ -622,36 +708,50 @@ class BepStructureService {
         fields: this.getFieldsForStep(step.id, bepType)
       }));
     }
-    return this.getDefaultTemplate(bepType);
+    return this.getDefaultTemplateFromConfig(bepType || 'post-appointment');
   }
 
   /**
-   * Clone the default template to a draft
+   * Clone the default template (from CONFIG) to a draft
    * @param {string} draftId - Draft ID to clone to
+   * @param {string} [bepType='post-appointment'] - BEP type for template structure
    * @returns {Array} Cloned structure (steps with fields)
    */
-  cloneTemplateToDraft(draftId) {
-    const template = this.getDefaultTemplate();
+  cloneTemplateToDraft(draftId, bepType = 'post-appointment') {
+    const template = this.getDefaultTemplateFromConfig(bepType);
     const stepIdMap = {}; // Maps old step IDs to new step IDs
 
     const transaction = db.transaction(() => {
-      // Clone steps
       template.forEach(step => {
         const newStep = this.createStep({
-          ...step,
           project_id: null,
-          draft_id: draftId
+          draft_id: draftId,
+          step_number: step.step_number,
+          title: step.title,
+          description: step.description,
+          category: step.category,
+          order_index: step.order_index,
+          is_visible: step.is_visible,
+          icon: step.icon,
+          bep_type: step.bep_type
         });
         stepIdMap[step.id] = newStep.id;
 
-        // Clone fields for this step
         step.fields.forEach(field => {
           this.createField({
-            ...field,
             project_id: null,
             draft_id: draftId,
             step_id: newStep.id,
-            config: field.config // Already parsed
+            field_id: field.field_id,
+            label: field.label,
+            type: field.type,
+            number: field.number,
+            order_index: field.order_index,
+            is_visible: field.is_visible,
+            is_required: field.is_required,
+            placeholder: field.placeholder,
+            config: field.config,
+            bep_type: 'shared'
           });
         });
       });

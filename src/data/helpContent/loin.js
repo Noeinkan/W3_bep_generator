@@ -18,7 +18,23 @@ export const loinHelp = {
       style: 'bullet list, lifecycle coverage, purpose-led, ISO 19650 language'
     },
 
-    relatedFields: ['geometricalInfo', 'alphanumericalInfo', 'projectInformationRequirements']
+    relatedFields: ['levelOfInformationMatrix', 'geometricalInfo', 'alphanumericalInfo', 'projectInformationRequirements']
+  },
+
+  levelOfInformationMatrix: {
+    description: `The Level of Information Need Matrix (Model Element Table) defines LOD, LoI, format, and responsibility per element category and project stage. Use it to specify what is required for each discipline and stage; the narrative fields below explain the rationale and exceptions.`,
+
+    iso19650: `ISO 19650-1 and NBIMS-US BEP §5.07 - A Model Element Table documents Level of Development (LOD), Level of Information (LoI), Level of Accuracy (LoA), information format, and author per element category.`,
+
+    bestPractices: [
+      'Add one row per element category or discipline and stage',
+      'Use consistent LOD/LOI codes (e.g. LOD 300, 350, 400)',
+      'Specify Information Format (2D/3D/data or file type)',
+      'Assign Author/Responsible party per row',
+      'Keep the narrative fields (Geometrical, Alphanumerical, Documentation) aligned with this table'
+    ],
+
+    relatedFields: ['informationPurposes', 'geometricalInfo', 'alphanumericalInfo', 'informationFormats']
   },
 
   geometricalInfo: {
@@ -42,7 +58,8 @@ Geometrical information requirements specify the detail, dimensionality, locatio
       'Include as-built verification requirements',
       'Reference LOD specification or similar standards',
       'Be specific about detail level for critical elements',
-      'Align with project complexity and information uses'
+      'Align with project complexity and information uses',
+      'Detail per element/stage can be recorded in the Level of Information Need Matrix table above'
     ],
 
     aiPrompt: {
@@ -51,7 +68,7 @@ Geometrical information requirements specify the detail, dimensionality, locatio
       style: 'requirements-focused, stage-based, quantifiable tolerances, ISO 19650/LOIN terminology'
     },
 
-    relatedFields: ['alphanumericalInfo', 'informationPurposes', 'volumeStrategy']
+    relatedFields: ['levelOfInformationMatrix', 'alphanumericalInfo', 'informationPurposes', 'volumeStrategy']
   },
 
   alphanumericalInfo: {
@@ -85,7 +102,7 @@ Alphanumerical requirements specify properties, attributes, and parameters that 
       style: 'structured categories, asset-data oriented, consistent naming, ISO 19650/COBie-aware'
     },
 
-    relatedFields: ['geometricalInfo', 'documentationInfo', 'projectInformationRequirements']
+    relatedFields: ['levelOfInformationMatrix', 'geometricalInfo', 'documentationInfo', 'projectInformationRequirements']
   },
 
   documentationInfo: {
@@ -120,7 +137,23 @@ Documentation requirements specify non-model information deliverables necessary 
       style: 'deliverable list, format-aware, compliance-focused, concise'
     },
 
-    relatedFields: ['alphanumericalInfo', 'projectInformationRequirements']
+    relatedFields: ['levelOfInformationMatrix', 'alphanumericalInfo', 'projectInformationRequirements']
+  },
+
+  informationFormats: {
+    description: `Select the default information formats (file types and exchange formats) required for LOIN deliverables. These apply across the Level of Information Need unless overridden per row in the LOIN Matrix table (e.g. 2D/3D/data per element).`,
+
+    iso19650: `ISO 19650-2 - Information formats (e.g. IFC, native, PDF) are specified in the EIR and confirmed in the BEP; they support interoperability and suitability for each information exchange.`,
+
+    bestPractices: [
+      'Select formats that match client and CDE requirements',
+      'Use IFC for coordination and handover where required',
+      'Specify PDF/PDF-A for documentation deliverables',
+      'Include BCF for issue exchange if using clash coordination',
+      'Detail format per element/stage in the LOIN Matrix if needed'
+    ],
+
+    relatedFields: ['levelOfInformationMatrix', 'geometricalInfo', 'documentationInfo']
   },
 
   projectInformationRequirements: {
@@ -155,6 +188,6 @@ PIR specify deliverable information to support the operational phase and ongoing
       style: 'operational focus, structured categories, lifecycle language, concise and specific'
     },
 
-    relatedFields: ['alphanumericalInfo', 'documentationInfo', 'informationPurposes']
+    relatedFields: ['levelOfInformationMatrix', 'alphanumericalInfo', 'documentationInfo', 'informationPurposes']
   }
 };

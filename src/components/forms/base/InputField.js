@@ -18,10 +18,12 @@ import SearchableSelect from './SearchableSelect';
 // Lazy-loaded static diagram components (display-only, keyed by diagramKey)
 const DocumentHierarchyDiagram = React.lazy(() => import('../diagrams/DocumentHierarchyDiagram'));
 const PartyInterfaceDiagram = React.lazy(() => import('../diagrams/PartyInterfaceDiagram'));
+const LoinProgressionDiagram = React.lazy(() => import('../diagrams/LoinProgressionDiagram'));
 
 const DIAGRAM_COMPONENTS = {
   documentHierarchy: DocumentHierarchyDiagram,
-  partyInterface: PartyInterfaceDiagram
+  partyInterface: PartyInterfaceDiagram,
+  loinProgression: LoinProgressionDiagram
 };
 
 // Shared loading fallback

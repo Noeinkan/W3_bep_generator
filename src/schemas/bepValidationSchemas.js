@@ -52,7 +52,7 @@ export const softwareTechnologySchema = z.object({
   cloudStorage: optionalString,
 });
 
-// Step 4: Model Development
+// Step 4: Model Development (legacy / alternate use)
 export const modelDevelopmentSchema = z.object({
   lodRequirements: optionalString,
   modelOrigin: optionalString,
@@ -63,7 +63,18 @@ export const modelDevelopmentSchema = z.object({
   disciplineModels: optionalArray,
 });
 
-// Step 5: Information Delivery Planning
+// Step 4 (form index): Level of Information Need (LOIN) — BEP section 5
+export const levelOfInformationSchema = z.object({
+  informationPurposes: requiredArray,
+  levelOfInformationMatrix: z.array(z.record(z.string(), z.union([z.string(), z.number()]))).optional(),
+  geometricalInfo: optionalString,
+  alphanumericalInfo: optionalString,
+  documentationInfo: optionalString,
+  informationFormats: optionalArray,
+  projectInformationRequirements: optionalString,
+});
+
+// Step 5: Information Delivery Planning (includes 6.2 PIM delivery strategy fields)
 export const informationDeliverySchema = z.object({
   keyMilestones: z.array(
     z.object({
@@ -71,11 +82,23 @@ export const informationDeliverySchema = z.object({
       description: requiredString,
       deliverables: requiredString,
       dueDate: optionalString,
-    })
+      gate: optionalString,
+      programmeVersion: optionalString,
+    }).passthrough()
   ).optional(),
   deliverySchedule: optionalString,
   informationRequirements: optionalString,
   dataDrops: optionalArray,
+  clientCdeResources: z.array(z.any()).optional(),
+  partnerCdeResources: z.array(z.any()).optional(),
+  pimExchangeEnvironments: z.array(z.any()).optional(),
+  pimExchangeDefinitions: optionalString,
+  assurancePipeline: optionalString,
+  reviewApprovalWorkflows: optionalString,
+  stageBasedAssurance: z.array(z.any()).optional(),
+  stageBasedDeliveryNarrative: optionalString,
+  securityOnExchanges: z.array(z.any()).optional(),
+  securityOnExchangesFramework: optionalString,
 });
 
 // Step 6: Quality Assurance
@@ -215,6 +238,7 @@ export const fullBepSchema = z.object({
   ...softwareTechnologySchema.shape,
   // Step 4
   ...modelDevelopmentSchema.shape,
+  ...levelOfInformationSchema.shape,
   // Step 5
   ...informationDeliverySchema.shape,
   // Step 6
@@ -241,7 +265,8 @@ export const stepSchemas = [
   teamStructureSchema,             // Step 1
   bimUsesSchema,                   // Step 2
   softwareTechnologySchema,        // Step 3
-  modelDevelopmentSchema,          // Step 4
+  modelDevelopmentSchema,          // Step 3 (legacy)
+  levelOfInformationSchema,        // Step 4 — Level of Information Need (LOIN)
   informationDeliverySchema,       // Step 5
   qualityAssuranceSchema,          // Step 6
   collaborationSchema,             // Step 7

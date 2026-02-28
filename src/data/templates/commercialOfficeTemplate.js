@@ -384,7 +384,15 @@ All resources will be tested for collaborative production capability before full
     'Space Planning and Occupancy Analysis',
     'Procurement and Supply Chain Management'
   ],
-  geometricalInfo: 'LOD 350 for construction documentation phase, with dimensional accuracy of ±10mm for structural elements and ±5mm for MEP coordination points.',
+  levelOfInformationMatrix: [
+    { 'Element Category / Discipline': 'Architecture', 'Project Stage': 'Stage 3 Design Development', 'LOD': 'LOD 300', 'LoI': 'Defined geometry', 'Information Format': '3D', 'Author/Responsible': 'Architect', 'Notes': 'Spatial coordination model' },
+    { 'Element Category / Discipline': 'Architecture', 'Project Stage': 'Stage 4 Technical Design', 'LOD': 'LOD 350', 'LoI': 'Coordinated geometry', 'Information Format': '3D', 'Author/Responsible': 'Architect', 'Notes': 'Construction documentation' },
+    { 'Element Category / Discipline': 'Structural', 'Project Stage': 'Stage 3 Design Development', 'LOD': 'LOD 300', 'LoI': 'Defined geometry', 'Information Format': '3D', 'Author/Responsible': 'Structural Engineer', 'Notes': 'Analysis and coordination' },
+    { 'Element Category / Discipline': 'Structural', 'Project Stage': 'Stage 4 Technical Design', 'LOD': 'LOD 400', 'LoI': 'Fabrication detail', 'Information Format': '3D', 'Author/Responsible': 'Structural Engineer', 'Notes': 'Connection details' },
+    { 'Element Category / Discipline': 'MEP', 'Project Stage': 'Stage 3 Design Development', 'LOD': 'LOD 300', 'LoI': 'Defined geometry', 'Information Format': '3D', 'Author/Responsible': 'MEP Engineer', 'Notes': 'System coordination' },
+    { 'Element Category / Discipline': 'MEP', 'Project Stage': 'Stage 4 Technical Design', 'LOD': 'LOD 350', 'LoI': 'Coordinated geometry', 'Information Format': '3D', 'Author/Responsible': 'MEP Engineer', 'Notes': 'Equipment and schedules' }
+  ],
+  geometricalInfo: 'LOD 350 for construction documentation phase, with dimensional accuracy of ±10mm for structural elements and ±5mm for MEP coordination points. Detail per element/stage is defined in the Level of Information Need Matrix above.',
   alphanumericalInfo: 'All building elements must include material specifications, performance data, manufacturer information, maintenance requirements, and warranty details.',
   documentationInfo: 'Construction drawings, specifications, schedules, O&M manuals, warranty documents, and asset registers in digital format.',
   informationFormats: ['IFC 4', 'PDF', 'BCF 2.1', 'DWG', 'COBie'],

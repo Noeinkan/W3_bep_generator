@@ -527,22 +527,55 @@ export const generateDocx = async (formData, bepType, options = {}) => {
       );
 
       if (tableFields.length > 0) {
-        const tableRows = tableFields
-          .filter(field => field.label)
-          .map(field => {
-            const fieldLabel = (field.number && field.number.trim())
-              ? `${field.number} ${field.label || 'Field'}`
-              : (field.label || 'Field');
-            return new TableRow({
+        for (const field of tableFields) {
+          if (!field.label) continue;
+          const fieldLabel = (field.number && field.number.trim())
+            ? `${field.number} ${field.label || 'Field'}`
+            : (field.label || 'Field');
+          const value = formData[field.name];
+
+          // Data table (type 'table' with array of row objects): render as full table
+          if (field.type === 'table' && Array.isArray(value) && value.length > 0) {
+            const columns = field.columns || [];
+            if (columns.length > 0) {
+              sections.push(new Paragraph({
+                children: [new TextRun({ text: fieldLabel, bold: true, size: 22, color: '2E86AB' })],
+                heading: HeadingLevel.HEADING_3,
+                spacing: { before: 200, after: 100 }
+              }));
+              const headerRow = new TableRow({
+                children: columns.map(col => createBorderedCell(col, true))
+              });
+              const dataRows = value.map(row =>
+                new TableRow({
+                  children: columns.map(col => createBorderedCell(row[col] ?? ''))
+                })
+              );
+              sections.push(new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [headerRow, ...dataRows]
+              }));
+            } else {
+              sections.push(new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [new TableRow({
+                  children: [createBorderedCell(fieldLabel + ':', true), createBorderedCell(value)]
+                })]
+              }));
+            }
+            continue;
+          }
+
+          // Key-value style row
+          sections.push(new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [new TableRow({
               children: [
                 createBorderedCell(fieldLabel + ':', true),
-                createBorderedCell(formData[field.name])
+                createBorderedCell(value)
               ]
-            });
-          });
-
-        if (tableRows.length > 0) {
-          sections.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: tableRows }));
+            })]
+          }));
         }
       }
 

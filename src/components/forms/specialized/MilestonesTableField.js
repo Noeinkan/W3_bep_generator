@@ -9,7 +9,7 @@ const MilestonesTableField = ({ field, value, onChange, error }) => {
   const milestones = value || [];
 
   const addMilestone = () => {
-    onChange(name, [...milestones, { stage: '', description: '', deliverables: '', dueDate: '' }]);
+    onChange(name, [...milestones, { stage: '', description: '', deliverables: '', dueDate: '', gate: '', programmeVersion: '' }]);
   };
 
   const updateMilestone = (index, key, newValue) => {
@@ -38,6 +38,8 @@ const MilestonesTableField = ({ field, value, onChange, error }) => {
               <th className="px-4 py-2 text-left text-sm font-medium text-ui-text border-b border-ui-border">Milestone Description</th>
               <th className="px-4 py-2 text-left text-sm font-medium text-ui-text border-b border-ui-border">Deliverables</th>
               <th className="px-4 py-2 text-left text-sm font-medium text-ui-text border-b border-ui-border">Due Date</th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-ui-text border-b border-ui-border">Gate</th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-ui-text border-b border-ui-border">Programme version</th>
               <th className="px-4 py-2 text-left text-sm font-medium text-ui-text border-b border-ui-border">Actions</th>
             </tr>
           </thead>
@@ -77,6 +79,24 @@ const MilestonesTableField = ({ field, value, onChange, error }) => {
                     value={milestone.dueDate || ''}
                     onChange={(e) => updateMilestone(index, 'dueDate', e.target.value)}
                     className="p-2 border-ui-border rounded-md bg-ui-surface text-ui-text focus-visible:ring-2 focus-visible:ring-ui-primary/30"
+                  />
+                </td>
+                <td className="px-4 py-2">
+                  <BaseTextInput
+                    type="text"
+                    value={milestone.gate || ''}
+                    onChange={(e) => updateMilestone(index, 'gate', e.target.value)}
+                    className="p-2 border-ui-border rounded-md bg-ui-surface text-ui-text placeholder:text-ui-text-muted focus-visible:ring-2 focus-visible:ring-ui-primary/30"
+                    placeholder="Y/N"
+                  />
+                </td>
+                <td className="px-4 py-2">
+                  <BaseTextInput
+                    type="text"
+                    value={milestone.programmeVersion || ''}
+                    onChange={(e) => updateMilestone(index, 'programmeVersion', e.target.value)}
+                    className="p-2 border-ui-border rounded-md bg-ui-surface text-ui-text placeholder:text-ui-text-muted focus-visible:ring-2 focus-visible:ring-ui-primary/30"
+                    placeholder="e.g. v1.0"
                   />
                 </td>
                 <td className="px-4 py-2">

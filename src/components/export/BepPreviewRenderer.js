@@ -9,12 +9,17 @@ import NamingConventionBuilder from '../forms/custom/NamingConventionBuilder';
 import FederationStrategyBuilder from '../forms/custom/FederationStrategyBuilder';
 import DocumentHierarchyDiagram from '../forms/diagrams/DocumentHierarchyDiagram';
 import PartyInterfaceDiagram from '../forms/diagrams/PartyInterfaceDiagram';
+import LoinProgressionDiagram from '../forms/diagrams/LoinProgressionDiagram';
 import CONFIG from '../../config/bepConfig';
 
 // Module-level constants — defined once, not re-created on every render
 const noop = () => {};
 
 const isLikelyHtml = (value) => typeof value === 'string' && /<\/?[a-z][^>]*>/i.test(value);
+
+/** Section 6.2 PIM delivery strategy subsections: show label even when value is empty */
+const isPimDeliverySubsection = (field) =>
+  field?.number && String(field.number).startsWith('6.2.');
 
 const sanitizeRichText = (html) => DOMPurify.sanitize(html, {
   FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed'],
@@ -27,7 +32,9 @@ const normalizeMilestoneRow = (row) => {
       'Stage/Phase': '',
       'Milestone Description': '',
       Deliverables: '',
-      'Due Date': ''
+      'Due Date': '',
+      'Gate': '',
+      'Programme version': ''
     };
   }
 
@@ -44,7 +51,9 @@ const normalizeMilestoneRow = (row) => {
     'Stage/Phase': getFirstValue(['Stage/Phase', 'Stage', 'Phase', 'stage', 'phase']),
     'Milestone Description': getFirstValue(['Milestone Description', 'milestoneDescription', 'Description', 'description']),
     Deliverables: getFirstValue(['Deliverables', 'deliverables']),
-    'Due Date': getFirstValue(['Due Date', 'dueDate', 'Date', 'date'])
+    'Due Date': getFirstValue(['Due Date', 'dueDate', 'Date', 'date']),
+    'Gate': getFirstValue(['Gate', 'gate']),
+    'Programme version': getFirstValue(['Programme version', 'programmeVersion'])
   };
 };
 
@@ -65,7 +74,7 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
     }
     if (field.type === 'static-diagram') {
       const diagramKey = field.diagramKey || field.config?.diagramKey || 'documentHierarchy';
-      const Diagram = diagramKey === 'partyInterface' ? PartyInterfaceDiagram : DocumentHierarchyDiagram;
+      const Diagram = diagramKey === 'partyInterface' ? PartyInterfaceDiagram : diagramKey === 'loinProgression' ? LoinProgressionDiagram : DocumentHierarchyDiagram;
       return (
         <div className="my-4 rounded-lg border border-gray-200 bg-gray-50 p-4 overflow-x-auto">
           <Diagram />
@@ -157,6 +166,35 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
             />
           </div>
         );
+
+      case 'deliverables-matrix':
+      case 'im-activities-matrix': {
+        const rows = value?.data ?? [];
+        const columns = value?.columns ?? field.columns ?? [];
+        if (rows.length === 0) return null;
+        return (
+          <div className="my-4 table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  {columns.map((col, idx) => (
+                    <th key={idx}>{col}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, rowIdx) => (
+                  <tr key={rowIdx}>
+                    {columns.map((col, colIdx) => (
+                      <td key={colIdx}>{row[col] ?? '-'}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      }
 
       case 'table': {
         const tableRows = Array.isArray(value) ? value : (value?.data ?? []);
@@ -449,11 +487,20 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
             {/* Section Content */}
             <div className="space-y-6">
               {stepConfig.fields.map((field, fieldIndex) => {
-                if (field.type === 'section-header') return null;
-
                 const value = formData[field.name];
-                const isDisplayOnly = field.type === 'static-diagram' || field.type === 'info-banner';
-                if (!isDisplayOnly && !value) return null;
+                const isDisplayOnly = field.type === 'static-diagram' || field.type === 'info-banner' || field.type === 'section-header';
+                const showWhenEmpty = isPimDeliverySubsection(field);
+                if (!isDisplayOnly && !value && !showWhenEmpty) return null;
+
+                if (field.type === 'section-header') {
+                  return (
+                    <div key={field.number || fieldIndex} className="pl-4 mt-4">
+                      <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                        {field.number && `${field.number} `}{field.label}
+                      </h3>
+                    </div>
+                  );
+                }
 
                 return (
                   <div key={field.name || fieldIndex} className="pl-4">
@@ -462,7 +509,11 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
                         {field.number && `${field.number} `}{field.label}
                       </h3>
                     )}
-                    {renderFieldValue(field, value)}
+                    {showWhenEmpty && !value ? (
+                      <p className="my-2 text-gray-500 italic">—</p>
+                    ) : (
+                      renderFieldValue(field, value)
+                    )}
                   </div>
                 );
               })}

@@ -3,6 +3,7 @@
  *
  * Custom hook for managing BEP structure (steps and fields) via API.
  * Handles fetching, creating, updating, deleting, and reordering.
+ * Default template is built from CONFIG on the server; no client-side merge needed.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -97,17 +98,14 @@ export function useBepStructure({ projectId = null, draftId = null, bepType = nu
       // Fetch structure - prioritize draftId over projectId
       let structureData;
       if (draftId) {
-        // Draft-level structure
         const response = await apiCall(`/draft/${draftId}?${params}`, { signal: abortControllerRef.current.signal });
         structureData = Array.isArray(response?.data) ? response.data : [];
         setHasCustomStructure(response.hasCustomStructure ?? false);
       } else if (projectId) {
-        // Project-level structure (deprecated)
         const response = await apiCall(`/project/${projectId}?${params}`, { signal: abortControllerRef.current.signal });
         structureData = Array.isArray(response?.data) ? response.data : [];
         setHasCustomStructure(response.hasCustomStructure ?? false);
       } else {
-        // Default template
         const response = await apiCall(`/template?${params}`, { signal: abortControllerRef.current.signal });
         structureData = Array.isArray(response?.data) ? response.data : [];
         setHasCustomStructure(false);
@@ -117,7 +115,7 @@ export function useBepStructure({ projectId = null, draftId = null, bepType = nu
         structureData = [];
       }
 
-      // Extract steps and flatten fields
+      // Extract steps and flatten fields (API returns CONFIG-built template when no custom structure)
       const allFields = [];
       const stepsData = structureData.map(step => {
         if (step.fields) {

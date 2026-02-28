@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bepStructureService = require('../services/bepStructureService');
 const { authenticateToken } = require('../middleware/authMiddleware');
+const { loadBepConfigAsync, isConfigLoaded } = require('../services/loadBepConfig');
 
 // Apply authentication to all BEP structure routes
 router.use(authenticateToken);
@@ -399,12 +400,16 @@ router.put('/fields/:id/move', async (req, res, next) => {
 
 /**
  * GET /api/bep-structure/template
- * Get the default 14-step template
+ * Get the default template built from CONFIG (bepFormFields.js + bepSteps.js). No DB read.
  */
 router.get('/template', async (req, res, next) => {
   try {
+    if (!isConfigLoaded()) {
+      await loadBepConfigAsync();
+    }
     const { bepType } = req.query;
-    const template = bepStructureService.getDefaultTemplate(bepType || null);
+    const effectiveType = bepType === 'pre-appointment' ? 'pre-appointment' : 'post-appointment';
+    const template = bepStructureService.getDefaultTemplateFromConfig(effectiveType);
 
     res.json({
       success: true,

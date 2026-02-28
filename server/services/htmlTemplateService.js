@@ -1,111 +1,8 @@
 const fs = require('fs');
 const path = require('path');
+const { getConfig, loadBepConfigAsync, loadBepConfig } = require('./loadBepConfig');
 
-/**
- * Default configuration structure
- * Used as fallback when bepConfig.js cannot be loaded
- * @type {Object}
- */
-const DEFAULT_CONFIG = {
-  bepTypeDefinitions: {
-    'pre-appointment': {
-      title: 'Pre-Appointment BEP',
-      subtitle: 'Tender Phase Document',
-      description: 'A document outlining the prospective delivery team\'s proposed approach, capability, and capacity.'
-    },
-    'post-appointment': {
-      title: 'Post-Appointment BEP',
-      subtitle: 'Project Execution Document',
-      description: 'Confirms the delivery team\'s information management approach and includes detailed planning and schedules.'
-    }
-  },
-  steps: [],
-  formFields: {},
-  sharedFormFields: {}
-};
-
-// Mutable config that gets populated
-let CONFIG = { ...DEFAULT_CONFIG };
-
-/**
- * Attempts to load the BEP configuration from the frontend config file
- * @returns {Object} Result object with success status and any error details
- */
-function loadBepConfig() {
-  const result = { success: false, error: null, configPath: null };
-
-  try {
-    const configPath = require.resolve('../../src/config/bepConfig.js');
-    result.configPath = configPath;
-
-    // Clear require cache to get fresh config
-    delete require.cache[configPath];
-
-    const loadedConfig = require('../../src/config/bepConfig');
-
-    // Handle different export formats
-    let configData = null;
-    if (loadedConfig.default) {
-      configData = loadedConfig.default;
-    } else if (loadedConfig.CONFIG) {
-      configData = loadedConfig.CONFIG;
-    } else if (typeof loadedConfig === 'object' && loadedConfig !== null) {
-      configData = loadedConfig;
-    }
-
-    if (!configData) {
-      throw new Error('Config file loaded but no valid configuration object found');
-    }
-
-    // Validate essential properties
-    if (!configData.bepTypeDefinitions) {
-      console.warn('⚠️  Loaded config missing bepTypeDefinitions, using defaults');
-      configData.bepTypeDefinitions = DEFAULT_CONFIG.bepTypeDefinitions;
-    }
-
-    if (!configData.steps || !Array.isArray(configData.steps)) {
-      console.warn('⚠️  Loaded config missing steps array, using defaults');
-      configData.steps = DEFAULT_CONFIG.steps;
-    }
-
-    if (!configData.formFields || typeof configData.formFields !== 'object') {
-      console.warn('⚠️  Loaded config missing formFields, using defaults');
-      configData.formFields = DEFAULT_CONFIG.formFields;
-    }
-
-    if (!configData.sharedFormFields || typeof configData.sharedFormFields !== 'object') {
-      console.warn('⚠️  Loaded config missing sharedFormFields, using defaults');
-      configData.sharedFormFields = DEFAULT_CONFIG.sharedFormFields;
-    }
-
-    CONFIG = { ...DEFAULT_CONFIG, ...configData };
-    result.success = true;
-
-  } catch (error) {
-    result.error = {
-      message: error.message,
-      code: error.code,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    };
-
-    console.warn('⚠️  Could not load bepConfig.js, using default structure');
-    console.warn(`   Reason: ${error.message}`);
-
-    if (error.code === 'MODULE_NOT_FOUND') {
-      console.warn('   Tip: Ensure the frontend config file exists at src/config/bepConfig.js');
-    }
-
-    CONFIG = { ...DEFAULT_CONFIG };
-  }
-
-  return result;
-}
-
-// Initial config load
-const configLoadResult = loadBepConfig();
-if (configLoadResult.success) {
-  console.log('✓ BEP config loaded successfully');
-}
+// Config is loaded async at server startup; use getConfig() when needed
 
 /**
  * HTML Template Service
@@ -185,7 +82,7 @@ class HtmlTemplateService {
    */
   collectSections(formData, bepType, tidpData, midpData) {
     const sections = [];
-    const steps = CONFIG.steps || [];
+    const steps = getConfig().steps || [];
 
     // Prepend Section 0 if documentHistory exists
     if (formData.documentHistory) {
@@ -336,7 +233,7 @@ class HtmlTemplateService {
    */
   renderBEPContent(formData, bepType, tidpData, midpData, componentImages, sections, options = {}) {
     const { includeToc } = options;
-    const bepConfig = CONFIG.bepTypeDefinitions?.[bepType] || CONFIG.bepTypeDefinitions['pre-appointment'];
+    const bepConfig = getConfig().bepTypeDefinitions?.[bepType] || getConfig().bepTypeDefinitions['pre-appointment'];
 
     let html = '<div class="container">';
 
@@ -514,7 +411,7 @@ class HtmlTemplateService {
    */
   renderContentSections(formData, bepType, componentImages) {
     let html = '';
-    const steps = CONFIG.steps || [];
+    const steps = getConfig().steps || [];
 
     steps.forEach((step, stepIndex) => {
       const stepConfig = this.getFormFields(bepType, stepIndex);
@@ -541,11 +438,19 @@ class HtmlTemplateService {
 
       // Section fields
       stepConfig.fields.forEach(field => {
-        if (field.type === 'section-header') return;
-
         const value = formData[field.name];
-        const isDisplayOnly = field.type === 'static-diagram' || field.type === 'info-banner';
+        const isDisplayOnly = field.type === 'static-diagram' || field.type === 'info-banner' || field.type === 'section-header';
         if (!isDisplayOnly && !this.hasRenderableValue(field, value)) return;
+
+        if (field.type === 'section-header') {
+          const fieldId = field.number ? this.generateSectionId(field.number, field.label) : '';
+          html += `
+          <div class="field-group subsection-header">
+            <h3 class="field-label"${fieldId ? ` id="${fieldId}"` : ''}>${field.number ? field.number + ' ' : ''}${this.escapeHtml(field.label)}</h3>
+          </div>
+          `;
+          return;
+        }
 
         // Generate ID for subsection (if it has a number)
         const fieldId = field.number ? this.generateSectionId(field.number, field.label) : '';
@@ -585,10 +490,12 @@ class HtmlTemplateService {
       `;
     }
 
-    // Display-only: static-diagram (document hierarchy or party interface)
+    // Display-only: static-diagram (document hierarchy, party interface, or LOIN progression)
     if (field.type === 'static-diagram') {
       const diagramKey = field.diagramKey || (field.config && field.config.diagramKey) || 'documentHierarchy';
-      return diagramKey === 'partyInterface' ? this.renderPartyInterfaceDiagramHtml() : this.renderDocumentHierarchyDiagramHtml();
+      if (diagramKey === 'partyInterface') return this.renderPartyInterfaceDiagramHtml();
+      if (diagramKey === 'loinProgression') return this.renderLoinProgressionDiagramHtml();
+      return this.renderDocumentHierarchyDiagramHtml();
     }
 
     // Special handling for naming-conventions - render as HTML instead of screenshot
@@ -640,7 +547,7 @@ class HtmlTemplateService {
    */
   hasRenderableValue(field, value) {
     // Display-only fields are always included in export
-    if (field?.type === 'static-diagram' || field?.type === 'info-banner') return true;
+    if (field?.type === 'static-diagram' || field?.type === 'info-banner' || field?.type === 'section-header') return true;
 
     if (value === null || value === undefined) return false;
 
@@ -671,6 +578,7 @@ class HtmlTemplateService {
       if (field?.type === 'table') {
         const rows = value?.data;
         if (Array.isArray(rows)) return rows.length > 0;
+        if (Array.isArray(value)) return value.length > 0;
         return false;
       }
 
@@ -745,6 +653,41 @@ class HtmlTemplateService {
           <span style="font-size:0.75rem;font-weight:500;color:#64748b;text-transform:uppercase;">IPDT (Integrated Project Delivery Team) spans all parties</span>
         </div>
         <p style="margin-top:0.5rem;font-size:0.75rem;color:#64748b;">ISO 19650-2:2018 — Interfaces between Appointing Party, Lead Appointed Party and Task Teams</p>
+      </div>
+    `;
+  }
+
+  /**
+   * Render LOIN progression diagram as HTML (Concept → Design → Coordination → Construction → As-built)
+   * @returns {string} HTML string
+   */
+  renderLoinProgressionDiagramHtml() {
+    const box = 'border:1px solid #475569;background:#fff;border-radius:0.25rem;padding:0.25rem 0.5rem;font-size:0.8rem;font-weight:500;color:#0f172a;text-align:center;';
+    return `
+      <div class="static-diagram loin-progression" style="border:1px solid #e2e8f0;background:#fff;padding:1rem;border-radius:0.5rem;margin:0.5rem 0;">
+        <p style="font-size:0.6rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:#64748b;margin-bottom:0.75rem;text-align:center;">Typical LOIN / LOD progression by project stage</p>
+        <div style="display:flex;flex-wrap:wrap;align-items:stretch;justify-content:center;gap:0.5rem;">
+          <div style="flex:0 0 auto;border:1px solid #fcd34d;background:#fef3c7;padding:0.5rem;border-radius:0.5rem;min-width:70px;text-align:center;">
+            <span style="font-size:0.6rem;font-weight:600;color:#92400e;">CONCEPT</span><br/><div style="${box}">LOD 200</div><span style="font-size:0.6rem;color:#b45309;">Approximate</span>
+          </div>
+          <span style="display:flex;align-items:center;color:#94a3b8;">→</span>
+          <div style="flex:0 0 auto;border:1px solid #93c5fd;background:#dbeafe;padding:0.5rem;border-radius:0.5rem;min-width:70px;text-align:center;">
+            <span style="font-size:0.6rem;font-weight:600;color:#1e40af;">DESIGN</span><br/><div style="${box}">LOD 300</div><span style="font-size:0.6rem;color:#1d4ed8;">Defined</span>
+          </div>
+          <span style="display:flex;align-items:center;color:#94a3b8;">→</span>
+          <div style="flex:0 0 auto;border:1px solid #a5b4fc;background:#e0e7ff;padding:0.5rem;border-radius:0.5rem;min-width:70px;text-align:center;">
+            <span style="font-size:0.6rem;font-weight:600;color:#3730a3;">COORDINATION</span><br/><div style="${box}">LOD 350</div><span style="font-size:0.6rem;color:#4f46e5;">Coordinated</span>
+          </div>
+          <span style="display:flex;align-items:center;color:#94a3b8;">→</span>
+          <div style="flex:0 0 auto;border:1px solid #6ee7b7;background:#d1fae5;padding:0.5rem;border-radius:0.5rem;min-width:70px;text-align:center;">
+            <span style="font-size:0.6rem;font-weight:600;color:#065f46;">CONSTRUCTION</span><br/><div style="${box}">LOD 400</div><span style="font-size:0.6rem;color:#047857;">Fabrication</span>
+          </div>
+          <span style="display:flex;align-items:center;color:#94a3b8;">→</span>
+          <div style="flex:0 0 auto;border:1px solid #e2e8f0;background:#f1f5f9;padding:0.5rem;border-radius:0.5rem;min-width:70px;text-align:center;">
+            <span style="font-size:0.6rem;font-weight:600;color:#475569;">AS-BUILT</span><br/><div style="${box}">LOD 500</div><span style="font-size:0.6rem;color:#64748b;">Verified</span>
+          </div>
+        </div>
+        <p style="margin-top:0.75rem;padding-top:0.5rem;border-top:1px solid #e2e8f0;font-size:0.65rem;color:#64748b;">Specify exact requirements per element and stage in the Level of Information Need Matrix table.</p>
       </div>
     `;
   }
@@ -830,7 +773,9 @@ class HtmlTemplateService {
         'Stage/Phase': '',
         'Milestone Description': '',
         Deliverables: '',
-        'Due Date': ''
+        'Due Date': '',
+        'Gate': '',
+        'Programme version': ''
       };
     }
 
@@ -847,7 +792,9 @@ class HtmlTemplateService {
       'Stage/Phase': getFirstValue(['Stage/Phase', 'Stage', 'Phase', 'stage', 'phase']),
       'Milestone Description': getFirstValue(['Milestone Description', 'milestoneDescription', 'Description', 'description']),
       Deliverables: getFirstValue(['Deliverables', 'deliverables']),
-      'Due Date': getFirstValue(['Due Date', 'dueDate', 'Date', 'date'])
+      'Due Date': getFirstValue(['Due Date', 'dueDate', 'Date', 'date']),
+      'Gate': getFirstValue(['Gate', 'gate']),
+      'Programme version': getFirstValue(['Programme version', 'programmeVersion', 'programmeVersion'])
     };
   }
 
@@ -1326,8 +1273,8 @@ class HtmlTemplateService {
    */
   getFormFields(bepType, stepIndex) {
     try {
-      const formFields = CONFIG.formFields || {};
-      const sharedFormFields = CONFIG.sharedFormFields || {};
+      const formFields = getConfig().formFields || {};
+      const sharedFormFields = getConfig().sharedFormFields || {};
       const typeFields = formFields[bepType] || {};
 
       if (stepIndex <= 2 && typeFields[stepIndex]) {
@@ -1872,9 +1819,9 @@ class HtmlTemplateService {
    * Useful for hot-reloading in development
    * @returns {Object} Config load result
    */
-  reloadConfig() {
+  async reloadConfig() {
     this._cssCache = null; // Clear CSS cache too
-    return loadBepConfig();
+    return loadBepConfigAsync();
   }
 
   /**
@@ -1882,13 +1829,15 @@ class HtmlTemplateService {
    * @returns {Object} Status object with config details
    */
   getConfigStatus() {
+    const { getConfig, lastLoadResult } = require('./loadBepConfig');
+    const CONFIG = getConfig();
     return {
-      hasSteps: CONFIG.steps.length > 0,
-      stepCount: CONFIG.steps.length,
-      hasBepTypes: Object.keys(CONFIG.bepTypeDefinitions).length > 0,
-      bepTypes: Object.keys(CONFIG.bepTypeDefinitions),
-      hasFormFields: Object.keys(CONFIG.formFields).length > 0,
-      initialLoadResult: configLoadResult
+      hasSteps: (CONFIG.steps && CONFIG.steps.length) > 0,
+      stepCount: (CONFIG.steps && CONFIG.steps.length) || 0,
+      hasBepTypes: CONFIG.bepTypeDefinitions && Object.keys(CONFIG.bepTypeDefinitions).length > 0,
+      bepTypes: CONFIG.bepTypeDefinitions ? Object.keys(CONFIG.bepTypeDefinitions) : [],
+      hasFormFields: CONFIG.formFields && Object.keys(CONFIG.formFields).length > 0,
+      initialLoadResult: lastLoadResult
     };
   }
 }
