@@ -458,6 +458,25 @@ if (hasOldColumns) {
   console.log('Migration: MIDP columns renamed to correct names');
 }
 
+// LOIN rows: Level of Information Need entries per project, discipline, stage, element
+db.exec(`
+  CREATE TABLE IF NOT EXISTS loin_rows (
+    id            TEXT PRIMARY KEY,
+    project_id    TEXT NOT NULL,
+    discipline    TEXT NOT NULL,
+    stage         TEXT NOT NULL,
+    element       TEXT NOT NULL,
+    geometry      TEXT,
+    alphanumeric  TEXT,
+    documentation TEXT,
+    notes         TEXT,
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_loin_rows_project_id ON loin_rows(project_id);
+`);
+
 console.log('Database initialized at:', dbPath);
 
 module.exports = db;

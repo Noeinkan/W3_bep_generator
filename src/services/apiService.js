@@ -167,6 +167,26 @@ class ApiService {
   }
 
   // ======================
+  // LOIN Services
+  // ======================
+
+  getLoinRows(projectId) {
+    return this._get(`/loin?projectId=${encodeURIComponent(projectId)}`, 'Failed to fetch LOIN rows');
+  }
+
+  createLoinRow(data) {
+    return this._post('/loin', data, 'Failed to create LOIN row');
+  }
+
+  updateLoinRow(id, data) {
+    return this._put(`/loin/${id}`, data, `Failed to update LOIN row ${id}`);
+  }
+
+  deleteLoinRow(id) {
+    return this._delete(`/loin/${id}`, `Failed to delete LOIN row ${id}`);
+  }
+
+  // ======================
   // TIDP Services
   // ======================
 

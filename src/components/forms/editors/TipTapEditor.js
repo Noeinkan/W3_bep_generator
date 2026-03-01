@@ -113,7 +113,7 @@ const TipTapEditor = ({
         'aria-required': ariaRequired || undefined,
         'aria-label': 'Rich text editor',
         'aria-multiline': 'true',
-        spellcheck: 'true',
+        spellcheck: 'false',
       },
       handleDOMEvents: {
         focus: (_view, event) => {

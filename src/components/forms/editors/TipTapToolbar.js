@@ -554,9 +554,19 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
         {showSnippetDropdown && (
           <>
             <div className="fixed inset-0 z-10" aria-hidden onClick={() => setShowSnippetDropdown(false)} />
-            <div className="absolute left-0 top-full mt-1 z-20 min-w-[12rem] py-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-auto">
+            <div className="absolute left-0 top-full mt-1 z-20 min-w-[14rem] py-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto">
+              <p className="px-3 py-2 text-xs text-gray-500 border-b border-gray-100">
+                Click to insert. To change the <strong>value</strong> that replaces each placeholder, go to Settings.
+              </p>
+              <a
+                href="/settings"
+                className="block px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 border-b border-gray-100"
+                onClick={() => setShowSnippetDropdown(false)}
+              >
+                → Manage snippet values in Settings
+              </a>
               {snippets.length === 0 ? (
-                <p className="px-3 py-2 text-sm text-gray-500">No snippets. Add in Settings → BEP text snippets.</p>
+                <p className="px-3 py-2 text-sm text-gray-500">No snippets yet. Add them in Settings first.</p>
               ) : (
                 snippets.map((s) => (
                   <button
