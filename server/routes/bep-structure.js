@@ -549,7 +549,7 @@ router.get('/draft/:draftId', async (req, res, next) => {
  */
 router.post('/clone-to-draft', async (req, res, next) => {
   try {
-    const { draftId } = req.body;
+    const { draftId, bepType } = req.body;
 
     if (!draftId) {
       return res.status(400).json({
@@ -566,7 +566,7 @@ router.post('/clone-to-draft', async (req, res, next) => {
       });
     }
 
-    const structure = bepStructureService.cloneTemplateToDraft(draftId);
+    const structure = bepStructureService.cloneTemplateToDraft(draftId, bepType || 'post-appointment');
 
     res.status(201).json({
       success: true,
@@ -585,7 +585,8 @@ router.post('/clone-to-draft', async (req, res, next) => {
 router.post('/reset-draft/:draftId', async (req, res, next) => {
   try {
     const { draftId } = req.params;
-    const structure = bepStructureService.resetDraftToDefault(draftId);
+    const { bepType } = req.body || {};
+    const structure = bepStructureService.resetDraftToDefault(draftId, bepType || 'post-appointment');
 
     res.json({
       success: true,

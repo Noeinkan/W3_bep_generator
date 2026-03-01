@@ -4,6 +4,7 @@ import { useBepForm } from '../../../contexts/BepFormContext';
 import { useProject } from '../../../contexts/ProjectContext';
 import { useTidpData } from '../../../hooks/useTidpData';
 import { useMidpData } from '../../../hooks/useMidpData';
+import { useSnippets } from '../../../hooks/useSnippets';
 import PreviewExportPage from '../PreviewExportPage';
 import { generateBEPContent } from '../../../services/bepFormatter';
 import { generateBEPPDFOnServer } from '../../../services/backendPdfService';
@@ -22,6 +23,7 @@ const BepPreviewView = () => {
   const { currentProject } = useProject();
   const { tidps } = useTidpData();
   const { midps } = useMidpData();
+  const { snippetMap } = useSnippets();
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [exportFormat, setExportFormat] = useState('pdf');
@@ -128,7 +130,8 @@ const BepPreviewView = () => {
         const docxBlob = await generateDocx(formData, bepType, {
           tidpData: tidps,
           midpData: midps,
-          componentImages: componentScreenshots
+          componentImages: componentScreenshots,
+          snippetMap
         });
         downloadBlob(docxBlob, `BEP_${bepType}_${new Date().toISOString().split('T')[0]}.docx`);
         setStatusMessage(`Document exported successfully as ${exportFormat.toUpperCase()}.`);

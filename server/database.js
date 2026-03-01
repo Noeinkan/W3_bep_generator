@@ -228,6 +228,21 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_acc_secrets_project_id ON acc_secrets(project_id);
   CREATE INDEX IF NOT EXISTS idx_acc_secrets_secret_type ON acc_secrets(secret_type);
 
+  -- Snippets: stable text reusable in labels, placeholders, and panels ({{snippet:key}})
+  CREATE TABLE IF NOT EXISTS snippets (
+    id TEXT PRIMARY KEY,
+    key TEXT NOT NULL UNIQUE,
+    value TEXT NOT NULL,
+    classification TEXT,
+    project_id TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_snippets_key ON snippets(key);
+  CREATE INDEX IF NOT EXISTS idx_snippets_classification ON snippets(classification);
+  CREATE INDEX IF NOT EXISTS idx_snippets_project_id ON snippets(project_id);
+
   -- Client Documents: EIR and other client-provided documents for analysis
   CREATE TABLE IF NOT EXISTS client_documents (
     id TEXT PRIMARY KEY,

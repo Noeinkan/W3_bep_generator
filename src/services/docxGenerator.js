@@ -16,6 +16,7 @@ import {
 } from 'docx';
 import CONFIG from '../config/bepConfig';
 import { convertHtmlToDocx } from './htmlToDocx';
+import { resolveSnippetsInText } from '../utils/snippetUtils';
 
 // Field types that are rendered as visual diagrams and captured as screenshots.
 // Must stay in sync with componentScreenshotCapture.js VISUAL_COMPONENTS array.
@@ -275,7 +276,8 @@ const renderDocumentHistoryDocx = (dh) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const generateDocx = async (formData, bepType, options = {}) => {
-  const { tidpData = [], midpData = [], componentImages = {} } = options;
+  const { tidpData = [], midpData = [], componentImages = {}, snippetMap = {} } = options;
+  const resolve = (t) => (typeof t === 'string' ? resolveSnippetsInText(t, snippetMap) : t);
   const currentDate = new Date();
   const formattedDate = currentDate.toLocaleDateString();
   const formattedTime = currentDate.toLocaleTimeString();
@@ -529,9 +531,10 @@ export const generateDocx = async (formData, bepType, options = {}) => {
       if (tableFields.length > 0) {
         for (const field of tableFields) {
           if (!field.label) continue;
+          const rawLabel = field.label || 'Field';
           const fieldLabel = (field.number && field.number.trim())
-            ? `${field.number} ${field.label || 'Field'}`
-            : (field.label || 'Field');
+            ? `${field.number} ${resolve(rawLabel)}`
+            : resolve(rawLabel);
           const value = formData[field.name];
 
           // Data table (type 'table' with array of row objects): render as full table
@@ -559,7 +562,7 @@ export const generateDocx = async (formData, bepType, options = {}) => {
               sections.push(new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
                 rows: [new TableRow({
-                  children: [createBorderedCell(fieldLabel + ':', true), createBorderedCell(value)]
+                  children: [createBorderedCell(fieldLabel + ':', true), createBorderedCell(typeof value === 'string' ? resolve(value) : value)]
                 })]
               }));
             }
@@ -572,7 +575,7 @@ export const generateDocx = async (formData, bepType, options = {}) => {
             rows: [new TableRow({
               children: [
                 createBorderedCell(fieldLabel + ':', true),
-                createBorderedCell(value)
+                createBorderedCell(typeof value === 'string' ? resolve(value) : value)
               ]
             })]
           }));
@@ -580,9 +583,10 @@ export const generateDocx = async (formData, bepType, options = {}) => {
       }
 
       for (const field of otherFields) {
+        const rawLabel = field.label || 'Untitled Field';
         const fieldLabel = (field.number && field.number.trim())
-          ? `${field.number} ${field.label || 'Untitled Field'}`
-          : (field.label || 'Untitled Field');
+          ? `${field.number} ${resolve(rawLabel)}`
+          : resolve(rawLabel);
 
         sections.push(
           new Paragraph({
@@ -630,19 +634,20 @@ export const generateDocx = async (formData, bepType, options = {}) => {
             sections.push(new Paragraph({ text: `✓ ${item}`, bullet: { level: 0 }, spacing: { after: 50 } }));
           });
         } else if (field.type === 'textarea' && value) {
-          const isHtml = value.trim().startsWith('<') && value.includes('>');
+          const resolvedValue = typeof value === 'string' ? resolve(value) : value;
+          const isHtml = resolvedValue.trim().startsWith('<') && resolvedValue.includes('>');
           if (isHtml) {
             try {
-              const docxElements = convertHtmlToDocx(value);
+              const docxElements = convertHtmlToDocx(resolvedValue);
               docxElements.forEach(element => sections.push(element));
             } catch (error) {
               console.error('Error converting HTML to DOCX:', error);
-              value.split('\n').forEach(line => {
+              resolvedValue.split('\n').forEach(line => {
                 sections.push(new Paragraph({ text: line || '', spacing: { after: 100 } }));
               });
             }
           } else {
-            value.split('\n').forEach(line => {
+            resolvedValue.split('\n').forEach(line => {
               sections.push(new Paragraph({ text: line || '', spacing: { after: 100 } }));
             });
           }

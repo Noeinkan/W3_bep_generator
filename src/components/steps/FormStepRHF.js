@@ -3,6 +3,8 @@ import { useFormContext } from 'react-hook-form';
 import InputFieldRHF from '../forms/base/InputFieldRHF';
 import CONFIG from '../../config/bepConfig';
 import { getFullWidthFieldTypes } from '../form-builder/FieldTypeRegistry';
+import { useSnippets } from '../../hooks/useSnippets';
+import { resolveSnippetsInField } from '../../utils/snippetUtils';
 
 // Field types that should span all 3 columns
 const THREE_COLUMN_FIELD_TYPES = ['standardsTable'];
@@ -15,6 +17,7 @@ const THREE_COLUMN_FIELD_TYPES = ['standardsTable'];
 const FormStepRHF = ({ stepIndex, bepType }) => {
   const { formState: { errors } } = useFormContext();
   const fullWidthTypes = useMemo(() => getFullWidthFieldTypes(), []);
+  const { snippetMap } = useSnippets();
 
   // Safety check - ensure we have the required props
   if (!bepType) {
@@ -53,7 +56,7 @@ const FormStepRHF = ({ stepIndex, bepType }) => {
               fullWidthTypes.includes(field.type) ? 'md:col-span-2' : ''
             }>
               <InputFieldRHF
-                field={field}
+                field={resolvedField}
                 error={fieldError?.message || ''}
               />
             </div>

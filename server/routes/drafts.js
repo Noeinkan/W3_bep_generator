@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database');
 const { createId } = require('@paralleldrive/cuid2');
-const bepStructureService = require('../services/bepStructureService');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
 /**
@@ -120,13 +119,9 @@ router.post('/', authenticateToken, async (req, res) => {
 
     stmt.run(id, userId, projectId || null, title, type, JSON.stringify(data), now, now);
 
-    // Auto-clone BEP structure template to this draft
-    try {
-      bepStructureService.cloneTemplateToDraft(id);
-    } catch (structureError) {
-      console.warn('Failed to clone BEP structure to draft:', structureError.message);
-      // Don't fail draft creation if structure cloning fails
-    }
+    // Do NOT clone BEP structure here. Structure is loaded from CONFIG (getDefaultTemplateFromConfig)
+    // when the draft has no custom structure, so CONFIG changes show up until the user customizes.
+    // Structure is cloned to the draft only when they enter Structure Map edit mode (clone-to-draft).
 
     const draft = db.prepare('SELECT * FROM drafts WHERE id = ?').get(id);
 

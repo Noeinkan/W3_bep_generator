@@ -50,6 +50,8 @@ const TidpReferenceField = React.lazy(() => import('../forms/specialized/TidpRef
 const TidpSectionField = React.lazy(() => import('../forms/specialized/TidpSectionField'));
 const DeliverablesMatrixField = React.lazy(() => import('../forms/specialized/DeliverablesMatrixField'));
 const ImActivitiesMatrixField = React.lazy(() => import('../forms/specialized/ImActivitiesMatrixField'));
+const EirReferenceField = React.lazy(() => import('../forms/specialized/EirReferenceField'));
+const LoinReferenceField = React.lazy(() => import('../forms/specialized/LoinReferenceField'));
 const ImageUploadField = React.lazy(() => import('../forms/base/ImageUploadField'));
 
 /**
@@ -334,6 +336,34 @@ export const FIELD_TYPE_REGISTRY = {
     isFormField: true,
     fullWidth: true,
     defaultConfig: { matrixType: 'im-activities' }
+  },
+
+  'eir-reference': {
+    component: EirReferenceField,
+    category: 'specialized',
+    icon: Link,
+    label: 'EIR Reference',
+    description: 'Link to EIR Manager',
+    hasPlaceholder: false,
+    hasOptions: false,
+    hasColumns: false,
+    isFormField: false,
+    fullWidth: true,
+    defaultConfig: {}
+  },
+
+  'loin-reference': {
+    component: LoinReferenceField,
+    category: 'specialized',
+    icon: Link,
+    label: 'LOIN Reference',
+    description: 'Link to LOIN Tables module',
+    hasPlaceholder: false,
+    hasOptions: false,
+    hasColumns: false,
+    isFormField: false,
+    fullWidth: true,
+    defaultConfig: {}
   },
 
   // ========================================

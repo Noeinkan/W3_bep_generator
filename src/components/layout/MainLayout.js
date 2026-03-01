@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, useLocation, Navigate } from 'react-router-dom';
-import { FileText, BarChart3, Grid3x3 } from 'lucide-react';
+import { FileText, BarChart3, Grid3x3, FileSearch, Layers } from 'lucide-react';
 import Sidebar from './Sidebar';
 import UserDropdown from './UserDropdown';
 import { useProject } from '../../contexts/ProjectContext';
@@ -36,6 +36,16 @@ const MainLayout = () => {
       name: 'Responsibility Matrix',
       href: '/responsibility-matrix',
       icon: Grid3x3
+    },
+    {
+      name: 'EIR Manager',
+      href: '/eir-manager',
+      icon: FileSearch
+    },
+    {
+      name: 'LOIN Tables',
+      href: '/loin-tables',
+      icon: Layers
     }
   ];
 

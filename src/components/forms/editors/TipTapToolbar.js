@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Bold,
   Italic,
@@ -26,9 +26,11 @@ import {
   ZoomIn,
   ZoomOut,
   ChevronDown,
+  FileText,
 } from 'lucide-react';
 import TableInsertDialog from '../dialogs/TableInsertDialog';
 import SmartHelpButton from '../ai/SmartHelpButton';
+import apiService from '../../../services/apiService';
 
 const ToolbarButton = ({ onClick, active, disabled, children, title }) => (
   <button
@@ -54,6 +56,21 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
   const [showHighlightPicker, setShowHighlightPicker] = useState(false);
   const [currentHighlight, setCurrentHighlight] = useState('#ffff00');
   const [showTableDialog, setShowTableDialog] = useState(false);
+  const [showSnippetDropdown, setShowSnippetDropdown] = useState(false);
+  const [snippets, setSnippets] = useState([]);
+
+  useEffect(() => {
+    if (showSnippetDropdown && snippets.length === 0) {
+      apiService.getSnippets().then((res) => setSnippets(res?.data ?? [])).catch(() => setSnippets([]));
+    }
+  }, [showSnippetDropdown, snippets.length]);
+
+  const insertSnippet = useCallback((key) => {
+    if (editor) {
+      editor.chain().focus().insertContent(`{{snippet:${key}}}`).run();
+      setShowSnippetDropdown(false);
+    }
+  }, [editor]);
 
   const addLink = useCallback(() => {
     if (linkUrl && editor) {
@@ -525,6 +542,38 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
       </ToolbarButton>
 
       <ToolbarDivider />
+
+      {/* Insert Snippet - placeholders replaced on preview/export */}
+      <div className="relative inline-block">
+        <ToolbarButton
+          onClick={() => setShowSnippetDropdown((v) => !v)}
+          title="Insert snippet (e.g. {{snippet:appointed_party}})"
+        >
+          <FileText size={18} />
+        </ToolbarButton>
+        {showSnippetDropdown && (
+          <>
+            <div className="fixed inset-0 z-10" aria-hidden onClick={() => setShowSnippetDropdown(false)} />
+            <div className="absolute left-0 top-full mt-1 z-20 min-w-[12rem] py-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-auto">
+              {snippets.length === 0 ? (
+                <p className="px-3 py-2 text-sm text-gray-500">No snippets. Add in Settings → BEP text snippets.</p>
+              ) : (
+                snippets.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 flex justify-between gap-2"
+                    onClick={() => insertSnippet(s.key)}
+                  >
+                    <span className="font-mono truncate">{s.key}</span>
+                    <span className="text-gray-400 truncate flex-shrink-0 max-w-[8rem]" title={s.value}>{s.value}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Smart Help Button - Unified help interface */}
       <SmartHelpButton

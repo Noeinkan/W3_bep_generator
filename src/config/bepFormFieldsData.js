@@ -12,9 +12,10 @@ export const formFields = {
         { number: '1.1', name: 'projectType', label: 'Project Type', required: true, type: 'select', options: 'projectTypes' },
         { number: '1.1', name: 'appointingParty', label: 'Appointing Party', required: true, type: 'text', placeholder: 'ABC Development Corporation' },
         { number: '1.1', name: 'eirPirReference', label: 'BEP Purpose — Response to EIR and PIR (and OIR/AIR where applicable)', type: 'textarea', rows: 3, placeholder: 'This BEP is prepared in response to the Exchange Information Requirements (EIR) ref. [EIR-REF] issued by [Appointing Party] and the Project Information Requirements (PIR) ref. [PIR-REF] dated [date]. Where the appointing party has issued Organisational Information Requirements (OIR) or Asset Information Requirements (AIR), these feed into the PIR and are reflected in the EIR; this BEP sets out the delivery team\'s proposed approach to meeting those requirements in accordance with ISO 19650-2:2018.' },
+        { number: '1.1a', name: 'eirReference', label: 'EIR Reference — Manage client EIR', type: 'eir-reference' },
         { number: '1.2', type: 'static-diagram', diagramKey: 'documentHierarchy', label: 'Information Requirements Document Hierarchy' },
         { number: '1.3', name: 'signpostedDocuments', label: 'Related Documents Signposted by this BEP', type: 'table', columns: ['Document', 'Reference / Title', 'Location / CDE Path', 'Status'] },
-        { number: '1.4', type: 'info-banner', label: 'ISO 19650 Requirement: A separate BEP must be prepared and maintained for each direct appointment within the project. This document covers the appointment of [Appointed Party] only.' },
+        { number: '1.4', type: 'info-banner', label: 'ISO 19650 Requirement: A separate BEP must be prepared and maintained for each direct appointment within the project. This document covers the appointment of {{snippet:appointed_party}} only.' },
         { number: '1.5', name: 'iso19650Definitions', label: 'ISO 19650 Party Definitions', type: 'table', columns: ['Term', 'ISO 19650 Definition', 'Role on This Project'] },
         { number: '1.6', type: 'static-diagram', diagramKey: 'partyInterface', label: 'ISO 19650-2:2018 — Interfaces Between Parties' },
         { number: '1.1', name: 'proposedTimeline', label: 'Proposed Project Timeline', type: 'timeline', placeholder: '24 months (Jan 2025 - Dec 2026)' },
@@ -74,9 +75,10 @@ export const formFields = {
         { number: '', name: 'projectType', label: 'Project Type', required: true, type: 'select', options: 'projectTypes' },
         { number: '', name: 'appointingParty', label: 'Appointing Party', required: true, type: 'text', placeholder: 'ABC Development Corporation' },
         { number: '1.1', name: 'eirPirReference', label: 'BEP Purpose — Confirmed response to EIR and PIR (and OIR/AIR where applicable)', type: 'textarea', rows: 3, placeholder: 'This BEP confirms our response to the Exchange Information Requirements (EIR) ref. [EIR-REF] issued by [Appointing Party] and the Project Information Requirements (PIR) ref. [PIR-REF] dated [date]. Where OIR or AIR apply, they are reflected in the PIR and EIR; this document sets out the delivery team\'s confirmed approach and includes the MIDP/TIDP, Information Standard response, and IPMP in accordance with ISO 19650-2:2018.' },
+        { number: '1.1a', name: 'eirReference', label: 'EIR Reference — Manage client EIR', type: 'eir-reference' },
         { number: '1.2', type: 'static-diagram', diagramKey: 'documentHierarchy', label: 'Information Requirements Document Hierarchy' },
         { number: '1.3', name: 'signpostedDocuments', label: 'Related Documents Signposted by this BEP', type: 'table', columns: ['Document', 'Reference / Title', 'Location / CDE Path', 'Status'] },
-        { number: '1.4', type: 'info-banner', label: 'ISO 19650 Requirement: A separate BEP must be prepared and maintained for each direct appointment within the project. This document covers the appointment of [Appointed Party] only.' },
+        { number: '1.4', type: 'info-banner', label: 'ISO 19650 Requirement: A separate BEP must be prepared and maintained for each direct appointment within the project. This document covers the appointment of {{snippet:appointed_party}} only.' },
         { number: '1.5', name: 'iso19650Definitions', label: 'ISO 19650 Party Definitions', type: 'table', columns: ['Term', 'ISO 19650 Definition', 'Role on This Project'] },
         { number: '1.6', type: 'static-diagram', diagramKey: 'partyInterface', label: 'ISO 19650-2:2018 — Interfaces Between Parties' },
         { number: '', name: 'confirmedTimeline', label: 'Confirmed Project Timeline', type: 'timeline', placeholder: '24 months (Jan 2025 - Dec 2026)' },
@@ -146,6 +148,7 @@ export const sharedFormFields = {
     fields: [
       { number: '5.1', name: 'informationPurposes', label: 'Information Purposes', required: true, type: 'checkbox', options: 'informationPurposes' },
       { number: '5.2', name: 'levelOfInformationMatrix', label: 'Level of Information Need Matrix (Model Element Table)', type: 'table', columns: ['Element Category / Discipline', 'Project Stage', 'LOD', 'LoI', 'Information Format', 'Author/Responsible', 'Notes'] },
+      { number: '5.2a', name: 'loinTablesReference', label: 'LOIN Tables (managed)', type: 'loin-reference', placeholder: 'Manage Level of Information Need tables by discipline, stage, and element in the LOIN Tables module.' },
       { number: '5.3', name: 'geometricalInfo', label: 'Geometrical Information Requirements', type: 'textarea', rows: 3, placeholder: 'Geometrical information requirements include: LOD 300 for all structural elements during design development. Summarise here; detail per element/stage in the LOIN table above.' },
       { number: '5.4', name: 'alphanumericalInfo', label: 'Alphanumerical Information Requirements', type: 'textarea', rows: 3, placeholder: 'Alphanumerical information requirements encompass: complete material specifications with thermal and fire ratings...' },
       { number: '5.5', name: 'documentationInfo', label: 'Documentation Requirements', type: 'textarea', rows: 3, placeholder: 'Documentation requirements include: technical specification documents for all building systems...' },
@@ -295,4 +298,4 @@ export function getFormFields(bepType, stepIndex) {
     return sharedFormFields[stepIndex];
   }
   return null;
-}
+}

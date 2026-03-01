@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Lock, Bell, Globe, Palette, Database, Shield, Save, Bot } from 'lucide-react';
+import { Lock, Bell, Globe, Palette, Database, Shield, Save, Bot, FileText, Plus, Pencil, Trash2 } from 'lucide-react';
+import apiService from '../../services/apiService';
+import toast from 'react-hot-toast';
 
 const PREFERRED_MODEL_KEY = 'preferredOllamaModel';
 const DEFAULT_MODEL = 'llama3.1:8b';
@@ -56,6 +58,82 @@ const SettingsPage = () => {
   useEffect(() => {
     localStorage.setItem(PREFERRED_MODEL_KEY, selectedModel);
   }, [selectedModel]);
+
+  // BEP Snippets (stable text for {{snippet:key}} in labels/placeholders/panels)
+  const [snippets, setSnippets] = useState([]);
+  const [snippetsLoading, setSnippetsLoading] = useState(true);
+  const [snippetForm, setSnippetForm] = useState({ key: '', value: '', classification: '' });
+  const [editingId, setEditingId] = useState(null);
+
+  const loadSnippets = useCallback(async () => {
+    setSnippetsLoading(true);
+    try {
+      const res = await apiService.getSnippets();
+      setSnippets(res?.data ?? []);
+    } catch (err) {
+      toast.error('Failed to load snippets');
+      setSnippets([]);
+    } finally {
+      setSnippetsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSnippets();
+  }, [loadSnippets]);
+
+  const handleSaveSnippet = async () => {
+    if (!snippetForm.key.trim() || snippetForm.value === undefined) {
+      toast.error('Key and value are required');
+      return;
+    }
+    try {
+      await apiService.createOrUpdateSnippet({
+        key: snippetForm.key.trim(),
+        value: String(snippetForm.value),
+        classification: snippetForm.classification?.trim() || undefined
+      });
+      toast.success(editingId ? 'Snippet updated' : 'Snippet added');
+      setSnippetForm({ key: '', value: '', classification: '' });
+      setEditingId(null);
+      loadSnippets();
+    } catch (err) {
+      toast.error(err?.message ?? 'Failed to save snippet');
+    }
+  };
+
+  const handleEditSnippet = (s) => {
+    setSnippetForm({ key: s.key, value: s.value, classification: s.classification || '' });
+    setEditingId(s.id);
+  };
+
+  const handleUpdateSnippet = async () => {
+    if (!editingId) return;
+    try {
+      await apiService.updateSnippet(editingId, {
+        value: String(snippetForm.value),
+        classification: snippetForm.classification?.trim() || undefined
+      });
+      toast.success('Snippet updated');
+      setSnippetForm({ key: '', value: '', classification: '' });
+      setEditingId(null);
+      loadSnippets();
+    } catch (err) {
+      toast.error(err?.message ?? 'Failed to update snippet');
+    }
+  };
+
+  const handleDeleteSnippet = async (id) => {
+    if (!window.confirm('Delete this snippet? References will show the key until you add it again.')) return;
+    try {
+      await apiService.deleteSnippet(id);
+      toast.success('Snippet deleted');
+      if (editingId === id) setEditingId(null);
+      loadSnippets();
+    } catch (err) {
+      toast.error(err?.message ?? 'Failed to delete snippet');
+    }
+  };
 
   const handleSave = () => {
     // TODO: Save to backend
@@ -132,6 +210,95 @@ const SettingsPage = () => {
             </p>
           </div>
         )}
+
+        {/* BEP Snippets */}
+        <SettingSection icon={FileText} title="BEP text snippets">
+          <p className="text-xs text-gray-500 mb-3">
+            Stable text used in labels and panels. Use <code className="bg-gray-100 px-1 rounded">{'{{snippet:key}}'}</code> in form config; changing the value here updates every reference.
+          </p>
+          {snippetsLoading ? (
+            <p className="text-sm text-gray-500">Loading snippets…</p>
+          ) : (
+            <>
+              <div className="space-y-2 mb-4">
+                <input
+                  type="text"
+                  placeholder="Key (e.g. appointed_party)"
+                  value={snippetForm.key}
+                  onChange={(e) => setSnippetForm({ ...snippetForm, key: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  disabled={!!editingId}
+                />
+                <input
+                  type="text"
+                  placeholder="Value"
+                  value={snippetForm.value}
+                  onChange={(e) => setSnippetForm({ ...snippetForm, value: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                <input
+                  type="text"
+                  placeholder="Classification (optional)"
+                  value={snippetForm.classification}
+                  onChange={(e) => setSnippetForm({ ...snippetForm, classification: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={editingId ? handleUpdateSnippet : handleSaveSnippet}
+                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                  >
+                    {editingId ? <Pencil className="w-4 h-4 mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
+                    {editingId ? 'Update' : 'Add'} snippet
+                  </button>
+                  {editingId && (
+                    <button
+                      type="button"
+                      onClick={() => { setEditingId(null); setSnippetForm({ key: '', value: '', classification: '' }); }}
+                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </div>
+              <ul className="border border-gray-200 rounded-lg divide-y divide-gray-200">
+                {snippets.length === 0 ? (
+                  <li className="px-4 py-3 text-sm text-gray-500">No snippets yet. Add one above.</li>
+                ) : (
+                  snippets.map((s) => (
+                    <li key={s.id} className="px-4 py-2 flex items-center justify-between gap-2">
+                      <span className="font-mono text-sm text-gray-700">{s.key}</span>
+                      <span className="flex-1 truncate text-sm text-gray-600" title={s.value}>{s.value}</span>
+                      {s.classification && (
+                        <span className="text-xs text-gray-400">{s.classification}</span>
+                      )}
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleEditSnippet(s)}
+                          className="p-1.5 text-gray-500 hover:text-blue-600 rounded"
+                          aria-label="Edit"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSnippet(s.id)}
+                          className="p-1.5 text-gray-500 hover:text-red-600 rounded"
+                          aria-label="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </>
+          )}
+        </SettingSection>
 
         {/* AI Settings */}
         <SettingSection icon={Bot} title="AI Model">

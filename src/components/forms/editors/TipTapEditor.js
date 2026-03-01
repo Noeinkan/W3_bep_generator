@@ -230,12 +230,12 @@ const TipTapEditor = ({
     // eslint-disable-next-line
   }, [editor, autoSaveKey]);
 
-  // Update editor content when value prop changes externally.
-  // setContent with emitUpdate=false prevents onUpdate from firing, which
-  // breaks the value → setContent → onUpdate → onChange → value loop.
+  // Update editor content when value prop changes externally (e.g. draft loaded).
+  // Do not overwrite while the user is typing (editor has focus) to avoid wiping edits.
   useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value, false);
+    if (!editor || editor.isFocused) return;
+    if (value !== editor.getHTML()) {
+      editor.commands.setContent(value ?? '', false);
     }
   }, [editor, value]);
 

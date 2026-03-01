@@ -137,6 +137,36 @@ class ApiService {
   }
 
   // ======================
+  // Snippet Services (stable text for labels/placeholders/panels)
+  // ======================
+
+  getSnippetsMap(projectId = null) {
+    const params = projectId ? { projectId } : {};
+    return this._get('/snippets/map', 'Failed to fetch snippets map', { params });
+  }
+
+  getSnippets(classification = null) {
+    const params = classification ? { classification } : {};
+    return this._get('/snippets', 'Failed to fetch snippets', { params });
+  }
+
+  getSnippetByKey(key) {
+    return this._get(`/snippets/${encodeURIComponent(key)}`, `Failed to fetch snippet ${key}`);
+  }
+
+  createOrUpdateSnippet({ key, value, classification }) {
+    return this._post('/snippets', { key, value, classification }, 'Failed to save snippet');
+  }
+
+  updateSnippet(id, data) {
+    return this._put(`/snippets/${id}`, data, `Failed to update snippet ${id}`);
+  }
+
+  deleteSnippet(id) {
+    return this._delete(`/snippets/${id}`, `Failed to delete snippet ${id}`);
+  }
+
+  // ======================
   // TIDP Services
   // ======================
 

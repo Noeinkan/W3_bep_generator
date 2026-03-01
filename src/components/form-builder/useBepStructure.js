@@ -347,7 +347,7 @@ export function useBepStructure({ projectId = null, draftId = null, bepType = nu
       if (draftId) {
         response = await apiCall('/clone-to-draft', {
           method: 'POST',
-          body: JSON.stringify({ draftId })
+          body: JSON.stringify({ draftId, bepType: bepType || undefined })
         });
       } else {
         response = await apiCall('/clone-template', {
@@ -362,7 +362,7 @@ export function useBepStructure({ projectId = null, draftId = null, bepType = nu
       setError(err.message);
       throw err;
     }
-  }, [apiCall, draftId, projectId, fetchStructure]);
+  }, [apiCall, draftId, projectId, bepType, fetchStructure]);
 
   const resetToDefault = useCallback(async () => {
     if (!draftId && !projectId) {
@@ -371,7 +371,10 @@ export function useBepStructure({ projectId = null, draftId = null, bepType = nu
     try {
       let response;
       if (draftId) {
-        response = await apiCall(`/reset-draft/${draftId}`, { method: 'POST' });
+        response = await apiCall(`/reset-draft/${draftId}`, {
+          method: 'POST',
+          body: JSON.stringify({ bepType: bepType || undefined })
+        });
       } else {
         response = await apiCall(`/reset/${projectId}`, { method: 'POST' });
       }

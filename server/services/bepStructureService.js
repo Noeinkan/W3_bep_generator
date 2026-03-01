@@ -695,6 +695,46 @@ class BepStructureService {
   }
 
   /**
+   * Merge EIR and LOIN reference fields from CONFIG into draft structure when missing.
+   * Ensures existing drafts (cloned before these fields existed) still show 1.1a and 5.2a.
+   */
+  mergeMissingReferenceFields(steps, bepType) {
+    if (!isConfigLoaded() || !steps.length) return steps;
+    const config = getConfig();
+    const effectiveType = bepType === 'pre-appointment' ? 'pre-appointment' : 'post-appointment';
+
+    const insertFieldAfter = (step, afterFieldId, configField) => {
+      const fields = step.fields || [];
+      const hasAlready = fields.some(f => (f.field_id || f.name) === configField.name);
+      if (hasAlready) return;
+      const afterIdx = fields.findIndex(f => (f.field_id || f.name) === afterFieldId);
+      const afterOrder = afterIdx >= 0 ? (fields[afterIdx].order_index ?? afterIdx) : -1;
+      const newField = this.configFieldToApiField(configField, step.id, afterOrder + 1);
+      newField.id = `config-merge-${step.id}-${configField.name}`;
+      const next = fields.filter(f => (f.order_index ?? 0) > afterOrder);
+      next.forEach(f => { f.order_index = (f.order_index ?? 0) + 1; });
+      step.fields = [...fields.filter(f => (f.order_index ?? 0) <= afterOrder), newField, ...next]
+        .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+    };
+
+    // Step 0: inject eirReference after eirPirReference if missing
+    const step0Config = config.getFormFields(effectiveType, 0);
+    if (step0Config && step0Config.fields) {
+      const eirRefConfig = step0Config.fields.find(f => f.name === 'eirReference');
+      if (eirRefConfig && steps[0]) insertFieldAfter(steps[0], 'eirPirReference', eirRefConfig);
+    }
+
+    // Step 4 (LOIN): inject loinTablesReference after levelOfInformationMatrix if missing
+    const step4Config = config.getFormFields(effectiveType, 4);
+    if (step4Config && step4Config.fields && steps[4]) {
+      const loinRefConfig = step4Config.fields.find(f => f.name === 'loinTablesReference');
+      if (loinRefConfig) insertFieldAfter(steps[4], 'levelOfInformationMatrix', loinRefConfig);
+    }
+
+    return steps;
+  }
+
+  /**
    * Get structure for a draft (uses draft-specific if exists, otherwise CONFIG-built default)
    * @param {string} draftId - Draft ID
    * @param {string|null} bepType - Filter by BEP type
@@ -703,10 +743,11 @@ class BepStructureService {
   getStructureForDraft(draftId, bepType = null) {
     if (this.hasCustomStructureForDraft(draftId)) {
       const steps = this.getStepsForDraft(draftId, bepType);
-      return steps.map(step => ({
+      const structure = steps.map(step => ({
         ...step,
         fields: this.getFieldsForStep(step.id, bepType)
       }));
+      return this.mergeMissingReferenceFields(structure, bepType || 'post-appointment');
     }
     return this.getDefaultTemplateFromConfig(bepType || 'post-appointment');
   }
@@ -765,9 +806,10 @@ class BepStructureService {
   /**
    * Reset a draft to the default template (delete custom and re-clone)
    * @param {string} draftId - Draft ID to reset
+   * @param {string} [bepType='post-appointment'] - BEP type for template
    * @returns {Array} New structure
    */
-  resetDraftToDefault(draftId) {
+  resetDraftToDefault(draftId, bepType = 'post-appointment') {
     const transaction = db.transaction(() => {
       // Hard delete all draft-specific steps and fields
       db.prepare(`DELETE FROM bep_field_configs WHERE draft_id = ?`).run(draftId);
@@ -776,8 +818,8 @@ class BepStructureService {
 
     transaction();
 
-    // Clone fresh template
-    return this.cloneTemplateToDraft(draftId);
+    // Clone fresh template with correct type
+    return this.cloneTemplateToDraft(draftId, bepType);
   }
 
   // ============================================

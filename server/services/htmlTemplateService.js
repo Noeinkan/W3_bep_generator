@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { getConfig, loadBepConfigAsync, loadBepConfig } = require('./loadBepConfig');
+const snippetService = require('./snippetService');
 
 // Config is loaded async at server startup; use getConfig() when needed
 
@@ -33,9 +34,10 @@ class HtmlTemplateService {
    */
   async generateBEPHTML(formData, bepType, tidpData = [], midpData = [], componentImages = {}, options = {}) {
     const { watermark = null, includeToc = true } = options;
+    const snippetMap = snippetService.getMap();
     const css = this.getInlineCSS();
-    const sections = this.collectSections(formData, bepType, tidpData, midpData);
-    const bodyContent = this.renderBEPContent(formData, bepType, tidpData, midpData, componentImages, sections, { watermark, includeToc });
+    const sections = this.collectSections(formData, bepType, tidpData, midpData, snippetMap);
+    const bodyContent = this.renderBEPContent(formData, bepType, tidpData, midpData, componentImages, sections, { watermark, includeToc, snippetMap });
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -80,7 +82,7 @@ class HtmlTemplateService {
    * @param {Array} midpData - MIDP data
    * @returns {Array} Array of section objects with number, title, and subsections
    */
-  collectSections(formData, bepType, tidpData, midpData) {
+  collectSections(formData, bepType, tidpData, midpData, snippetMap = {}) {
     const sections = [];
     const steps = getConfig().steps || [];
 
@@ -124,7 +126,7 @@ class HtmlTemplateService {
         if (field.number) {
           section.subsections.push({
             number: field.number,
-            title: field.label
+            title: snippetService.resolveInText(field.label, snippetMap)
           });
         }
       });
@@ -238,6 +240,7 @@ class HtmlTemplateService {
     let html = '<div class="container">';
 
     // Cover page
+    const snippetMap = options.snippetMap || {};
     html += this.renderCoverPage(formData, bepType, bepConfig);
 
     // Section 0 — Document History & Governance (ISO 19650)
@@ -251,7 +254,7 @@ class HtmlTemplateService {
     }
 
     // Content sections
-    html += this.renderContentSections(formData, bepType, componentImages);
+    html += this.renderContentSections(formData, bepType, componentImages, snippetMap);
 
     // TIDP/MIDP sections
     if (tidpData.length > 0 || midpData.length > 0) {
@@ -409,7 +412,7 @@ class HtmlTemplateService {
    * @param {Object} componentImages - Component images map
    * @returns {string} Content sections HTML
    */
-  renderContentSections(formData, bepType, componentImages) {
+  renderContentSections(formData, bepType, componentImages, snippetMap = {}) {
     let html = '';
     const steps = getConfig().steps || [];
 
@@ -442,23 +445,25 @@ class HtmlTemplateService {
         const isDisplayOnly = field.type === 'static-diagram' || field.type === 'info-banner' || field.type === 'section-header';
         if (!isDisplayOnly && !this.hasRenderableValue(field, value)) return;
 
+        const resolvedLabel = snippetService.resolveInText(field.label, snippetMap);
+
         if (field.type === 'section-header') {
-          const fieldId = field.number ? this.generateSectionId(field.number, field.label) : '';
+          const fieldId = field.number ? this.generateSectionId(field.number, resolvedLabel) : '';
           html += `
           <div class="field-group subsection-header">
-            <h3 class="field-label"${fieldId ? ` id="${fieldId}"` : ''}>${field.number ? field.number + ' ' : ''}${this.escapeHtml(field.label)}</h3>
+            <h3 class="field-label"${fieldId ? ` id="${fieldId}"` : ''}>${field.number ? field.number + ' ' : ''}${this.escapeHtml(resolvedLabel)}</h3>
           </div>
           `;
           return;
         }
 
         // Generate ID for subsection (if it has a number)
-        const fieldId = field.number ? this.generateSectionId(field.number, field.label) : '';
+        const fieldId = field.number ? this.generateSectionId(field.number, resolvedLabel) : '';
 
         html += `
           <div class="field-group">
-            <h3 class="field-label"${fieldId ? ` id="${fieldId}"` : ''}>${field.number ? field.number + ' ' : ''}${this.escapeHtml(field.label)}</h3>
-            ${this.renderFieldValue(field, value, componentImages)}
+            <h3 class="field-label"${fieldId ? ` id="${fieldId}"` : ''}>${field.number ? field.number + ' ' : ''}${this.escapeHtml(resolvedLabel)}</h3>
+            ${this.renderFieldValue(field, value, componentImages, snippetMap)}
           </div>
         `;
       });
@@ -479,10 +484,10 @@ class HtmlTemplateService {
    * @param {Object} componentImages - Component images map
    * @returns {string} Field value HTML
    */
-  renderFieldValue(field, value, componentImages) {
+  renderFieldValue(field, value, componentImages, snippetMap = {}) {
     // Display-only: info-banner (styled callout)
     if (field.type === 'info-banner') {
-      const label = (field.label || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      const label = snippetService.resolveInText(field.label || '', snippetMap).replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
       return `
         <div class="export-info-banner" style="border: 1px solid #93c5fd; background: #eff6ff; padding: 0.75rem 1rem; border-radius: 0.5rem; margin: 0.5rem 0; font-size: 0.875rem; color: #1e3a5f;">
           ${label}
@@ -529,13 +534,13 @@ class HtmlTemplateService {
         return this.renderCheckboxList(value);
 
       case 'textarea':
-        return this.renderTextarea(value);
+        return this.renderTextarea(value, snippetMap);
 
       case 'introTable':
-        return this.renderIntroTable(field, value);
+        return this.renderIntroTable(field, value, snippetMap);
 
       default:
-        return this.renderSimpleField(value);
+        return this.renderSimpleField(value, snippetMap);
     }
   }
 
@@ -822,8 +827,9 @@ class HtmlTemplateService {
    * @param {string} value - Text content
    * @returns {string} Textarea HTML
    */
-  renderTextarea(value) {
-    const text = String(value ?? '');
+  renderTextarea(value, snippetMap = {}) {
+    const raw = String(value ?? '');
+    const text = snippetService.resolveInText(raw, snippetMap);
 
     if (this.isLikelyHtml(text)) {
       const sanitizedHtml = this.sanitizeRichTextHtml(text);
@@ -839,11 +845,12 @@ class HtmlTemplateService {
    * @param {Object} value - Field value with intro and rows
    * @returns {string} IntroTable HTML
    */
-  renderIntroTable(field, value) {
+  renderIntroTable(field, value, snippetMap = {}) {
     let html = '';
 
     if (value.intro) {
-      html += `<p class="intro-text">${this.escapeHtml(value.intro).replace(/\n/g, '<br>')}</p>`;
+      const intro = snippetService.resolveInText(value.intro, snippetMap);
+      html += `<p class="intro-text">${this.escapeHtml(intro).replace(/\n/g, '<br>')}</p>`;
     }
 
     if (value.rows && Array.isArray(value.rows) && value.rows.length > 0) {
@@ -879,8 +886,9 @@ class HtmlTemplateService {
    * @param {*} value - Field value
    * @returns {string} Simple field HTML
    */
-  renderSimpleField(value) {
-    return `<p class="field-value">${this.escapeHtml(String(value))}</p>`;
+  renderSimpleField(value, snippetMap = {}) {
+    const resolved = snippetService.resolveInText(String(value ?? ''), snippetMap);
+    return `<p class="field-value">${this.escapeHtml(resolved)}</p>`;
   }
 
   /**

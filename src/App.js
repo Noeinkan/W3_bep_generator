@@ -20,6 +20,8 @@ import TidpEditorPage from './components/pages/TidpEditorPage';
 import ProfilePage from './components/pages/ProfilePage';
 import SettingsPage from './components/pages/SettingsPage';
 import ResponsibilityMatrixManager from './components/responsibility-matrix/ResponsibilityMatrixManager';
+import EirManagerPage from './components/pages/eir-manager/EirManagerPage';
+import LoinTablesPage from './components/pages/loin-tables/LoinTablesPage';
 
 // Auth components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -109,6 +111,12 @@ function App() {
 
             {/* Responsibility Matrix Manager */}
             <Route path="/responsibility-matrix" element={<ProtectedRoute><ResponsibilityMatrixManager /></ProtectedRoute>} />
+
+            {/* EIR Manager */}
+            <Route path="/eir-manager" element={<ProtectedRoute><EirManagerPage /></ProtectedRoute>} />
+
+            {/* LOIN Tables */}
+            <Route path="/loin-tables" element={<ProtectedRoute><LoinTablesPage /></ProtectedRoute>} />
 
             {/* User Profile & Settings */}
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />

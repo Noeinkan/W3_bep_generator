@@ -11,6 +11,8 @@ import DocumentHierarchyDiagram from '../forms/diagrams/DocumentHierarchyDiagram
 import PartyInterfaceDiagram from '../forms/diagrams/PartyInterfaceDiagram';
 import LoinProgressionDiagram from '../forms/diagrams/LoinProgressionDiagram';
 import CONFIG from '../../config/bepConfig';
+import { useSnippets } from '../../hooks/useSnippets';
+import { resolveSnippetsInField } from '../../utils/snippetUtils';
 
 // Module-level constants — defined once, not re-created on every render
 const noop = () => {};
@@ -62,6 +64,7 @@ const normalizeMilestoneRow = (row) => {
  * Shows both regular fields and custom visual components
  */
 const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] }) => {
+  const { snippetMap, resolve } = useSnippets();
 
   const renderFieldValue = (field, value) => {
     // Display-only fields (no form value)
@@ -78,6 +81,20 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
       return (
         <div className="my-4 rounded-lg border border-gray-200 bg-gray-50 p-4 overflow-x-auto">
           <Diagram />
+        </div>
+      );
+    }
+    if (field.type === 'eir-reference') {
+      return (
+        <div className="my-4 rounded-lg border border-amber-200 bg-amber-50/50 p-3 text-sm text-gray-700">
+          EIR managed in EIR Manager.
+        </div>
+      );
+    }
+    if (field.type === 'loin-reference') {
+      return (
+        <div className="my-4 rounded-lg border border-teal-200 bg-teal-50/50 p-3 text-sm text-gray-700">
+          LOIN tables managed in LOIN Tables module.
         </div>
       );
     }
@@ -268,25 +285,27 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
           </ul>
         );
 
-      case 'textarea':
-        if (typeof value === 'string' && isLikelyHtml(value)) {
+      case 'textarea': {
+        const resolvedText = typeof value === 'string' ? resolve(value) : value;
+        if (typeof resolvedText === 'string' && isLikelyHtml(resolvedText)) {
           return (
             <div
               className="my-2 prose prose-sm max-w-none text-gray-700 rich-text-content [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_h4]:text-sm"
-              dangerouslySetInnerHTML={{ __html: sanitizeRichText(value) }}
+              dangerouslySetInnerHTML={{ __html: sanitizeRichText(resolvedText) }}
             />
           );
         }
 
         return (
-          <p className="my-2 text-gray-700 whitespace-pre-wrap">{value}</p>
+          <p className="my-2 text-gray-700 whitespace-pre-wrap">{resolvedText}</p>
         );
+      }
 
       case 'introTable':
         return (
           <div className="my-4">
             {value.intro && (
-              <p className="mb-4 text-gray-700 whitespace-pre-wrap">{value.intro}</p>
+              <p className="mb-4 text-gray-700 whitespace-pre-wrap">{resolve(value.intro)}</p>
             )}
             {value.rows && Array.isArray(value.rows) && value.rows.length > 0 && (
               <div className="table-wrapper">
@@ -317,7 +336,7 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
         return (
           <p className="my-2 text-gray-700">
             <span className="font-medium">{field.label}: </span>
-            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+            {typeof value === 'object' ? JSON.stringify(value) : resolve(String(value))}
           </p>
         );
     }
@@ -487,6 +506,7 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
             {/* Section Content */}
             <div className="space-y-6">
               {stepConfig.fields.map((field, fieldIndex) => {
+                const resolvedField = resolveSnippetsInField(field, snippetMap);
                 const value = formData[field.name];
                 const isDisplayOnly = field.type === 'static-diagram' || field.type === 'info-banner' || field.type === 'section-header';
                 const showWhenEmpty = isPimDeliverySubsection(field);
@@ -494,25 +514,25 @@ const BepPreviewRenderer = ({ formData, bepType, tidpData = [], midpData = [] })
 
                 if (field.type === 'section-header') {
                   return (
-                    <div key={field.number || fieldIndex} className="pl-4 mt-4">
+                    <div key={resolvedField.number || fieldIndex} className="pl-4 mt-4">
                       <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                        {field.number && `${field.number} `}{field.label}
+                        {resolvedField.number && `${resolvedField.number} `}{resolvedField.label}
                       </h3>
                     </div>
                   );
                 }
 
                 return (
-                  <div key={field.name || fieldIndex} className="pl-4">
-                    {field.label && (
+                  <div key={resolvedField.name || fieldIndex} className="pl-4">
+                    {resolvedField.label && (
                       <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                        {field.number && `${field.number} `}{field.label}
+                        {resolvedField.number && `${resolvedField.number} `}{resolvedField.label}
                       </h3>
                     )}
                     {showWhenEmpty && !value ? (
                       <p className="my-2 text-gray-500 italic">—</p>
                     ) : (
-                      renderFieldValue(field, value)
+                      renderFieldValue(resolvedField, value)
                     )}
                   </div>
                 );
