@@ -2,9 +2,9 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import apiService from '../services/apiService';
 import { runDraftMigrationOnAppLoad } from '../utils/draftMigration';
 
-// TEMPORARY: set to false to re-enable login/auth
+// TEMPORARY: set to false to re-enable login/auth. Must match backend authMiddleware MOCK_USER when backend runs with NODE_ENV=development.
 const AUTH_DISABLED = true;
-const MOCK_USER = { id: 1, email: 'dev@local.test', name: 'Dev User' };
+const MOCK_USER = { id: 'dev-user-1', email: 'dev@local.test', name: 'Dev User' };
 
 const AuthContext = createContext();
 

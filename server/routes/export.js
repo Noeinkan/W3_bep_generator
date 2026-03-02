@@ -10,6 +10,7 @@ const tidpSyncService = require('../services/tidpSyncService');
 const puppeteerPdfService = require('../services/puppeteerPdfService');
 const htmlTemplateService = require('../services/htmlTemplateService');
 const eirExportService = require('../services/eirExportService');
+const eirDocumentExportService = require('../services/eirDocumentExportService');
 const projectService = require('../services/projectService');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
@@ -935,6 +936,59 @@ router.post('/eir/pdf', async (req, res, next) => {
     res.status(statusCode).json({
       success: false,
       error: error.message || 'EIR PDF export failed'
+    });
+  }
+});
+
+/**
+ * POST /api/export/eir-document/pdf
+ * Export authored EIR document (form data) to PDF.
+ * Request body: { data: {...}, title?: string, filename?: string }
+ */
+router.post('/eir-document/pdf', async (req, res, next) => {
+  try {
+    const { data, title, filename } = req.body;
+
+    if (!data || typeof data !== 'object') {
+      return res.status(400).json({
+        success: false,
+        error: 'data (EIR form data object) is required'
+      });
+    }
+
+    const documentTitle = title || 'Exchange Information Requirements';
+    const html = await eirDocumentExportService.generateEirDocumentHTML(data, documentTitle);
+
+    const pdfOptions = {
+      format: 'A4',
+      orientation: 'portrait',
+      margins: { top: '22mm', right: '18mm', bottom: '22mm', left: '18mm' },
+      timeout: 60000
+    };
+
+    const filepath = await puppeteerPdfService.generatePDFFromHTML(html, pdfOptions);
+
+    const safeFilename = filename || `EIR_${new Date().toISOString().split('T')[0]}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
+
+    const fileStream = fs.createReadStream(filepath);
+    fileStream.pipe(res);
+
+    fileStream.on('end', () => {
+      setTimeout(() => {
+        fs.unlink(filepath, (err) => {
+          if (err) console.error('EIR document PDF cleanup error:', err);
+        });
+      }, 5000);
+    });
+
+    fileStream.on('error', (error) => next(error));
+  } catch (error) {
+    console.error('EIR document PDF export failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'EIR document PDF export failed'
     });
   }
 });

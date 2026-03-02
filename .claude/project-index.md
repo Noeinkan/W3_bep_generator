@@ -90,6 +90,7 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 | `/api/validation` | POST tidp/:id, POST midp/:id |
 | `/api/migrate` | DB migration endpoints |
 | `/api/loin` | LOIN rows CRUD, scoped by projectId |
+| `/api/eir` | EIR drafts CRUD: GET/POST /drafts, GET/PUT/DELETE /drafts/:id |
 | `/api/snippets` | Snippets CRUD + resolve ({{snippet:key}} substitution) |
 
 ## Schemas (Zod)

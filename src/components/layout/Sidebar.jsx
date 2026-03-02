@@ -94,6 +94,19 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, navigation }) => {
         <div className="space-y-1 px-2">
           {navigation.map((item) => {
             const IconComponent = item.icon;
+            if (item.disabled) {
+              return (
+                <div
+                  key={item.name}
+                  className="flex items-center px-3 py-3 rounded-lg text-sm font-medium text-gray-400 cursor-not-allowed"
+                  title={isCollapsed ? item.name : undefined}
+                  aria-disabled="true"
+                >
+                  <IconComponent className={`flex-shrink-0 ${isCollapsed ? 'w-5 h-5' : 'w-5 h-5 mr-3'}`} />
+                  {!isCollapsed && <span className="whitespace-nowrap">{item.name}</span>}
+                </div>
+              );
+            }
             return (
               <NavLink
                 key={item.name}

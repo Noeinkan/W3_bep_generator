@@ -1,7 +1,7 @@
 const { verifyToken, getUserById } = require('../services/authService');
 
-// TEMPORARY: set to false to re-enable login/auth
-const AUTH_DISABLED = true;
+// Disable auth only in development for convenience; tests and production require auth
+const AUTH_DISABLED = process.env.NODE_ENV === 'development';
 const MOCK_USER = { id: 'dev-user-1', email: 'dev@local.test', name: 'Dev User', is_active: 1 };
 
 // Ensure the mock user row exists so FK constraints on user_id are satisfied

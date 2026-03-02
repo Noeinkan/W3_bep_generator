@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 // Import layout and page components
 import { AuthProvider } from './contexts/AuthContext';
 import { ProjectProvider } from './contexts/ProjectContext';
+import { PartyRoleProvider } from './contexts/PartyRoleContext';
 import MainLayout from './components/layout/MainLayout';
 import HomePage from './components/pages/HomePage';
 import ProjectsPage from './components/pages/ProjectsPage';
@@ -21,7 +22,9 @@ import ProfilePage from './components/pages/ProfilePage';
 import SettingsPage from './components/pages/SettingsPage';
 import ResponsibilityMatrixManager from './components/responsibility-matrix/ResponsibilityMatrixManager';
 import EirManagerPage from './components/pages/eir-manager/EirManagerPage';
+import EirFormView from './components/pages/eir-manager/EirFormView';
 import LoinTablesPage from './components/pages/loin-tables/LoinTablesPage';
+import RoleChoicePage from './components/pages/RoleChoicePage';
 
 // Auth components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -37,6 +40,7 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
       <ProjectProvider>
+        <PartyRoleProvider>
         <Toaster
           position="top-right"
           toastOptions={{
@@ -81,6 +85,9 @@ function App() {
             {/* Protected routes */}
             <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
 
+            {/* Role choice (ISO 19650 guided flow) - chromeless like home/projects */}
+            <Route path="/role-choice" element={<ProtectedRoute><RoleChoicePage /></ProtectedRoute>} />
+
             {/* BEP Generator with nested routes */}
             <Route path="/bep-generator/*" element={<ProtectedRoute><BEPGeneratorWrapper /></ProtectedRoute>} />
 
@@ -114,6 +121,8 @@ function App() {
 
             {/* EIR Manager */}
             <Route path="/eir-manager" element={<ProtectedRoute><EirManagerPage /></ProtectedRoute>} />
+            <Route path="/eir-manager/:draftId/edit" element={<ProtectedRoute><EirFormView /></ProtectedRoute>} />
+            <Route path="/eir-manager/:draftId/edit/step/:stepIndex" element={<ProtectedRoute><EirFormView /></ProtectedRoute>} />
 
             {/* LOIN Tables */}
             <Route path="/loin-tables" element={<ProtectedRoute><LoinTablesPage /></ProtectedRoute>} />
@@ -126,6 +135,7 @@ function App() {
           {/* Catch-all redirect for 404 */}
           <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
+        </PartyRoleProvider>
       </ProjectProvider>
       </BrowserRouter>
     </AuthProvider>

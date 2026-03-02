@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, User, LogOut, ChevronDown } from 'lucide-react';
+import { Settings, User, LogOut, ChevronDown, ArrowLeftRight } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePartyRole } from '../../contexts/PartyRoleContext';
 
 const UserDropdown = ({ isCollapsed }) => {
   const { user, logout } = useAuth();
+  const { partyRole, clearPartyRole } = usePartyRole();
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef(null);
@@ -41,6 +43,12 @@ const UserDropdown = ({ isCollapsed }) => {
     logout();
     setShowUserMenu(false);
     navigate('/login');
+  };
+
+  const handleChangeRole = () => {
+    clearPartyRole();
+    setShowUserMenu(false);
+    navigate('/role-choice');
   };
 
   const getUserInitials = () => {
@@ -102,6 +110,17 @@ const UserDropdown = ({ isCollapsed }) => {
                 <Settings className="w-4 h-4 mr-3 text-gray-400" />
                 Settings
               </button>
+
+              {partyRole && (
+                <button
+                  onClick={handleChangeRole}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center transition-colors"
+                  role="menuitem"
+                >
+                  <ArrowLeftRight className="w-4 h-4 mr-3 text-gray-400" />
+                  Cambia ruolo
+                </button>
+              )}
 
               <div className="border-t border-gray-100"></div>
 
@@ -169,6 +188,17 @@ const UserDropdown = ({ isCollapsed }) => {
               <Settings className="w-4 h-4 mr-3 text-gray-400" />
               Settings
             </button>
+
+            {partyRole && (
+              <button
+                onClick={handleChangeRole}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center transition-colors"
+                role="menuitem"
+              >
+                <ArrowLeftRight className="w-4 h-4 mr-3 text-gray-400" />
+                Cambia ruolo
+              </button>
+            )}
 
             <div className="border-t border-gray-100"></div>
 

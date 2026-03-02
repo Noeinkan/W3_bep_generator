@@ -1,10 +1,25 @@
 const request = require('supertest');
-const app = require('../app'); // we'll create this app export
+const { v4: uuidv4 } = require('uuid');
+const app = require('../app');
 const db = require('../database');
+const { generateToken } = require('../services/authService');
 
 describe('TIDP API', () => {
+  let userId;
+  let token;
+
+  beforeAll(() => {
+    userId = uuidv4();
+    const now = new Date().toISOString();
+    db.prepare(`
+      INSERT INTO users (id, email, password_hash, name, created_at, updated_at, is_active, email_verified)
+      VALUES (?, ?, ?, ?, ?, ?, 1, 1)
+    `).run(userId, `tidp-test-${userId.slice(0, 8)}@example.com`, 'hash', 'TIDP Test', now, now);
+    token = generateToken(userId);
+  });
+
   afterAll(() => {
-    // close db if necessary (better-sqlite3 doesn't expose close in this setup)
+    if (userId) db.prepare('DELETE FROM users WHERE id = ?').run(userId);
   });
 
   test('POST /api/tidp - create TIDP happy path', async () => {
@@ -37,7 +52,11 @@ describe('TIDP API', () => {
       ]
     };
 
-    const res = await request(app).post('/api/tidp').send(payload).expect(201);
+    const res = await request(app)
+      .post('/api/tidp')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload)
+      .expect(201);
     expect(res.body).toBeDefined();
     expect(res.body.success).toBe(true);
     expect(res.body.data).toHaveProperty('id');

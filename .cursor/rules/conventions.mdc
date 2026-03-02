@@ -6,14 +6,4 @@ alwaysApply: false
 
 # Conventions
 
-- **Forms:** React Hook Form + Zod. Schemas in `src/schemas/`; component uses `useForm` with `zodResolver`.
-- **State:** React Context + local state only (no Redux/Zustand).
-- **API:** Service layer in `src/services/` (e.g. `apiService.js`). Backend: route in `server/routes/`, logic in `server/services/`.
-- **Styles:** Tailwind CSS. No custom CSS unless necessary.
-- **Tests:** Vitest; frontend in `src/__tests__/`, server in `server/__tests__/`. Run `npm test`.
-- **DB:** SQLite via better-sqlite3 (synchronous). DB in `server/db/`.
-
-**Common patterns:**
-- New API: route → service → frontend call in `src/services/apiService.js`.
-- Protected route: use `server/middleware/authMiddleware.js` before handler.
-- New page: add to `src/components/pages/`, register route in `App.js`.
+**Forms, state, API, styles, tests, DB:** See **CLAUDE.md** → Key conventions and Common patterns. Keep API/form changes in sync (routes + services + apiService; schema + component).

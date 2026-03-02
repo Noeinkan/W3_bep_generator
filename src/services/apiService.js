@@ -49,15 +49,26 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    const duration = error.config?.metadata ? new Date() - error.config.metadata.startTime : 0;
-    const errorDetail = error.response?.data ?? error.message ?? '(no response)';
-    console.error(`❌ API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url} (${duration}ms)`, errorDetail);
+    const is401 = error.response?.status === 401;
+    const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+    const isAuthPage = /^\/(login|register|forgot-password|reset-password|verify-email)/.test(pathname);
 
-    // Handle common HTTP errors
-    if (error.response?.status === 401) {
-      // Unauthorized - clear auth and redirect
+    if (is401) {
       localStorage.removeItem('authToken');
-      window.location.href = '/login';
+      if (!isAuthPage) {
+        debugLog('Session expired or invalid token — redirecting to login');
+        window.location.href = '/login';
+      }
+      // Avoid noisy console for expected 401 when redirecting
+      if (!IS_PRODUCTION && !isAuthPage) {
+        console.warn('Unauthorized (401): session expired or invalid token. Redirecting to login.');
+      }
+    }
+
+    if (!is401) {
+      const duration = error.config?.metadata ? new Date() - error.config.metadata.startTime : 0;
+      const errorDetail = error.response?.data ?? error.message ?? '(no response)';
+      console.error(`❌ API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url} (${duration}ms)`, errorDetail);
     }
 
     return Promise.reject(error);
@@ -774,6 +785,39 @@ class ApiService {
 
   resendVerification(email) {
     return this._post('/auth/resend-verification', { email }, 'Failed to resend verification email');
+  }
+
+  // EIR drafts (Exchange Information Requirements)
+  getEirDrafts(projectId = null) {
+    const params = projectId ? { projectId } : {};
+    return this._get('/eir/drafts', 'Failed to fetch EIR drafts', { params });
+  }
+
+  getEirDraft(id) {
+    return this._get(`/eir/drafts/${id}`, `Failed to fetch EIR draft ${id}`);
+  }
+
+  createEirDraft({ projectId, title, data }) {
+    return this._post('/eir/drafts', { projectId, title, data: data || {} }, 'Failed to create EIR draft');
+  }
+
+  updateEirDraft(id, { title, projectId, data }) {
+    return this._put(`/eir/drafts/${id}`, { title, projectId, data }, `Failed to update EIR draft ${id}`);
+  }
+
+  deleteEirDraft(id) {
+    return this._delete(`/eir/drafts/${id}`, `Failed to delete EIR draft ${id}`);
+  }
+
+  /**
+   * Export EIR document (authored form data) to PDF. Returns blob; caller should trigger download.
+   * @param {Object} data - EIR form data
+   * @param {string} [title] - Document title
+   * @returns {Promise<Blob>}
+   */
+  async exportEirDocumentPdf(data, title) {
+    const response = await apiClient.post('/export/eir-document/pdf', { data, title }, { responseType: 'blob' });
+    return response.data;
   }
 }
 

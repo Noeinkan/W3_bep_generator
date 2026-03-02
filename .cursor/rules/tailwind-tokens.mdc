@@ -6,4 +6,4 @@ alwaysApply: false
 
 # Tailwind Semantic Tokens
 
-Use **dashed** keys/classes only (e.g. `text-ui-text-muted`, `bg-ui-primary-hover`, `bg-ui-success-bg`). Never use camelCase token names in Tailwind config or utility classes. When adding new UI tokens, keep config keys and class names matched (same dashed style).
+Use **dashed** keys/classes only (e.g. `text-ui-text-muted`, `bg-ui-primary-hover`). See **CLAUDE.md** for full rule.

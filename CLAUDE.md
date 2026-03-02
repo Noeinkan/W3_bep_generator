@@ -26,6 +26,7 @@ Windows host, but shell is bash — use Unix syntax (forward slashes, `/dev/null
 
 ## Key conventions
 
+- **App language: English only.** Regardless of conversation language, all shipped content must be in English: UI copy, labels, messages, code comments, docs, commit messages.
 - **Forms:** React Hook Form + Zod schemas (schemas live in `src/schemas/`).
 - **State:** React Context + local state. No global store (no Redux/Zustand).
 - **API calls:** Service layer in `src/services/` wraps fetch/axios calls.

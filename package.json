@@ -60,7 +60,7 @@
     "start": "concurrently \"npm run start:frontend\" \"npm run start:backend\" \"npm run start:ml\"",
     "start:ollama": "node scripts/start-ollama.js",
     "start:frontend": "vite",
-    "start:backend": "node server/server.js",
+    "start:backend": "cross-env NODE_ENV=development node server/server.js",
     "start:ml": "cd ml-service && venv\\Scripts\\python.exe api_ollama.py",
     "start:ml:old": "cd ml-service && venv\\Scripts\\python.exe api.py",
     "start:3000": "vite",

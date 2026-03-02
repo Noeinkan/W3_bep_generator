@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FolderOpen, Plus, ArrowRight, Trash2, Pencil, Check, X, ArrowLeft, FileText, Calendar } from 'lucide-react';
 import { useProject } from '../../contexts/ProjectContext';
+import { usePartyRole, PARTY_ROLE } from '../../contexts/PartyRoleContext';
 import toast from 'react-hot-toast';
 import ConfirmDialog from '../common/ConfirmDialog';
 
@@ -16,6 +17,7 @@ const ProjectsPage = () => {
     updateProject,
     deleteProject
   } = useProject();
+  const { partyRole } = usePartyRole();
 
   const [newProjectName, setNewProjectName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -34,7 +36,13 @@ const ProjectsPage = () => {
       setIsCreating(false);
       selectProject(project);
       toast.success(`Project "${name}" created`);
-      navigate('/bep-generator');
+      if (!partyRole) {
+        navigate('/role-choice');
+      } else if (partyRole === PARTY_ROLE.APPOINTING_PARTY) {
+        navigate('/eir-manager');
+      } else {
+        navigate('/bep-generator');
+      }
     } catch (err) {
       toast.error(err.message || 'Failed to create project');
     }
@@ -42,7 +50,13 @@ const ProjectsPage = () => {
 
   const handleSelect = (project) => {
     selectProject(project);
-    navigate('/bep-generator');
+    if (!partyRole) {
+      navigate('/role-choice');
+    } else if (partyRole === PARTY_ROLE.APPOINTING_PARTY) {
+      navigate('/eir-manager');
+    } else {
+      navigate('/bep-generator');
+    }
   };
 
   const handleDelete = (e, project) => {

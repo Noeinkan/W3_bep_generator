@@ -309,6 +309,22 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_reset_tokens_token ON password_reset_tokens(token);
+
+  -- EIR drafts: Authored Exchange Information Requirements documents (ISO 19650)
+  CREATE TABLE IF NOT EXISTS eir_drafts (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    project_id TEXT,
+    title TEXT NOT NULL,
+    data TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_eir_drafts_user_id ON eir_drafts(user_id);
+  CREATE INDEX IF NOT EXISTS idx_eir_drafts_project_id ON eir_drafts(project_id);
+  CREATE INDEX IF NOT EXISTS idx_eir_drafts_updated_at ON eir_drafts(updated_at);
 `);
 
 // Migration: Add draft_id columns if they don't exist (for existing databases)
