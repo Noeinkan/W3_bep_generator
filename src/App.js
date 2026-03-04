@@ -21,6 +21,7 @@ import TidpEditorPage from './components/pages/TidpEditorPage';
 import ProfilePage from './components/pages/ProfilePage';
 import SettingsPage from './components/pages/SettingsPage';
 import ResponsibilityMatrixManager from './components/responsibility-matrix/ResponsibilityMatrixManager';
+import BimImportPage from './components/pages/bim-import/BimImportPage';
 import EirManagerPage from './components/pages/eir-manager/EirManagerPage';
 import EirFormView from './components/pages/eir-manager/EirFormView';
 import LoinTablesPage from './components/pages/loin-tables/LoinTablesPage';
@@ -118,6 +119,9 @@ function App() {
 
             {/* Responsibility Matrix Manager */}
             <Route path="/responsibility-matrix" element={<ProtectedRoute><ResponsibilityMatrixManager /></ProtectedRoute>} />
+
+            {/* IFC Import — auto-populate deliverables from IFC */}
+            <Route path="/ifc-import" element={<ProtectedRoute><BimImportPage /></ProtectedRoute>} />
 
             {/* EIR Manager */}
             <Route path="/eir-manager" element={<ProtectedRoute><EirManagerPage /></ProtectedRoute>} />

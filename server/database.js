@@ -493,6 +493,33 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_loin_rows_project_id ON loin_rows(project_id);
 `);
 
+// Migration: add ifc_entity to loin_rows (for IDS generation)
+const loinRowColumns = db.prepare('PRAGMA table_info(loin_rows)').all();
+const hasIfcEntity = loinRowColumns.some(col => col.name === 'ifc_entity');
+if (!hasIfcEntity) {
+  try {
+    db.exec('ALTER TABLE loin_rows ADD COLUMN ifc_entity TEXT');
+    console.log('Migration: added ifc_entity column to loin_rows');
+  } catch (err) {
+    console.error('Could not add ifc_entity to loin_rows:', err.message);
+  }
+}
+
+// LOIN property requirements: IFC property set/name/constraint per row (for IDS)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS loin_property_requirements (
+    id               TEXT PRIMARY KEY,
+    loin_row_id      TEXT NOT NULL REFERENCES loin_rows(id) ON DELETE CASCADE,
+    property_set     TEXT NOT NULL,
+    property_name    TEXT NOT NULL,
+    data_type        TEXT NOT NULL DEFAULT 'IFCLABEL',
+    value_constraint TEXT,
+    created_at       TEXT NOT NULL,
+    updated_at       TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_loin_property_requirements_loin_row_id ON loin_property_requirements(loin_row_id);
+`);
+
 console.log('Database initialized at:', dbPath);
 
 module.exports = db;

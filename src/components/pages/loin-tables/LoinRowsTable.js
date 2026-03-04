@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pencil, Trash2, Layers } from 'lucide-react';
+import { Pencil, Trash2, Layers, FileCheck } from 'lucide-react';
 
 const COLS = [
   { key: 'discipline', label: 'Discipline', width: 'w-28' },
@@ -20,11 +20,12 @@ const Cell = ({ value }) => (
 /**
  * Table of LOIN rows for a project.
  * Props:
- *   rows      — array of LOIN row objects
- *   onEdit    — (row) => void
- *   onDelete  — (row) => void
+ *   rows             — array of LOIN row objects (may include propertyCount)
+ *   onEdit            — (row) => void
+ *   onDelete          — (row) => void
+ *   onOpenProperties  — (row) => void — open IDS properties modal
  */
-const LoinRowsTable = ({ rows, onEdit, onDelete }) => {
+const LoinRowsTable = ({ rows, onEdit, onDelete, onOpenProperties }) => {
   if (!rows || rows.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-gray-400">
@@ -59,6 +60,21 @@ const LoinRowsTable = ({ rows, onEdit, onDelete }) => {
               {COLS.map(col => <Cell key={col.key} value={row[col.key]} />)}
               <td className="px-3 py-2 align-top">
                 <div className="flex items-center gap-1">
+                  {onOpenProperties && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenProperties(row)}
+                      title="IDS Properties"
+                      className="inline-flex items-center gap-1 p-1.5 rounded-md text-gray-500 hover:text-teal-700 hover:bg-teal-50 transition-colors"
+                    >
+                      <FileCheck className="w-3.5 h-3.5" />
+                      {(row.propertyCount ?? 0) > 0 && (
+                        <span className="min-w-[1rem] h-4 px-1 text-xs font-medium bg-teal-100 text-teal-800 rounded flex items-center justify-center">
+                          {row.propertyCount}
+                        </span>
+                      )}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => onEdit(row)}

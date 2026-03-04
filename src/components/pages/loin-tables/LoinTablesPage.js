@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Layers, ArrowLeft, Plus, RefreshCw } from 'lucide-react';
+import { Layers, ArrowLeft, Plus, RefreshCw, Download } from 'lucide-react';
 import { useProject } from '../../../contexts/ProjectContext';
 import apiService from '../../../services/apiService';
 import LoinRowsTable from './LoinRowsTable';
 import LoinRowForm from './LoinRowForm';
+import LoinPropertyRequirementsModal from './LoinPropertyRequirementsModal';
 import { ConfirmDialog } from '../../common';
 import toast from 'react-hot-toast';
 
@@ -22,6 +23,7 @@ const LoinTablesPage = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [editingRow, setEditingRow] = useState(null); // null = create mode
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [propertiesRow, setPropertiesRow] = useState(null); // row for IDS properties modal
 
   // Back navigation: return to BEP editor step if navigated from there
   const handleBack = () => {
@@ -40,7 +42,7 @@ const LoinTablesPage = () => {
     if (!projectId) { setRows([]); return; }
     setLoading(true);
     try {
-      const res = await apiService.getLoinRows(projectId);
+      const res = await apiService.getLoinRows(projectId, { withPropertyCount: true });
       setRows(res?.data ?? []);
     } catch {
       toast.error('Failed to load LOIN rows');
@@ -90,6 +92,16 @@ const LoinTablesPage = () => {
       toast.error('Failed to delete row');
     } finally {
       setDeleteTarget(null);
+    }
+  };
+
+  const handleExportIDS = async () => {
+    if (!currentProject?.id) return;
+    try {
+      await apiService.exportLoinIDS(currentProject.id, currentProject.name);
+      toast.success('IDS file downloaded');
+    } catch {
+      toast.error('Failed to export IDS');
     }
   };
 
@@ -149,6 +161,14 @@ const LoinTablesPage = () => {
               </button>
               <button
                 type="button"
+                onClick={handleExportIDS}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                <Download className="w-4 h-4" />
+                Export IDS
+              </button>
+              <button
+                type="button"
                 onClick={openCreate}
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-colors"
               >
@@ -183,6 +203,7 @@ const LoinTablesPage = () => {
                 rows={rows}
                 onEdit={openEdit}
                 onDelete={setDeleteTarget}
+                onOpenProperties={setPropertiesRow}
               />
             )}
             {!loading && rows.length > 0 && (
@@ -198,6 +219,15 @@ const LoinTablesPage = () => {
           row={editingRow}
           onSave={handleSave}
           onClose={closeForm}
+        />
+      )}
+
+      {/* IDS Properties modal */}
+      {propertiesRow && (
+        <LoinPropertyRequirementsModal
+          row={propertiesRow}
+          onClose={() => setPropertiesRow(null)}
+          onSaved={() => loadRows(currentProject?.id)}
         />
       )}
 

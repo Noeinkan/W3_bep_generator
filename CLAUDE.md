@@ -92,6 +92,8 @@ Before ANY exploration, read `.claude/project-index.md`. It maps every directory
 - **New page:** Add to `src/components/pages/` → Register route in `App.js`
 - **PDF export:** Data → `htmlTemplateService.js` (render HTML + CSS from `templates/`) → `puppeteerPdfService.js` (Puppeteer) → temp file in `server/temp/` → stream to client → cleanup
 - **DOCX export:** Uses `docxGenerator` in `src/services/` (client-side, separate pipeline from PDF).
+- **IDS export (LOIN → buildingSMART IDS):** LOIN rows with `ifc_entity` and `loin_property_requirements` → `idsGeneratorService.generateIdsXml()` → XML string; POST `/api/export/loin/:projectId/ids` returns `.ids` file for use in Solibri/BlenderBIM.
+- **IFC import:** Page `/ifc-import` → upload .ifc (Multer, `server/temp/`, max 50MB) → POST `/api/bim/parse-ifc` → `ifcParserService` (STEP text parsing, no extra npm deps) → preview suggested deliverables → import via POST `/api/responsibility-matrix/deliverables` per row.
 
 ## Session Management
 When hitting usage limits mid-task, always save progress by:

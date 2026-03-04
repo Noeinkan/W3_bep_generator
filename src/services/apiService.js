@@ -181,8 +181,10 @@ class ApiService {
   // LOIN Services
   // ======================
 
-  getLoinRows(projectId) {
-    return this._get(`/loin?projectId=${encodeURIComponent(projectId)}`, 'Failed to fetch LOIN rows');
+  getLoinRows(projectId, options = {}) {
+    const params = new URLSearchParams({ projectId });
+    if (options.withPropertyCount) params.set('withPropertyCount', '1');
+    return this._get(`/loin?${params}`, 'Failed to fetch LOIN rows');
   }
 
   createLoinRow(data) {
@@ -195,6 +197,27 @@ class ApiService {
 
   deleteLoinRow(id) {
     return this._delete(`/loin/${id}`, `Failed to delete LOIN row ${id}`);
+  }
+
+  getLoinPropertyRequirements(rowId) {
+    return this._get(`/loin/${encodeURIComponent(rowId)}/properties`, `Failed to fetch property requirements for row ${rowId}`);
+  }
+
+  createLoinPropertyRequirement(rowId, data) {
+    return this._post(`/loin/${encodeURIComponent(rowId)}/properties`, data, `Failed to create property requirement`);
+  }
+
+  updateLoinPropertyRequirement(id, data) {
+    return this._put(`/loin/properties/${encodeURIComponent(id)}`, data, `Failed to update property requirement ${id}`);
+  }
+
+  deleteLoinPropertyRequirement(id) {
+    return this._delete(`/loin/properties/${encodeURIComponent(id)}`, `Failed to delete property requirement ${id}`);
+  }
+
+  exportLoinIDS(projectId, projectName) {
+    const filename = `IDS_${(projectName || 'Project').replace(/[^\w\s-]/g, '').trim() || 'Project'}.ids`;
+    return this._postBlob(`/export/loin/${encodeURIComponent(projectId)}/ids`, {}, 'Failed to export IDS', filename);
   }
 
   // ======================

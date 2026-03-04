@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, useLocation, Navigate } from 'react-router-dom';
-import { FileText, BarChart3, Grid3x3, FileSearch, Layers, Building2, FolderInput, Package } from 'lucide-react';
+import { FileText, BarChart3, Grid3x3, FileSearch, Layers, Building2, FolderInput, Package, FileUp } from 'lucide-react';
 import Sidebar from './Sidebar';
 import UserDropdown from './UserDropdown';
 import { useProject } from '../../contexts/ProjectContext';
@@ -14,6 +14,7 @@ const WORK_ROUTE_PREFIXES = [
   '/eir-manager',
   '/tidp-midp',
   '/responsibility-matrix',
+  '/ifc-import',
   '/loin-tables',
   '/idrm-manager',
   '/tidp-editor'
@@ -24,6 +25,7 @@ const LAP_ONLY_PREFIXES = [
   '/bep-generator',
   '/tidp-midp',
   '/responsibility-matrix',
+  '/ifc-import',
   '/loin-tables',
   '/idrm-manager',
   '/tidp-editor'
@@ -73,7 +75,8 @@ const MainLayout = () => {
           { name: 'BEP Generator', href: '/bep-generator', icon: FileText },
           { name: 'TIDP/MIDP Manager', href: '/tidp-midp', icon: BarChart3 },
           { name: 'Responsibility Matrix', href: '/responsibility-matrix', icon: Grid3x3 },
-          { name: 'EIR ricevuti', href: '/eir-manager', icon: FileSearch },
+          { name: 'IFC Import', href: '/ifc-import', icon: FileUp },
+          { name: 'EIR Manager', href: '/eir-manager', icon: FileSearch },
           { name: 'LOIN Tables', href: '/loin-tables', icon: Layers }
         ];
 

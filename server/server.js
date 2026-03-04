@@ -19,6 +19,7 @@ const projectsRoutes = require('./routes/projects');
 const snippetsRoutes = require('./routes/snippets');
 const loinRoutes = require('./routes/loin');
 const eirRoutes = require('./routes/eir');
+const bimRoutes = require('./routes/bim');
 
 // Import services
 const puppeteerPdfService = require('./services/puppeteerPdfService');
@@ -97,6 +98,7 @@ app.use('/api/projects', projectsRoutes);
 app.use('/api/snippets', snippetsRoutes);
 app.use('/api/loin', loinRoutes);
 app.use('/api/eir', eirRoutes);
+app.use('/api/bim', bimRoutes);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {

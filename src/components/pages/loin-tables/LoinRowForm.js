@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { suggestIfcEntity, IFC_ENTITY_OPTIONS } from '../../../constants/idsEntities';
 
 const DISCIPLINES = [
   'Architecture', 'Structure', 'MEP', 'Civil', 'Landscape',
@@ -11,7 +12,7 @@ const STAGES = [
   'Technical Design', 'Construction', 'Handover', 'In Use',
 ];
 
-const EMPTY = { discipline: '', stage: '', element: '', geometry: '', alphanumeric: '', documentation: '', notes: '' };
+const EMPTY = { discipline: '', stage: '', element: '', ifc_entity: '', geometry: '', alphanumeric: '', documentation: '', notes: '' };
 
 /**
  * Modal form for adding or editing a LOIN row.
@@ -33,6 +34,7 @@ const LoinRowForm = ({ row, onSave, onClose }) => {
         discipline: isCustom ? 'Other' : (row.discipline || ''),
         stage: row.stage || '',
         element: row.element || '',
+        ifc_entity: row.ifc_entity || '',
         geometry: row.geometry || '',
         alphanumeric: row.alphanumeric || '',
         documentation: row.documentation || '',
@@ -58,12 +60,19 @@ const LoinRowForm = ({ row, onSave, onClose }) => {
     return Object.keys(e).length === 0;
   };
 
+  const handleElementBlur = () => {
+    if (form.element?.trim() && !form.ifc_entity?.trim()) {
+      const suggested = suggestIfcEntity(form.element);
+      if (suggested) setForm(f => ({ ...f, ifc_entity: suggested }));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
     setSaving(true);
     const discipline = form.discipline === 'Other' ? customDiscipline.trim() : form.discipline;
-    await onSave({ ...form, discipline });
+    await onSave({ ...form, discipline, ifc_entity: form.ifc_entity?.trim() || null });
     setSaving(false);
   };
 
@@ -123,10 +132,27 @@ const LoinRowForm = ({ row, onSave, onClose }) => {
               type="text"
               value={form.element}
               onChange={e => set('element', e.target.value)}
+              onBlur={handleElementBlur}
               placeholder="e.g. Walls, Slabs, HVAC ducts, Fire doors…"
               className={inputClass('element')}
             />
             {errors.element && <p className="mt-1 text-xs text-red-500">{errors.element}</p>}
+          </div>
+
+          {/* IFC Entity (IDS) */}
+          <div>
+            <label className={labelClass}>IFC Entity (for IDS export)</label>
+            <input
+              type="text"
+              list="loin-ifc-entity-list"
+              value={form.ifc_entity}
+              onChange={e => set('ifc_entity', e.target.value)}
+              placeholder="e.g. IFCWALL, IFCSLAB — suggested from element"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-300"
+            />
+            <datalist id="loin-ifc-entity-list">
+              {IFC_ENTITY_OPTIONS.map(opt => <option key={opt} value={opt} />)}
+            </datalist>
           </div>
 
           {/* ISO 19650 three categories */}

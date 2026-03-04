@@ -12,6 +12,8 @@ const htmlTemplateService = require('../services/htmlTemplateService');
 const eirExportService = require('../services/eirExportService');
 const eirDocumentExportService = require('../services/eirDocumentExportService');
 const projectService = require('../services/projectService');
+const loinService = require('../services/loinService');
+const idsGeneratorService = require('../services/idsGeneratorService');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
 // Apply authentication to all export routes
@@ -563,6 +565,29 @@ router.post('/responsibility-matrix/pdf', async (req, res, next) => {
     });
   } catch (error) {
     console.error('Error exporting responsibility matrices to PDF:', error);
+    next(error);
+  }
+});
+
+/**
+ * POST /api/export/loin/:projectId/ids
+ * Export LOIN table as buildingSMART IDS (.ids XML) for Solibri/BlenderBIM validation.
+ */
+router.post('/loin/:projectId/ids', (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+    const project = projectService.getProject(projectId);
+    if (!project) {
+      return res.status(404).json({ success: false, error: 'Project not found' });
+    }
+    const projectName = (project.name || 'Project').replace(/[^\w\s-]/g, '').trim() || 'Project';
+    const rows = loinService.getRowsByProjectWithProperties(projectId);
+    const xml = idsGeneratorService.generateIdsXml(projectName, rows);
+    const filename = `IDS_${projectName}.ids`;
+    res.setHeader('Content-Type', 'application/xml');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(xml);
+  } catch (error) {
     next(error);
   }
 });

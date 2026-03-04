@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # deploy.sh — deploy the latest master to Hetzner
 # Usage: ./deploy.sh [--no-build]
-#   --no-build  skip docker compose build (just pull + restart)
+#   (no args)   pull, build images, then restart — use this to run the latest code
+#   --no-build  pull and restart only (no image rebuild); running app stays on old image
 
 set -euo pipefail
 
@@ -28,7 +29,7 @@ ssh "$SERVER" bash -s -- "$NO_BUILD" << 'REMOTE'
   # Preserve .env.production across pulls (gitignored, must not be overwritten)
   mv .env.production /tmp/.env.production.bak 2>/dev/null || true
   git pull origin master
-  mv /tmp/.env.production.bak .env.production
+  mv /tmp/.env.production.bak .env.production 2>/dev/null || true
 
   if [[ "$NO_BUILD" != "true" ]]; then
     echo ""

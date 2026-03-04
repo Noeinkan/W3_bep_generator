@@ -62,6 +62,9 @@ The output: a complete, professional, ISO 19650-compliant BEP in hours instead o
 #### LOIN Tables Management
 A new Level of Information Need (LOIN) tables module has been added with full CRUD operations. BIM managers can now define, edit, and delete LOIN tables directly within the platform — complete with a database schema, API routes, and a dedicated UI component.
 
+#### IDS Generation from LOIN
+LOIN tables can now drive machine-readable **buildingSMART IDS** (Information Delivery Specification) exports. Each LOIN row can have an **IFC entity** (e.g. IFCWALL, IFCSLAB) and **property requirements** (property set, name, data type, optional value constraint). The **Export IDS** button produces a `.ids` XML file compatible with Solibri, BlenderBIM, and other IDS checkers, so model deliverables can be validated automatically against the agreed information requirements. IFC entity is suggested from the element name; the IDS properties modal allows per-row editing of requirements.
+
 #### Snippets Management
 A reusable snippets library is now available within the BEP workflow. Snippets can be inserted inline into rich text fields as rendered chips (`{{snippet:key}}`), making it easy to maintain consistent boilerplate text across multiple BEP sections. The toolbar calls `editor.chain().focus().insertSnippetChip(key)` rather than inserting raw text.
 
@@ -77,6 +80,9 @@ The rich text editor has been extended with four new capabilities:
 
 #### IntegrationSection Improvements
 The Integrations section of the BEP form has been updated with additional tool entries and a revised layout for improved readability.
+
+#### IFC Import — Auto-populate Deliverables
+Upload an IFC model file (`.ifc`, max 50MB) from the **IFC Import** page (`/ifc-import`) to auto-suggest deliverable containers for the Responsibility Matrix. The server parses the IFC STEP text format (no extra npm packages): header metadata (project name, author, organisation, schema, file date) and discipline detection from entity scan (structural, architectural, MEP, civil). You get a preview of suggested deliverables (combined model + per-discipline), can edit names and stages, then import selected rows; each is created via the existing Responsibility Matrix deliverables API and you are redirected to the matrix with a success toast. BCF integration remains planned for a later release.
 
 ---
 
@@ -758,7 +764,8 @@ Full RBAC and approval workflow system planned. See `zz_docs/MultiUserSystem.md`
 | **Internationalisation (i18n)** | Language picker (EN, IT, ES, FR, DE) exists in settings. Needs `react-i18next` and string extraction |
 | **Template Marketplace** | Publish, share, and import community BEP templates beyond built-in ones |
 | **Version History & Diffing** | Track document revisions; `useUndoRedo` hook already exists and could be extended |
-| **IFC / BCF Integration** | Import IFC model metadata or BCF issues to auto-populate deliverable containers |
+| **IFC Import** | Done — upload .ifc → parse STEP → suggest deliverables → import to Responsibility Matrix (see `/ifc-import`) |
+| **BCF Integration** | Planned — import BCF issues / viewpoints to enrich deliverable or clash context |
 | **Bulk EIR Processing** | Batch-upload multiple EIR documents and generate comparative analyses |
 | **Offline-First PWA** | Service worker caching for fully offline use, syncing when connectivity returns |
 | **Model Fine-Tuning Pipeline** | Custom LoRA fine-tuning on organisation-specific BEP data to improve suggestion quality |
