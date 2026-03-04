@@ -51,6 +51,7 @@ const BepFormViewContent = () => {
     currentDraft,
     setCurrentDraft,
     getFormData,
+    isInitialized,
   } = useBepForm();
 
   const { documentHistory, handleDocumentHistorySave } = useDocumentHistory({ currentDraft, setCurrentDraft });
@@ -136,6 +137,14 @@ const BepFormViewContent = () => {
       contentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [currentStep]);
+
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!bepType) {
     navigate(ROUTES.BEP_GENERATOR);

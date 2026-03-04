@@ -57,6 +57,29 @@ The output: a complete, professional, ISO 19650-compliant BEP in hours instead o
 
 ## What's New
 
+### March 2026
+
+#### LOIN Tables Management
+A new Level of Information Need (LOIN) tables module has been added with full CRUD operations. BIM managers can now define, edit, and delete LOIN tables directly within the platform — complete with a database schema, API routes, and a dedicated UI component.
+
+#### Snippets Management
+A reusable snippets library is now available within the BEP workflow. Snippets can be inserted inline into rich text fields as rendered chips (`{{snippet:key}}`), making it easy to maintain consistent boilerplate text across multiple BEP sections. The toolbar calls `editor.chain().focus().insertSnippetChip(key)` rather than inserting raw text.
+
+#### Enhanced EIR Management
+EIR document management now supports full CRUD operations — create, update, and delete EIR records — backed by new API endpoints. Previously EIR documents were upload-only.
+
+#### TipTap Editor Extensions
+The rich text editor has been extended with four new capabilities:
+- **Floating menu** — A `+` button appears on empty lines for quick block insertion
+- **Bubble menu** — A mini formatting toolbar appears on text selection
+- **Slash command palette** — Type `/` to open an insert menu for headings, lists, tables, and snippets
+- **Word/character count** — A status bar below the editor shows live word and character counts
+
+#### IntegrationSection Improvements
+The Integrations section of the BEP form has been updated with additional tool entries and a revised layout for improved readability.
+
+---
+
 ### February 2026
 
 #### EIR Responsiveness Matrix
@@ -183,7 +206,7 @@ Most BEP tools are static templates or basic form fillers. BEP Suite is differen
 - **bcryptjs + jsonwebtoken** - Authentication
 
 ### ML/AI Service
-- **Ollama** — Local LLM runtime (llama3.2:3b default, any Ollama model supported)
+- **Ollama** — Local LLM runtime (llama3.1:8b default, any Ollama model supported)
 - **Python 3.8+** — ML runtime environment
 - **FastAPI 0.104.1+** — High-performance API server (Port 8000)
 - **Uvicorn** — ASGI server
@@ -218,7 +241,7 @@ The application follows a modern three-tier architecture:
                                                                    │
                                                            ┌───────▼───────┐
                                                            │  Ollama       │
-                                                           │  llama3.2:3b  │
+                                                           │  llama3.1:8b  │
                                                            │  (Port 11434) │
                                                            └───────────────┘
 ```
@@ -240,6 +263,8 @@ The application follows a modern three-tier architecture:
 - `documents` - Uploaded EIR and reference documents
 - `information_management_activities` - ISO 19650 IM activities
 - `information_deliverables` - Information deliverables with TIDP linkage
+- `loin_tables` - Level of Information Need (LOIN) table definitions per project
+- `snippets` - Reusable text snippets inserted as chips in rich text fields
 
 ---
 
@@ -287,7 +312,7 @@ Executive summary · Project objectives · BIM objectives · Stakeholders · Rol
 1. Install Ollama from [ollama.ai](https://ollama.ai)
 2. Pull the default model:
 ```bash
-ollama pull llama3.2:3b
+ollama pull llama3.1:8b
 ```
 3. Verify installation:
 ```bash
@@ -303,7 +328,7 @@ These environment variables let you speed up EIR analysis without reducing accur
 | `EIR_CHUNK_TOKENS` | `7000` | Chunk size used when the document is split |
 | `OLLAMA_MAX_CONCURRENCY` | `auto` | Max parallel workers (`auto` adapts to the machine) |
 | `EIR_AUTO_CONCURRENCY_LATENCY` | `60` | Seconds threshold to reduce workers when Ollama is slow |
-| `OLLAMA_MODEL` | `llama3.2:3b` | Ollama model to use (any Ollama-compatible model) |
+| `OLLAMA_MODEL` | `llama3.1:8b` | Ollama model to use (any Ollama-compatible model) |
 | `OLLAMA_QUESTIONS_MODEL` | _(same as OLLAMA_MODEL)_ | Optional: smaller/faster model for Guided AI question generation only (e.g. `qwen3:4b`, `llama3.2:3b`). Omit to use `OLLAMA_MODEL` for everything. |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server address |
 
@@ -402,7 +427,7 @@ These environment variables let you speed up EIR analysis without reducing accur
 
    Install Ollama from [ollama.ai](https://ollama.ai), then pull the default model:
    ```bash
-   ollama pull llama3.2:3b
+   ollama pull llama3.1:8b
    ```
 
    Create a Python virtual environment for the ML service:
@@ -616,7 +641,7 @@ Returns whether SMTP is configured and whether the server can verify the SMTP co
 - **CPU:** Quad-core processor or better
 - **RAM:** 8 GB (16 GB for optimal AI performance)
 - **Storage:** 5 GB free space (for Ollama and models)
-- **Ollama:** Latest version with llama3.2:3b (~2 GB download)
+- **Ollama:** Latest version with llama3.1:8b (~5 GB download)
 
 ---
 
@@ -639,7 +664,7 @@ taskkill /PID <PID> /F
 
 ### ML Service Not Starting
 - Verify Ollama is installed: `ollama list`
-- Pull the model: `ollama pull llama3.2:3b`
+- Pull the model: `ollama pull llama3.1:8b`
 - Verify Python: `python --version`
 - Install dependencies: `pip install -r ml-service/requirements.txt`
 - Check port 8000 is available
@@ -656,11 +681,11 @@ npm install
 
 ## Roadmap & Planned Features
 
-### Work in Progress
+### In Progress / Partially Done
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| **User Authentication** | Frontend UI complete, backend not yet wired end-to-end | Login, registration, and profile pages exist. JWT + bcrypt planned — see `auth-implementation-plan.md` |
+| **User Authentication** | Implemented (mock bypass in dev) | Login, registration, JWT + bcryptjs wired end-to-end. Dev mode uses a mock user bypass; production requires real credentials. |
 | **Protected Routes** | Component exists, not applied | `ProtectedRoute` built but not wired in `App.js` |
 | **Profile Management** | UI only | Password change shows "Coming soon" |
 | **Settings Persistence** | UI only | Appearance, notifications, language controls — currently logs to console only |
@@ -668,19 +693,72 @@ npm install
 | **Security Middleware Activation** | Imported, not applied | `helmet` and `express-rate-limit` installed but need enabling in `app.js` |
 | **Additional BEP Templates** | Commented out | Residential Complex and Healthcare Facility templates stubbed in `templateRegistry.js` |
 
-### Planned Value Adds
+---
+
+### BEP Tier-1 Quality — 12-Step Roadmap
+
+The current app generates a ~42-page BEP. A real Tier-1 BEP (e.g. National Grid) runs 85+ pages. The following steps close the gap. See `zz_docs/BEP Tier-1 Quality Roadmap.md` for full file-level detail.
+
+| # | Feature | Effort | Priority |
+|---|---------|--------|----------|
+| 1 | **Document Control Table & Approval Block** — Revision history table, document reference number, status badge (WIP/SHR/PBL/ARC), formal signatory block | 5 h | Very High |
+| 2 | **Running Page Headers & Footers** — Every page shows doc ref + revision in header; "Page N of M" in footer via Puppeteer `headerTemplate`/`footerTemplate` | 4 h | Very High |
+| 3 | **Purpose, Scope, Applicable Documents & Definitions** — Two new BEP steps: Purpose & Scope (with applicable documents table) and Definitions & Abbreviations (pre-filled with 12 ISO 19650 terms) | 7 h | High |
+| 4 | **PDF Visual Polish** — Professional typography, section rule underlines, alternating table row shading, logo placeholder, classification label on cover | 4 h | High |
+| 5 | **Formal Appendices System (A–E)** — Five lettered appendices: Software Register, RACI Matrix, Referenced Docs, COBie Requirements, EIR Compliance Matrix | 6 h | High |
+| 6 | **Exceptions & Derogations Section** — Formal table for EIR clause exceptions with Clause Ref / Proposed Alternative / Justification columns; "No exceptions" toggle | 3 h | High |
+| 7 | **Model Progression Specification (LOD/LOI Matrix)** — Phase-by-phase LOD/LOI breakdown per discipline; colour-coded matrix grid; Information Delivery Schedule table | 6 h | High |
+| 8 | **AI Prompt Upgrade: Contractual Tone** — System prompt enforcing "shall" language, ISO 19650 clause references, 3rd-person formal register across all suggestion endpoints | 4 h | Medium-High |
+| 9 | **Clash Management Enhancement** — Clash severity matrix (Critical/Major/Minor/Cosmetic), clash detection schedule per discipline pair, coordination meeting protocol | 5 h | Medium |
+| 10 | **EIR Analyzer: Governance & Exceptions Extraction** — Extract document control metadata, derogations, security classification, and project phases from EIR PDFs | 5 h | Medium |
+| 11 | **DOCX Export Structural Parity** — Headers/footers, document control table, all five appendices, LOD matrix table in Word export | 7 h | Medium |
+| 12 | **Supply Chain Capability Assessment** — Per-task-team capability table (BIM Role, Software Competency, ISO 19650 Training, Capacity FTE); auto-populated from EIR analysis | 4 h | Medium |
+
+**Total estimated effort:** ~60 hours
+
+---
+
+### ACC / Autodesk Construction Cloud Integration
+
+Phase 1 (manual export ZIP) is complete. Phase 2 adds direct upload via the APS API:
+
+| Item | Status |
+|------|--------|
+| ACC-ready ZIP export with ISO 19650 folder structure | **Done** |
+| `acc_hub_id` / `acc_project_id` linkage on projects | **Done** |
+| Encrypted local secret storage (`encryptedSecretService`) | **Done** |
+| Autodesk OAuth connection flow (local app) | Planned |
+| Token lifecycle management (encrypted local storage) | Planned |
+| ACC hub / project / folder discovery endpoints | Planned |
+| Direct upload of BEP / TIDP / MIDP artifacts via APS Data Management API | Planned |
+| Project picker and upload target UX | Planned |
+
+---
+
+### Multi-User Collaboration
+
+Full RBAC and approval workflow system planned. See `zz_docs/MultiUserSystem.md` for schema and service design.
+
+| Item | Status |
+|------|--------|
+| `project_members` table (owner / editor / viewer roles) | Planned |
+| Email invitations with accept/decline flow | Planned |
+| Draft approval workflow (draft → pending review → approved / rejected) | Planned |
+| Ownership transfer | Planned |
+| Project activity log / audit trail | Planned |
+| Fix: routes currently accept `userId` from query params instead of `req.user` | Planned |
+
+---
+
+### Other Planned Value Adds
 
 | Opportunity | Description |
 |-------------|-------------|
 | **Dark Mode / Theming** | Settings UI has a theme selector. Tailwind's `darkMode` support makes this straightforward |
 | **Internationalisation (i18n)** | Language picker (EN, IT, ES, FR, DE) exists in settings. Needs `react-i18next` and string extraction |
-| **Multi-User Collaboration** | Real-time co-editing via WebSockets; shared project workspaces with role-based access |
 | **Template Marketplace** | Publish, share, and import community BEP templates beyond built-in ones |
 | **Version History & Diffing** | Track document revisions; `useUndoRedo` hook already exists and could be extended |
-| **Cloud Sync & Multi-Device** | Persist settings and drafts server-side for cross-device continuity |
-| **Webhook / CI Integration** | Trigger BEP validation on repository commits or design tool exports |
 | **IFC / BCF Integration** | Import IFC model metadata or BCF issues to auto-populate deliverable containers |
-| **Audit Trail & Activity Log** | Record who changed what and when for ISO 19650 accountability |
 | **Bulk EIR Processing** | Batch-upload multiple EIR documents and generate comparative analyses |
 | **Offline-First PWA** | Service worker caching for fully offline use, syncing when connectivity returns |
 | **Model Fine-Tuning Pipeline** | Custom LoRA fine-tuning on organisation-specific BEP data to improve suggestion quality |
@@ -728,6 +806,6 @@ This project is proprietary software. All rights reserved.
 
 ---
 
-**Version:** 2.1.0
-**Last Updated:** February 2026
+**Version:** 2.2.0
+**Last Updated:** March 2026
 **Developed with:** React 19, Node.js, Python, and Ollama

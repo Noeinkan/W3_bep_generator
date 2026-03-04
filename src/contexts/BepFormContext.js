@@ -37,6 +37,7 @@ export const BepFormProvider = ({ children, initialData = null, bepType = '' }) 
   const [completedSections, setCompletedSections] = React.useState(new Set());
   const [bepTypeState, setBepTypeState] = React.useState(bepType);
   const [currentDraft, setCurrentDraft] = React.useState(null);
+  const [isInitialized, setIsInitialized] = React.useState(false);
 
   // Update form data when initial data changes (e.g., loading draft or template)
   useEffect(() => {
@@ -103,9 +104,28 @@ export const BepFormProvider = ({ children, initialData = null, bepType = '' }) 
       }
     } catch (error) {
       console.error('Failed to restore BEP state:', error);
+    } finally {
+      setIsInitialized(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Also persist to sessionStorage when bepType or currentDraft change (not just on field edits)
+  useEffect(() => {
+    if (!bepTypeState) return;
+    try {
+      const existing = sessionStorage.getItem('bep-temp-state');
+      const parsed = existing ? JSON.parse(existing) : {};
+      sessionStorage.setItem('bep-temp-state', JSON.stringify({
+        ...parsed,
+        bepType: bepTypeState,
+        currentDraft,
+        timestamp: Date.now(),
+      }));
+    } catch (error) {
+      console.error('Failed to persist BEP type/draft state:', error);
+    }
+  }, [bepTypeState, currentDraft]);
 
   // Validate specific step
   const validateStep = useCallback((stepIndex) => {
@@ -177,6 +197,7 @@ export const BepFormProvider = ({ children, initialData = null, bepType = '' }) 
     currentDraft,
     setCurrentDraft,
     setBepType: setBepTypeState,
+    isInitialized,
   };
 
   return (

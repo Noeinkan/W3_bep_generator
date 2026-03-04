@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Bold,
   Italic,
@@ -565,13 +566,13 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
               <p className="px-3 py-2 text-xs text-ui-text-muted border-b border-ui-border">
                 Click to insert. To change the <strong>value</strong> that replaces each placeholder, go to Settings.
               </p>
-              <a
-                href="/settings"
+              <Link
+                to="/settings"
                 className="block px-3 py-2 text-sm text-ui-primary hover:bg-ui-muted border-b border-ui-border"
                 onClick={() => setShowSnippetDropdown(false)}
               >
                 → Manage snippet values in Settings
-              </a>
+              </Link>
               {snippets.length === 0 ? (
                 <p className="px-3 py-2 text-sm text-ui-text-muted">No snippets yet. Add them in Settings first.</p>
               ) : (
