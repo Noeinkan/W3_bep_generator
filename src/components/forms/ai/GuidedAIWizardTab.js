@@ -42,7 +42,7 @@ const GuidedAIWizardTab = ({ editor, fieldName, fieldType, onClose }) => {
         field_type: fieldType || fieldName,
         field_label: fieldName,
         field_context: null
-      }, { timeout: 30000 });
+      }, { timeout: 90000 });
 
       if (response.data.success && response.data.questions?.length > 0) {
         setQuestions(response.data.questions);
@@ -55,8 +55,8 @@ const GuidedAIWizardTab = ({ editor, fieldName, fieldType, onClose }) => {
       }
     } catch (err) {
       console.error('Guided AI — failed to fetch questions:', err);
-      if (err.code === 'ECONNABORTED') {
-        setError('Request timed out. Please check if the AI service is running.');
+      if (err.code === 'ECONNABORTED' || err.response?.status === 408) {
+        setError('Request timed out. The AI service may be slow or busy. Please try again.');
       } else if (err.response?.status === 503) {
         setError('AI service is unavailable. Please start the ML service.');
       } else {

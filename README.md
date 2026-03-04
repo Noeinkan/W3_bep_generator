@@ -304,6 +304,7 @@ These environment variables let you speed up EIR analysis without reducing accur
 | `OLLAMA_MAX_CONCURRENCY` | `auto` | Max parallel workers (`auto` adapts to the machine) |
 | `EIR_AUTO_CONCURRENCY_LATENCY` | `60` | Seconds threshold to reduce workers when Ollama is slow |
 | `OLLAMA_MODEL` | `llama3.2:3b` | Ollama model to use (any Ollama-compatible model) |
+| `OLLAMA_QUESTIONS_MODEL` | _(same as OLLAMA_MODEL)_ | Optional: smaller/faster model for Guided AI question generation only (e.g. `qwen3:4b`, `llama3.2:3b`). Omit to use `OLLAMA_MODEL` for everything. |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server address |
 
 ---

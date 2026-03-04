@@ -27,6 +27,8 @@ import {
   ZoomOut,
   ChevronDown,
   FileText,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import TableInsertDialog from '../dialogs/TableInsertDialog';
 import SmartHelpButton from '../ai/SmartHelpButton';
@@ -37,18 +39,19 @@ const ToolbarButton = ({ onClick, active, disabled, children, title }) => (
     onClick={onClick}
     disabled={disabled}
     title={title}
-    className={`p-2 rounded hover:bg-gray-200 transition-colors ${
-      active ? 'bg-blue-100 text-blue-600' : 'text-gray-700'
-    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+    aria-label={title}
+    className={`p-2 rounded transition-colors ${
+      active ? 'bg-ui-muted text-ui-primary' : 'text-ui-text hover:bg-ui-muted'
+    } ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
     type="button"
   >
     {children}
   </button>
 );
 
-const ToolbarDivider = () => <div className="w-px h-6 bg-gray-300 mx-1" />;
+const ToolbarDivider = () => <div className="w-px h-6 bg-ui-border mx-1" />;
 
-const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldName, helpContent }) => {
+const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldName, helpContent, isFullscreen, onToggleFullscreen }) => {
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -67,7 +70,7 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
 
   const insertSnippet = useCallback((key) => {
     if (editor) {
-      editor.chain().focus().insertContent(`{{snippet:${key}}}`).run();
+      editor.chain().focus().insertSnippetChip(key).run();
       setShowSnippetDropdown(false);
     }
   }, [editor]);
@@ -179,7 +182,7 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
   ];
 
   return (
-    <div className="tiptap-toolbar border border-gray-300 rounded-t-lg bg-gray-50 p-2 flex flex-wrap gap-1 items-center">
+    <div className="tiptap-toolbar border border-ui-border rounded-t-lg bg-ui-canvas p-2 flex flex-wrap gap-1 items-center">
       {/* Undo/Redo */}
       <ToolbarButton
         onClick={() => editor.chain().focus().undo().run()}
@@ -200,7 +203,7 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
 
       {/* Font Family */}
       <select
-        className="px-2 py-1 border border-gray-300 rounded text-sm bg-white cursor-pointer hover:border-gray-400"
+        className="px-2 py-1 border border-ui-border rounded text-sm bg-ui-surface text-ui-text cursor-pointer hover:border-ui-border-strong"
         onChange={(e) => {
           if (e.target.value) {
             editor.chain().focus().setFontFamily(e.target.value).run();
@@ -209,6 +212,7 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
           }
         }}
         title="Font Family"
+        aria-label="Font Family"
       >
         {fonts.map((font) => (
           <option key={font.value} value={font.value} style={{ fontFamily: font.value }}>
@@ -219,7 +223,7 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
 
       {/* Font Size */}
       <select
-        className="px-2 py-1 border border-gray-300 rounded text-sm bg-white cursor-pointer hover:border-gray-400"
+        className="px-2 py-1 border border-ui-border rounded text-sm bg-ui-surface text-ui-text cursor-pointer hover:border-ui-border-strong"
         onChange={(e) => {
           if (e.target.value) {
             editor.chain().focus().setFontSize(e.target.value).run();
@@ -228,6 +232,7 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
           }
         }}
         title="Font Size"
+        aria-label="Font Size"
       >
         <option value="">Default</option>
         {fontSizes.map((size) => (
@@ -264,14 +269,14 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleStrike().run()}
         active={editor.isActive('strike')}
-        title="Strikethrough"
+        title="Strikethrough (Ctrl+Shift+X)"
       >
         <Strikethrough size={18} />
       </ToolbarButton>
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleCode().run()}
         active={editor.isActive('code')}
-        title="Code"
+        title="Inline Code (Ctrl+`)"
       >
         <Code size={18} />
       </ToolbarButton>
@@ -282,21 +287,22 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
       <div className="relative">
         <button
           onClick={() => setShowColorPicker(!showColorPicker)}
-          className="p-2 rounded hover:bg-gray-200 transition-colors flex items-center gap-1"
+          className="p-2 rounded hover:bg-ui-muted transition-colors flex items-center gap-1 text-ui-text"
           title="Text Color"
+          aria-label="Text Color"
           type="button"
         >
-          <div className="w-4 h-4 border border-gray-400 rounded" style={{ backgroundColor: currentColor }} />
+          <div className="w-4 h-4 border border-ui-border rounded" style={{ backgroundColor: currentColor }} />
           <ChevronDown size={12} />
         </button>
         {showColorPicker && (
-          <div className="absolute top-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-2 z-20">
+          <div className="absolute top-full mt-1 bg-ui-surface border border-ui-border rounded-lg shadow-lg p-2 z-20">
             <div className="grid grid-cols-10 gap-1 w-48">
               {colors.map((color) => (
                 <button
                   key={color}
                   onClick={() => setColor(color)}
-                  className="w-5 h-5 rounded border border-gray-300 hover:scale-110 transition-transform"
+                  className="w-5 h-5 rounded border border-ui-border hover:scale-110 transition-transform"
                   style={{ backgroundColor: color }}
                   title={color}
                   type="button"
@@ -305,7 +311,7 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
             </div>
             <button
               onClick={() => setShowColorPicker(false)}
-              className="mt-2 w-full py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded"
+              className="mt-2 w-full py-1 text-xs bg-ui-muted hover:bg-ui-border rounded"
               type="button"
             >
               Close
@@ -318,21 +324,22 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
       <div className="relative">
         <button
           onClick={() => setShowHighlightPicker(!showHighlightPicker)}
-          className="p-2 rounded hover:bg-gray-200 transition-colors flex items-center gap-1"
+          className="p-2 rounded hover:bg-ui-muted transition-colors flex items-center gap-1 text-ui-text"
           title="Highlight Color"
+          aria-label="Highlight Color"
           type="button"
         >
           <Highlighter size={18} style={{ color: currentHighlight }} />
           <ChevronDown size={12} />
         </button>
         {showHighlightPicker && (
-          <div className="absolute top-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-2 z-20">
+          <div className="absolute top-full mt-1 bg-ui-surface border border-ui-border rounded-lg shadow-lg p-2 z-20">
             <div className="grid grid-cols-10 gap-1 w-48">
               {colors.map((color) => (
                 <button
                   key={color}
                   onClick={() => setHighlight(color)}
-                  className="w-5 h-5 rounded border border-gray-300 hover:scale-110 transition-transform"
+                  className="w-5 h-5 rounded border border-ui-border hover:scale-110 transition-transform"
                   style={{ backgroundColor: color }}
                   title={color}
                   type="button"
@@ -352,7 +359,7 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
               </button>
               <button
                 onClick={() => setShowHighlightPicker(false)}
-                className="flex-1 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded"
+                className="flex-1 py-1 text-xs bg-ui-muted hover:bg-ui-border rounded"
                 type="button"
               >
                 Close
@@ -368,21 +375,21 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
         active={editor.isActive('heading', { level: 1 })}
-        title="Heading 1"
+        title="Heading 1 (Ctrl+Alt+1)"
       >
         <Heading1 size={18} />
       </ToolbarButton>
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
         active={editor.isActive('heading', { level: 2 })}
-        title="Heading 2"
+        title="Heading 2 (Ctrl+Alt+2)"
       >
         <Heading2 size={18} />
       </ToolbarButton>
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
         active={editor.isActive('heading', { level: 3 })}
-        title="Heading 3"
+        title="Heading 3 (Ctrl+Alt+3)"
       >
         <Heading3 size={18} />
       </ToolbarButton>
@@ -393,28 +400,28 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
       <ToolbarButton
         onClick={() => editor.chain().focus().setTextAlign('left').run()}
         active={editor.isActive({ textAlign: 'left' })}
-        title="Align Left"
+        title="Align Left (Ctrl+Shift+L)"
       >
         <AlignLeft size={18} />
       </ToolbarButton>
       <ToolbarButton
         onClick={() => editor.chain().focus().setTextAlign('center').run()}
         active={editor.isActive({ textAlign: 'center' })}
-        title="Align Center"
+        title="Align Center (Ctrl+Shift+E)"
       >
         <AlignCenter size={18} />
       </ToolbarButton>
       <ToolbarButton
         onClick={() => editor.chain().focus().setTextAlign('right').run()}
         active={editor.isActive({ textAlign: 'right' })}
-        title="Align Right"
+        title="Align Right (Ctrl+Shift+R)"
       >
         <AlignRight size={18} />
       </ToolbarButton>
       <ToolbarButton
         onClick={() => editor.chain().focus().setTextAlign('justify').run()}
         active={editor.isActive({ textAlign: 'justify' })}
-        title="Justify"
+        title="Justify (Ctrl+Shift+J)"
       >
         <AlignJustify size={18} />
       </ToolbarButton>
@@ -425,14 +432,14 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleBulletList().run()}
         active={editor.isActive('bulletList')}
-        title="Bullet List"
+        title="Bullet List (Ctrl+Shift+8)"
       >
         <List size={18} />
       </ToolbarButton>
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
         active={editor.isActive('orderedList')}
-        title="Numbered List"
+        title="Numbered List (Ctrl+Shift+7)"
       >
         <ListOrdered size={18} />
       </ToolbarButton>
@@ -443,13 +450,13 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
         active={editor.isActive('blockquote')}
-        title="Blockquote"
+        title="Blockquote (Ctrl+Shift+B)"
       >
         <Quote size={18} />
       </ToolbarButton>
 
       {/* Horizontal Rule */}
-      <ToolbarButton onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Horizontal Rule">
+      <ToolbarButton onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Horizontal Rule (Ctrl+Shift+-)">
         <Minus size={18} />
       </ToolbarButton>
 
@@ -460,15 +467,15 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
         <ToolbarButton
           onClick={() => setShowLinkInput(!showLinkInput)}
           active={editor.isActive('link')}
-          title="Insert Link"
+          title="Insert Link (Ctrl+K)"
         >
           <LinkIcon size={18} />
         </ToolbarButton>
         {showLinkInput && (
-          <div className="absolute top-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-3 z-20 w-64">
+          <div className="absolute top-full mt-1 bg-ui-surface border border-ui-border rounded-lg shadow-lg p-3 z-20 w-64">
             <input
               type="url"
-              className="w-full px-2 py-1 border border-gray-300 rounded mb-2 text-sm"
+              className="w-full px-2 py-1 border border-ui-border rounded mb-2 text-sm bg-ui-surface text-ui-text"
               placeholder="https://example.com"
               value={linkUrl}
               onChange={(e) => setLinkUrl(e.target.value)}
@@ -483,7 +490,7 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
             <div className="flex gap-2">
               <button
                 onClick={addLink}
-                className="flex-1 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                className="flex-1 px-3 py-1 bg-ui-primary text-white rounded hover:bg-ui-primary-hover text-sm"
                 type="button"
               >
                 Add Link
@@ -493,7 +500,7 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
                   editor.chain().focus().unsetLink().run();
                   setShowLinkInput(false);
                 }}
-                className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm"
+                className="px-3 py-1 bg-ui-muted hover:bg-ui-border rounded text-sm text-ui-text"
                 type="button"
               >
                 Remove
@@ -530,7 +537,7 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
       >
         <ZoomOut size={18} />
       </ToolbarButton>
-      <span className="px-2 py-1 text-sm font-medium text-gray-700 min-w-[4rem] text-center">
+      <span className="px-2 py-1 text-sm font-medium text-ui-text-muted min-w-[4rem] text-center">
         {zoom}%
       </span>
       <ToolbarButton
@@ -554,29 +561,29 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
         {showSnippetDropdown && (
           <>
             <div className="fixed inset-0 z-10" aria-hidden onClick={() => setShowSnippetDropdown(false)} />
-            <div className="absolute left-0 top-full mt-1 z-20 min-w-[14rem] py-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-auto">
-              <p className="px-3 py-2 text-xs text-gray-500 border-b border-gray-100">
+            <div className="absolute left-0 top-full mt-1 z-20 min-w-[14rem] py-1 bg-ui-surface border border-ui-border rounded-lg shadow-lg max-h-56 overflow-auto">
+              <p className="px-3 py-2 text-xs text-ui-text-muted border-b border-ui-border">
                 Click to insert. To change the <strong>value</strong> that replaces each placeholder, go to Settings.
               </p>
               <a
                 href="/settings"
-                className="block px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 border-b border-gray-100"
+                className="block px-3 py-2 text-sm text-ui-primary hover:bg-ui-muted border-b border-ui-border"
                 onClick={() => setShowSnippetDropdown(false)}
               >
                 → Manage snippet values in Settings
               </a>
               {snippets.length === 0 ? (
-                <p className="px-3 py-2 text-sm text-gray-500">No snippets yet. Add them in Settings first.</p>
+                <p className="px-3 py-2 text-sm text-ui-text-muted">No snippets yet. Add them in Settings first.</p>
               ) : (
                 snippets.map((s) => (
                   <button
                     key={s.id}
                     type="button"
-                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 flex justify-between gap-2"
+                    className="w-full text-left px-3 py-2 text-sm text-ui-text hover:bg-ui-muted flex justify-between gap-2"
                     onClick={() => insertSnippet(s.key)}
                   >
                     <span className="font-mono truncate">{s.key}</span>
-                    <span className="text-gray-400 truncate flex-shrink-0 max-w-[8rem]" title={s.value}>{s.value}</span>
+                    <span className="text-ui-text-muted truncate flex-shrink-0 max-w-[8rem]" title={s.value}>{s.value}</span>
                   </button>
                 ))
               )}
@@ -584,6 +591,20 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
           </>
         )}
       </div>
+
+      {/* Fullscreen toggle */}
+      {onToggleFullscreen && (
+        <>
+          <ToolbarDivider />
+          <ToolbarButton
+            onClick={onToggleFullscreen}
+            active={isFullscreen}
+            title={isFullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen mode'}
+          >
+            {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+          </ToolbarButton>
+        </>
+      )}
 
       {/* Smart Help Button - Unified help interface */}
       <SmartHelpButton

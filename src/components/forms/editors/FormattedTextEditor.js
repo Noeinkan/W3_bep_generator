@@ -182,10 +182,10 @@ const FormattedTextEditor = ({
     const text = value || '';
     const lineCount = text.split('\n').length;
 
-    // Se non c'è testo, mostra almeno il minimo (rows)
+    // If there is no text, show at least the minimum (rows)
     if (!text.trim()) return rows;
 
-    // Altrimenti, numero di righe del testo + 2
+    // Otherwise, number of text lines + 2
     return Math.max(lineCount + 2, rows);
   };
 

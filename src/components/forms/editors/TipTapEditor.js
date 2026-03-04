@@ -13,12 +13,19 @@ import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
+import CharacterCount from '@tiptap/extension-character-count';
+import SlashCommand from './extensions/SlashCommand';
+import SnippetChip from './extensions/SnippetChip';
 import FontSize from './extensions/FontSize';
 import ResizableImage from './extensions/ResizableImage';
 import TipTapToolbar from './TipTapToolbar';
+import TipTapStatusBar from './TipTapStatusBar';
+import TipTapBubbleMenu from './TipTapBubbleMenu';
+import TipTapFloatingMenu from './TipTapFloatingMenu';
 import FindReplaceDialog from '../dialogs/FindReplaceDialog';
 import TableBubbleMenu from '../tables/TableBubbleMenu';
 import { getHelpContent } from '../../../data/helpContent';
+import 'tippy.js/dist/tippy.css';
 import './tiptap.css';
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -35,13 +42,21 @@ const TipTapEditor = ({
   minHeight = '200px',
   fieldName,
   compactMode = false,
+  showWordCount,
+  stickyToolbar,
   onFocus,
   onBlur,
   onMouseDown,
 }) => {
+  // Default: show word count unless compactMode
+  const _showWordCount = showWordCount !== undefined ? showWordCount : !compactMode;
+  // Default: sticky toolbar unless compactMode
+  const _stickyToolbar = stickyToolbar !== undefined ? stickyToolbar : !compactMode;
   const [zoom, setZoom] = useState(100);
   const [showFindReplace, setShowFindReplace] = useState(false);
   const [helpContent, setHelpContent] = useState(null);
+  const [isFocused, setIsFocused] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Keep callback refs current so stale closures in useEditor config always
   // call the latest prop values without needing to rebuild the editor.
@@ -104,6 +119,9 @@ const TipTapEditor = ({
       Placeholder.configure({
         placeholder,
       }),
+      CharacterCount,
+      SlashCommand,
+      SnippetChip,
     ],
     content: value,
     editorProps: {
@@ -117,10 +135,12 @@ const TipTapEditor = ({
       },
       handleDOMEvents: {
         focus: (_view, event) => {
+          setIsFocused(true);
           onFocusRef.current?.(event);
           return false;
         },
         blur: (_view, event) => {
+          setIsFocused(false);
           onBlurRef.current?.(event);
           return false;
         },
@@ -239,12 +259,6 @@ const TipTapEditor = ({
     }
   }, [editor, value]);
 
-  // Word and character count
-  const text = editor?.getText() ?? '';
-  const stats = { // eslint-disable-line no-unused-vars
-    words: text.trim() ? text.trim().split(/\s+/).length : 0,
-    characters: editor?.storage.characterCount?.characters() ?? text.length,
-  };
 
   useEffect(() => {
     let isMounted = true;
@@ -271,27 +285,32 @@ const TipTapEditor = ({
 
   return (
     <div
-      className={`tiptap-wrapper ${className}`}
+      className={`tiptap-wrapper ${isFocused ? 'tiptap-wrapper--focused' : ''} ${isFullscreen ? 'tiptap-wrapper--fullscreen' : ''} ${className}`}
       style={{
         '--tiptap-padding': compactMode ? '0.375rem 0.5rem' : '0.75rem',
-        '--tiptap-min-height': minHeight,
+        '--tiptap-min-height': isFullscreen ? '100%' : minHeight,
       }}
+      onKeyDown={(e) => { if (e.key === 'Escape' && isFullscreen) setIsFullscreen(false); }}
     >
       {/* Toolbar */}
       {showToolbar && (
-        <TipTapToolbar
-          editor={editor}
-          zoom={zoom}
-          onZoomChange={setZoom}
-          onFindReplace={() => setShowFindReplace(true)}
-          fieldName={fieldName}
-          helpContent={helpContent}
-        />
+        <div className={_stickyToolbar ? 'sticky top-0 z-10' : undefined}>
+          <TipTapToolbar
+            editor={editor}
+            zoom={zoom}
+            onZoomChange={setZoom}
+            onFindReplace={() => setShowFindReplace(true)}
+            fieldName={fieldName}
+            helpContent={helpContent}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={() => setIsFullscreen((v) => !v)}
+          />
+        </div>
       )}
 
       {/* Editor Content with Zoom */}
       <div
-        className={`tiptap-content-wrapper border border-ui-border ${showToolbar ? 'rounded-b-lg' : 'rounded-lg'} bg-ui-surface text-ui-text overflow-auto`}
+        className={`tiptap-content-wrapper border border-ui-border bg-ui-surface text-ui-text overflow-auto ${!showToolbar ? 'rounded-t-lg' : ''} ${!_showWordCount || !showToolbar ? 'rounded-b-lg' : ''}`}
         style={{
           minHeight,
           transform: `scale(${zoom / 100})`,
@@ -303,6 +322,11 @@ const TipTapEditor = ({
         <EditorContent editor={editor} />
       </div>
 
+      {/* Word / character count status bar */}
+      {showToolbar && _showWordCount && (
+        <TipTapStatusBar editor={editor} compactMode={compactMode} />
+      )}
+
       {/* Find & Replace Dialog */}
       {showFindReplace && (
         <FindReplaceDialog
@@ -310,6 +334,12 @@ const TipTapEditor = ({
           onClose={() => setShowFindReplace(false)}
         />
       )}
+
+      {/* Text selection bubble menu */}
+      <TipTapBubbleMenu editor={editor} />
+
+      {/* Floating + button on empty lines */}
+      <TipTapFloatingMenu editor={editor} />
 
       {/* Table Bubble Menu */}
       <TableBubbleMenu editor={editor} />

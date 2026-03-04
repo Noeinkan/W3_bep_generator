@@ -1,10 +1,45 @@
 import React from 'react';
-import { CheckCircle, Calendar, FileText, Users, TrendingUp, BarChart3 } from 'lucide-react';
+import { CheckCircle, Calendar, Users, TrendingUp } from 'lucide-react';
+
+const cards = [
+  {
+    gradient: 'from-blue-50 to-blue-100',
+    border: 'border-blue-200',
+    bg: 'bg-blue-500',
+    icon: CheckCircle,
+    title: 'Clause 5.1 & 5.3',
+    desc: 'Information management process and information requirements framework',
+  },
+  {
+    gradient: 'from-green-50 to-green-100',
+    border: 'border-green-200',
+    bg: 'bg-green-500',
+    icon: Calendar,
+    title: 'Clause 5.4',
+    desc: 'Information delivery planning with TIDP/MIDP framework',
+  },
+  {
+    gradient: 'from-orange-50 to-orange-100',
+    border: 'border-orange-200',
+    bg: 'bg-orange-500',
+    icon: Users,
+    title: 'Annex A',
+    desc: 'Responsibility matrices for information management activities and deliverables',
+  },
+  {
+    gradient: 'from-indigo-50 to-indigo-100',
+    border: 'border-indigo-200',
+    bg: 'bg-indigo-500',
+    icon: TrendingUp,
+    title: 'LOIN Management',
+    desc: 'Level of Information Need specification and tracking for all deliverables',
+  },
+];
 
 const ISOComplianceSection = () => {
   return (
     <div className="bg-white py-12 lg:py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8 lg:mb-10">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
             ISO 19650 Compliance Built-In
@@ -14,54 +49,19 @@ const ISOComplianceSection = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border-2 border-blue-200">
-            <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center mb-4">
-              <CheckCircle className="w-6 h-6 text-white" aria-hidden="true" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {cards.map(({ gradient, border, bg, icon: Icon, title, desc }) => (
+            <div
+              key={title}
+              className={`bg-gradient-to-br ${gradient} rounded-xl p-6 border-2 ${border}`}
+            >
+              <div className={`w-12 h-12 ${bg} rounded-lg flex items-center justify-center mb-4`}>
+                <Icon className="w-6 h-6 text-white" aria-hidden="true" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
+              <p className="text-sm text-gray-700">{desc}</p>
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Clause 5.1 & 5.3</h3>
-            <p className="text-sm text-gray-700">Information management process and information requirements framework</p>
-          </div>
-
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border-2 border-green-200">
-            <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center mb-4">
-              <Calendar className="w-6 h-6 text-white" aria-hidden="true" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Clause 5.4</h3>
-            <p className="text-sm text-gray-700">Information delivery planning with TIDP/MIDP framework</p>
-          </div>
-
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border-2 border-purple-200">
-            <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center mb-4">
-              <FileText className="w-6 h-6 text-white" aria-hidden="true" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Clause 5.6 & 5.7</h3>
-            <p className="text-sm text-gray-700">Information production methods and Common Data Environment workflows</p>
-          </div>
-
-          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border-2 border-orange-200">
-            <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center mb-4">
-              <Users className="w-6 h-6 text-white" aria-hidden="true" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Annex A</h3>
-            <p className="text-sm text-gray-700">Responsibility matrices for information management activities and deliverables</p>
-          </div>
-
-          <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-6 border-2 border-indigo-200">
-            <div className="w-12 h-12 bg-indigo-500 rounded-lg flex items-center justify-center mb-4">
-              <TrendingUp className="w-6 h-6 text-white" aria-hidden="true" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">LOIN Management</h3>
-            <p className="text-sm text-gray-700">Level of Information Need specification and tracking for all deliverables</p>
-          </div>
-
-          <div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl p-6 border-2 border-teal-200">
-            <div className="w-12 h-12 bg-teal-500 rounded-lg flex items-center justify-center mb-4">
-              <BarChart3 className="w-6 h-6 text-white" aria-hidden="true" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Validation & QA</h3>
-            <p className="text-sm text-gray-700">Quality gates, acceptance criteria, and comprehensive validation checks</p>
-          </div>
+          ))}
         </div>
       </div>
     </div>

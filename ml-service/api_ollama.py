@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 # Get model and base URL from environment or use defaults
 OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.1:8b')
+OLLAMA_QUESTIONS_MODEL = os.getenv('OLLAMA_QUESTIONS_MODEL', '').strip() or OLLAMA_MODEL
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
 
 # Create FastAPI app
@@ -442,6 +443,11 @@ class FieldContext(BaseModel):
     draft_id: Optional[int] = Field(None, description="Draft ID for additional context")
 
 
+class WarmQuestionsResponse(BaseModel):
+    """Response for warm-questions endpoint"""
+    warmed: bool = Field(..., description="Whether the questions model was warmed successfully")
+
+
 class GenerateQuestionsRequest(BaseModel):
     """Request model for generating guided questions"""
     field_type: str = Field(..., description="Type of BEP field")
@@ -490,6 +496,24 @@ class GenerateFromAnswersResponse(BaseModel):
     model: str = Field(..., description="Model used for generation")
 
 
+@app.post("/warm-questions", response_model=WarmQuestionsResponse, tags=["Guided AI"])
+async def warm_questions():
+    """
+    Warm the Ollama model used for question generation by running a minimal
+    generate (1 token). Call this when the user opens the Guided AI flow so
+    the first real generate-questions request is faster.
+    """
+    try:
+        model = OLLAMA_QUESTIONS_MODEL or OLLAMA_MODEL
+        generator = get_ollama_generator(model=model)
+        generator.generate_text(prompt="warm", max_length=1, temperature=0)
+        logger.debug("Questions model warmed successfully")
+        return WarmQuestionsResponse(warmed=True)
+    except Exception as e:
+        logger.warning(f"Warm questions failed: {e}")
+        return WarmQuestionsResponse(warmed=False)
+
+
 @app.post("/generate-questions", response_model=GenerateQuestionsResponse, tags=["Guided AI"])
 async def generate_questions(request: GenerateQuestionsRequest):
     """
@@ -499,7 +523,7 @@ async def generate_questions(request: GenerateQuestionsRequest):
     that will be used to generate more accurate, project-specific BEP content.
     """
     try:
-        generator = get_ollama_generator(model=request.model or OLLAMA_MODEL)
+        generator = get_ollama_generator(model=request.model or OLLAMA_QUESTIONS_MODEL or OLLAMA_MODEL)
 
         field_context_dict = None
         if request.field_context:

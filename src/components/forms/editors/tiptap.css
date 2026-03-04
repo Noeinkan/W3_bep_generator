@@ -1,3 +1,43 @@
+/* Editor wrapper focus ring */
+.tiptap-wrapper {
+  border-radius: 0.5rem;
+  transition: box-shadow 0.15s ease;
+}
+
+.tiptap-wrapper--focused {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-primary, #2563eb) 20%, transparent);
+}
+
+/* Fullscreen mode */
+.tiptap-wrapper--fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: var(--ui-surface, #ffffff);
+  border-radius: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.tiptap-wrapper--fullscreen .tiptap-content-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  max-width: 56rem;
+  margin: 0 auto;
+  width: 100%;
+  border-left: none;
+  border-right: none;
+  border-radius: 0 !important;
+}
+
+.tiptap-wrapper--fullscreen .tiptap-status-bar {
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+}
+
 .tiptap-editor {
   padding: var(--tiptap-padding, 0.75rem);
   min-height: var(--tiptap-min-height, 200px);
@@ -181,4 +221,19 @@
 .tiptap-editor mark {
   border-radius: 0.125rem;
   padding: 0.125rem 0.25rem;
+}
+
+/* Slash command dropdown */
+.slash-command-menu {
+  animation: bubble-in 0.1s ease-out;
+}
+
+/* Bubble menu */
+.tiptap-bubble-menu {
+  animation: bubble-in 0.1s ease-out;
+}
+
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }

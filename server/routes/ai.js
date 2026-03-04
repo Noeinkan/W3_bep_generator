@@ -10,6 +10,7 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const router = express.Router();
+const guidedAiQuestionsCache = require('../services/guidedAiQuestionsCache');
 
 // Configuration for ML service
 const ML_SERVICE_TIMEOUT = 30000; // 30 seconds
@@ -363,6 +364,23 @@ router.post('/suggest-from-eir', async (req, res) => {
 // ============================================================================
 
 /**
+ * Warm the Ollama model used for question generation (minimal 1-token generate).
+ * GET /api/ai/warm-questions
+ * Frontend calls this when the user opens the Guided AI card so the first
+ * generate-questions request hits a warm model.
+ */
+router.get('/warm-questions', async (req, res) => {
+  try {
+    const mlClient = getMLClient();
+    await mlClient.post('/warm-questions', {}, { timeout: 20000 });
+    res.json({ warmed: true });
+  } catch (err) {
+    console.warn('Guided AI warm-questions failed:', err.message);
+    res.json({ warmed: false });
+  }
+});
+
+/**
  * Generate contextual questions for a BEP field
  *
  * POST /api/ai/generate-questions
@@ -393,6 +411,12 @@ router.post('/generate-questions', async (req, res) => {
       });
     }
 
+    const stepName = field_context && field_context.step_name != null ? field_context.step_name : '';
+    const cached = guidedAiQuestionsCache.get(field_type, stepName);
+    if (cached) {
+      return res.json({ success: true, questions: cached.questions, field_type: cached.field_type });
+    }
+
     console.log(`Guided AI: generating questions for field_type=${field_type}`);
 
     const mlClient = getMLClient();
@@ -402,8 +426,10 @@ router.post('/generate-questions', async (req, res) => {
       field_context: field_context || null,
       ...(model && { model })
     }, {
-      timeout: 30000 // 30s for question generation
+      timeout: 90000 // 90s for question generation (Ollama can be slow on first request or with heavier models)
     });
+
+    guidedAiQuestionsCache.set(field_type, stepName, response.data.questions, response.data.field_type);
 
     res.json({
       success: true,

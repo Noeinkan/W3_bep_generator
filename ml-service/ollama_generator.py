@@ -708,18 +708,14 @@ class OllamaGenerator:
         if existing_summary:
             prompt += f"{existing_summary}\n"
         prompt += (
-            "\nRequirements:\n"
-            "1. Ask specific, actionable questions that will help generate better content\n"
-            "2. Questions should be relevant to the field and ISO 19650 standards\n"
-            "3. Keep questions clear and concise\n"
-            "4. Each question should gather different information\n"
-            "5. Avoid yes/no questions - ask open-ended questions\n\n"
-            'Respond with a JSON object: {"questions": [{"id": "q1", "text": "...", "hint": "..."}, ...]}'
+            "\nAsk 3-4 specific, open-ended questions relevant to the field and ISO 19650; "
+            "each question should gather different information. "
+            'Respond with JSON only: {"questions": [{"id": "q1", "text": "...", "hint": "..."}, ...]}'
         )
 
         _schema = _QuestionsList.model_json_schema()
         raw = self.generate_text(
-            prompt=prompt, max_length=400, temperature=0.6, format_schema=_schema
+            prompt=prompt, max_length=220, temperature=0.4, num_ctx=1024, format_schema=_schema
         )
 
         # Parse questions — structured output makes this reliable; keep fallback for edge cases
@@ -729,7 +725,7 @@ class OllamaGenerator:
         if len(questions) < 2:
             logger.warning("First question generation produced < 2 questions, retrying…")
             raw = self.generate_text(
-                prompt=prompt, max_length=400, temperature=0.7, format_schema=_schema
+                prompt=prompt, max_length=220, temperature=0.5, num_ctx=1024, format_schema=_schema
             )
             questions = self._parse_questions_json(raw)
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import {
   Sparkles,
   Zap,
@@ -90,7 +91,10 @@ const AIAssistantTab = ({
           {/* Guided AI Card */}
           <button
             type="button"
-            onClick={() => setMode('guided')}
+            onClick={() => {
+              axios.get('/api/ai/warm-questions', { timeout: 15000 }).catch(() => {});
+              setMode('guided');
+            }}
             className="group text-left p-5 rounded-xl border-2 border-gray-200 bg-white hover:border-purple-400 hover:shadow-md transition-all"
           >
             <div className="flex items-center gap-3 mb-3">
