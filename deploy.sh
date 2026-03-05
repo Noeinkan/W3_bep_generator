@@ -1,23 +1,16 @@
 #!/usr/bin/env bash
 # deploy.sh — deploy the latest master to Hetzner
-# Usage: ./deploy.sh [--no-build]
-#   (no args)   pull, build images, then restart — use this to run the latest code
-#   --no-build  pull and restart only (no image rebuild); running app stays on old image
+# Usage: ./deploy.sh
+#   SSH into Hetzner, git pull origin master, then docker compose up -d --build
 
 set -euo pipefail
 
 SERVER="root@77.42.70.26"
 REMOTE_DIR="/opt/bep-generator"
-NO_BUILD=false
-
-for arg in "$@"; do
-  [[ "$arg" == "--no-build" ]] && NO_BUILD=true
-done
 
 echo "==> Connecting to $SERVER ..."
 
-ssh "$SERVER" bash -s -- "$NO_BUILD" << 'REMOTE'
-  NO_BUILD=$1
+ssh "$SERVER" bash -s << 'REMOTE'
   DIR="/opt/bep-generator"
 
   set -euo pipefail
@@ -31,18 +24,9 @@ ssh "$SERVER" bash -s -- "$NO_BUILD" << 'REMOTE'
   git pull origin master
   mv /tmp/.env.production.bak .env.production 2>/dev/null || true
 
-  if [[ "$NO_BUILD" != "true" ]]; then
-    echo ""
-    echo "==> Building Docker images ..."
-    docker compose build
-  else
-    echo ""
-    echo "==> Skipping build (--no-build flag set)"
-  fi
-
   echo ""
-  echo "==> Starting containers ..."
-  docker compose up -d
+  echo "==> Rebuilding and restarting containers (docker compose up -d --build) ..."
+  docker compose up -d --build
 
   echo ""
   echo "==> Waiting for backend to be ready ..."
