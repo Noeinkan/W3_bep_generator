@@ -10,7 +10,9 @@ import {
   Layers,
   ShieldCheck,
   Download,
-  Sparkles
+  CheckCircle2,
+  Play,
+  Sparkles,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Lenis from 'lenis';
@@ -38,10 +40,10 @@ const apFeatures = [
   },
   {
     icon: FileText,
-    title: 'OIR / PIR',
-    desc: 'Organisational and Project requirements',
-    color: 'text-indigo-400',
-    isSoon: true,
+    title: 'OIR Manager',
+    desc: 'Organisational Information Requirements',
+    color: 'text-indigo-600',
+    href: '/oir-manager',
   },
   {
     icon: ArrowRight,
@@ -78,33 +80,78 @@ const lapFeatures = [
   },
 ];
 
-const workflowSteps = [
+const walkthroughTabs = [
   {
-    step: '1',
+    id: 'eir',
+    label: 'Author EIR',
     icon: FileSearch,
-    role: 'Appointing Party',
-    title: 'Define Requirements',
-    desc: 'Author EIR, OIR, and PIR documents that set information standards for the project',
-    accent: 'text-indigo-400',
-    border: 'border-indigo-500',
+    accentBg: 'bg-indigo-600',
+    accentText: 'text-indigo-600',
+    accentBorder: 'border-indigo-600',
+    accentLight: 'bg-indigo-50',
+    caption: 'The Appointing Party fills guided EIR sections — purpose, standards, deliverables, acceptance criteria — and publishes to the delivery team in one click.',
+    screen: {
+      title: 'EIR Manager',
+      badge: 'Live',
+      badgeColor: 'bg-indigo-100 text-indigo-700',
+      rows: [
+        { label: 'Project Purpose', done: true },
+        { label: 'Organisational Information Requirements', done: true },
+        { label: 'Standards & Methods', done: true },
+        { label: 'Acceptance Criteria', done: false },
+        { label: 'Supporting Documents', done: false },
+      ],
+      cta: 'Publish EIR to BEP',
+      ctaColor: 'bg-indigo-600',
+    },
   },
   {
-    step: '2',
+    id: 'bep',
+    label: 'Build BEP',
     icon: FileText,
-    role: 'Lead Appointed Party',
-    title: 'Author & Deliver',
-    desc: 'Respond with a compliant BEP; coordinate delivery through TIDP, MIDP, and RACI',
-    accent: 'text-blue-400',
-    border: 'border-blue-500',
+    accentBg: 'bg-blue-600',
+    accentText: 'text-blue-600',
+    accentBorder: 'border-blue-600',
+    accentLight: 'bg-blue-50',
+    caption: 'The Lead Appointed Party works through a 14-step wizard pre-filled from the EIR — BEP sections, TIDP, MIDP, RACI, and LOIN tables all in one place.',
+    screen: {
+      title: 'BEP Wizard — Step 4 of 14',
+      badge: 'Draft',
+      badgeColor: 'bg-blue-100 text-blue-700',
+      rows: [
+        { label: 'Project Information', done: true },
+        { label: 'Management Strategy', done: true },
+        { label: 'High-level Programme', done: true },
+        { label: 'Responsibility Matrix (RACI)', done: false },
+        { label: 'TIDP / MIDP Coordination', done: false },
+      ],
+      cta: 'Continue to Step 5',
+      ctaColor: 'bg-blue-600',
+    },
   },
   {
-    step: '3',
+    id: 'export',
+    label: 'Export',
     icon: Download,
-    role: 'Both Parties',
-    title: 'Export & Submit',
-    desc: 'High-quality PDF, DOCX, and Excel exports for client submission and archiving',
-    accent: 'text-green-400',
-    border: 'border-green-500',
+    accentBg: 'bg-emerald-600',
+    accentText: 'text-emerald-600',
+    accentBorder: 'border-emerald-600',
+    accentLight: 'bg-emerald-50',
+    caption: 'Export a submission-ready BEP as PDF, DOCX, or structured Excel — formatted to client standards, ready to attach to the CDE or send directly.',
+    screen: {
+      title: 'Export & Submit',
+      badge: 'Ready',
+      badgeColor: 'bg-emerald-100 text-emerald-700',
+      rows: [
+        { label: 'PDF — formatted for client submission', done: true },
+        { label: 'DOCX — editable Word document', done: true },
+        { label: 'Excel — structured data export', done: true },
+        { label: 'IDS — buildingSMART validation file', done: true },
+        { label: 'CDE upload (coming soon)', done: false },
+      ],
+      cta: 'Download All Formats',
+      ctaColor: 'bg-emerald-600',
+    },
   },
 ];
 
@@ -125,10 +172,10 @@ const VARIANT_CLASSES = {
   },
 };
 
-const RoleCard = ({ title, subtitle, icon: Icon, description, features, variant, buttonText, onClick, highlighted }) => {
+const RoleCard = ({ title, subtitle, icon: Icon, description, features, variant, buttonText, onClick }) => {
   const v = VARIANT_CLASSES[variant];
   return (
-    <div className={`group bg-white rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 hover:-translate-y-2 border overflow-hidden will-change-transform flex flex-col ${highlighted ? 'border-indigo-300 ring-4 ring-indigo-200 ring-offset-2 scale-[1.02]' : 'border-gray-100'}`}>
+    <div className="group bg-white rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 overflow-hidden will-change-transform flex flex-col">
       <div className={`bg-gradient-to-r ${v.header} p-8 lg:p-10 relative overflow-hidden`}>
         <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -translate-y-16 translate-x-16" aria-hidden="true" />
         <div className="relative z-10 flex items-center text-white">
@@ -237,7 +284,7 @@ const HomePage = () => {
   const navigate = useNavigate();
   const { setPartyRole } = usePartyRole();
   const [isVisible, setIsVisible] = useState(false);
-  const [activeStep, setActiveStep] = useState(null);
+  const [activeTab, setActiveTab] = useState('eir');
   const [orbActive, setOrbActive] = useState(false);
   const orbRef = useRef(null);
 
@@ -404,56 +451,112 @@ const HomePage = () => {
         </div>
       </div>
 
-      {/* ── How It Works strip ────────────────────────────────────────────── */}
+      {/* ── Product Walkthrough ───────────────────────────────────────────── */}
       <motion.div
-        className="bg-gray-50 border-b border-gray-200 py-12 lg:py-16"
+        className="bg-gray-50 border-b border-gray-200 py-14 lg:py-20"
         initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }}
         variants={FADE_UP}
       >
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-xs font-semibold text-gray-400 uppercase tracking-widest mb-10">
-            How It Works — <span className="normal-case font-normal">click a step to highlight the role</span>
-          </p>
+          {/* Heading */}
+          <div className="text-center mb-10">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">See It In Action</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Everything you need, in one workflow</h2>
+          </div>
 
-          {/* Steps + arrows row */}
-          <div className="flex flex-col md:flex-row items-stretch gap-4 md:gap-0">
-            {workflowSteps.map(({ step, icon: Icon, role, title, desc, accent, border }, i) => (
-              <>
-                {/* Card */}
+          {/* Tabs */}
+          <div className="flex justify-center gap-2 mb-8 flex-wrap">
+            {walkthroughTabs.map((tab) => {
+              const TabIcon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
                 <button
-                  key={step}
-                  onClick={() => setActiveStep(activeStep === i ? null : i)}
-                  className={`flex-1 flex flex-col items-center text-center gap-3 rounded-2xl px-6 py-6 transition-all duration-300 cursor-pointer ${
-                    activeStep === i ? 'bg-white shadow-lg scale-[1.04] ring-1 ring-gray-200' : 'hover:bg-white/70'
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold border-2 transition-all duration-200 ${
+                    isActive
+                      ? `${tab.accentBg} ${tab.accentBorder} text-white shadow-md`
+                      : `bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:text-gray-900`
                   }`}
                 >
-                  {/* Number badge */}
-                  <div className={`w-11 h-11 rounded-full border-2 ${border} bg-white flex items-center justify-center shadow-sm`}>
-                    <span className={`text-sm font-bold ${accent}`}>{step}</span>
-                  </div>
-
-                  {/* Role label */}
-                  <span className={`text-xs font-bold uppercase tracking-widest ${accent}`}>{role}</span>
-
-                  {/* Icon + Title */}
-                  <div className="flex items-center gap-2">
-                    <Icon className={`w-5 h-5 flex-shrink-0 ${accent}`} aria-hidden="true" />
-                    <h3 className="text-gray-900 font-bold text-lg">{title}</h3>
-                  </div>
-
-                  {/* Description */}
-                  <p className="text-gray-600 text-sm leading-relaxed max-w-[240px]">{desc}</p>
+                  <TabIcon className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                  {tab.label}
                 </button>
-
-                {/* Connector arrow between cards (desktop only) */}
-                {i < workflowSteps.length - 1 && (
-                  <div className="hidden md:flex items-center justify-center self-center flex-shrink-0 px-1 text-gray-300" aria-hidden="true">
-                    <ArrowRight className="w-5 h-5" />
-                  </div>
-                )}
-              </>
-            ))}
+              );
+            })}
           </div>
+
+          {/* Screen frame */}
+          {walkthroughTabs.map((tab) => {
+            if (tab.id !== activeTab) return null;
+            const { screen } = tab;
+            return (
+              <motion.div
+                key={tab.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25 }}
+                className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden"
+              >
+                {/* Browser chrome */}
+                <div className="bg-gray-100 border-b border-gray-200 px-4 py-3 flex items-center gap-3">
+                  <div className="flex gap-1.5" aria-hidden="true">
+                    <span className="w-3 h-3 rounded-full bg-red-400" />
+                    <span className="w-3 h-3 rounded-full bg-yellow-400" />
+                    <span className="w-3 h-3 rounded-full bg-green-400" />
+                  </div>
+                  <div className="flex-1 bg-white rounded-md border border-gray-200 px-3 py-1 text-xs text-gray-400 text-center">
+                    app.bep-generator.com
+                  </div>
+                  <Play className="w-4 h-4 text-gray-300" aria-hidden="true" />
+                </div>
+
+                {/* App content mockup */}
+                <div className="p-6 lg:p-8">
+                  {/* Top bar */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-lg">{screen.title}</h3>
+                    </div>
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${screen.badgeColor}`}>
+                      {screen.badge}
+                    </span>
+                  </div>
+
+                  {/* Section rows */}
+                  <div className="space-y-3 mb-6">
+                    {screen.rows.map((row) => (
+                      <div
+                        key={row.label}
+                        className={`flex items-center justify-between px-4 py-3 rounded-lg border ${
+                          row.done ? `${tab.accentLight} border-transparent` : 'bg-gray-50 border-gray-100'
+                        }`}
+                      >
+                        <span className={`text-sm font-medium ${row.done ? tab.accentText : 'text-gray-500'}`}>
+                          {row.label}
+                        </span>
+                        {row.done && (
+                          <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${tab.accentText}`} aria-hidden="true" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* CTA button */}
+                  <button className={`w-full ${screen.ctaColor} text-white font-semibold py-3 rounded-xl text-sm`}>
+                    {screen.cta}
+                  </button>
+                </div>
+              </motion.div>
+            );
+          })}
+
+          {/* Caption */}
+          {walkthroughTabs.map((tab) => tab.id === activeTab && (
+            <p key={tab.id} className="text-center text-gray-500 text-sm leading-relaxed mt-5 max-w-2xl mx-auto">
+              {tab.caption}
+            </p>
+          ))}
         </div>
       </motion.div>
 
@@ -483,7 +586,6 @@ const HomePage = () => {
             variant="indigo"
             buttonText="Get Started as Appointing Party"
             onClick={() => goAs(PARTY_ROLE.APPOINTING_PARTY)}
-            highlighted={activeStep === 0 || activeStep === 2}
           />
           <RoleCard
             title="Lead Appointed Party"
@@ -494,7 +596,6 @@ const HomePage = () => {
             variant="blue"
             buttonText="Get Started as Lead Appointed Party"
             onClick={() => goAs(PARTY_ROLE.LEAD_APPOINTED_PARTY)}
-            highlighted={activeStep === 1 || activeStep === 2}
           />
         </div>
       </motion.div>

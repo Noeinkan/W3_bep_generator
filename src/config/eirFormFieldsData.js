@@ -5,13 +5,28 @@
 
 export const eirFormFields = {
   0: {
+    number: 'P',
+    title: 'Project Information',
+    fields: [
+      { number: 'P.1', name: 'projectName', label: 'Project name', required: true, type: 'text', placeholder: 'Full project name...' },
+      { number: 'P.2', name: 'projectNumber', label: 'Project number / reference', type: 'text', placeholder: 'e.g. PROJ-2026-001' },
+      { number: 'P.3', name: 'clientOrganisation', label: 'Client / appointing party', type: 'text', placeholder: 'Organisation name...' },
+      { number: 'P.4', name: 'projectAddress', label: 'Project address / location', type: 'textarea', rows: 2, placeholder: 'Site address or geographic description...' },
+      { number: 'P.5', name: 'projectDescription', label: 'Project description', required: true, type: 'textarea', rows: 3, placeholder: 'Brief description of scope and type of works...' },
+      { number: 'P.6', name: 'formOfContract', label: 'Form of contract', type: 'text', placeholder: 'e.g. NEC4, JCT Design & Build...' },
+      { number: 'P.7', name: 'projectPhasing', label: 'Project phasing', type: 'textarea', rows: 2, placeholder: 'Describe project phases or stages if applicable...' },
+      { number: 'P.8', type: 'section-header', label: 'Key Project Contacts' },
+      { number: 'P.9', name: 'keyContacts', label: 'Key project contacts', type: 'table', columns: ['Role', 'Name', 'Organisation', 'Email', 'Phone'] }
+    ]
+  },
+  1: {
     number: '0',
     title: 'Executive Summary',
     fields: [
       { number: '0.1', name: 'executiveSummary', label: 'Executive Summary', required: true, type: 'textarea', rows: 5, placeholder: 'Summarise the purpose and scope of this Exchange Information Requirements document...' }
     ]
   },
-  1: {
+  2: {
     number: '1',
     title: 'Introduction',
     fields: [
@@ -30,22 +45,23 @@ export const eirFormFields = {
       { number: '1.3.2.6', name: 'deliveryTeamBepRequirement', label: "Delivery team's BIM execution plan (BEP)", type: 'textarea', rows: 2, placeholder: 'Requirements for the appointed party BEP...' }
     ]
   },
-  2: {
+  3: {
     number: '2',
     title: 'Information Requirements',
     fields: [
       { number: '2.1', name: 'informationPurpose', label: 'Information purpose', required: true, type: 'textarea', rows: 4, placeholder: 'Define the purpose of information to be produced and exchanged...' },
-      { number: '2.2', name: 'planOfWork', label: 'Plan of work', type: 'textarea', rows: 3, placeholder: 'Reference or describe the plan of work (e.g. RIBA stages)...' },
-      { number: '2.3', name: 'informationDeliveryMilestones', label: 'Information delivery milestones (dates and purposes)', required: true, type: 'milestones-table', columns: ['Stage/Phase', 'Milestone Description', 'Deliverables', 'Due Date', 'Gate', 'Notes'] },
-      { number: '2.4', name: 'informationSecurityRequirements', label: 'Information security requirements', type: 'textarea', rows: 4, placeholder: 'Security classification, access control and handling requirements...' },
-      { number: '2.5', name: 'spatialCoordinationRequirements', label: 'Spatial coordination requirements', type: 'textarea', rows: 3, placeholder: 'Requirements for spatial coordination and clash detection...' },
-      { number: '2.6', name: 'pimRequirements', label: 'Project Information Model (PIM) requirements', type: 'textarea', rows: 4, placeholder: 'PIM requirements for design and construction phases...' },
-      { number: '2.7', name: 'aimRequirements', label: 'Asset Information Model (AIM) requirements (at handover)', type: 'textarea', rows: 4, placeholder: 'AIM requirements at handover and for asset management...' },
-      { number: '2.8', name: 'informationKpis', label: 'Information management key performance indicators (KPIs)', type: 'table', columns: ['KPI', 'Target', 'Measurement', 'Responsibility'] },
-      { number: '2.9', name: 'healthSafetyRiskManagement', label: 'Health and safety and design/construction risk management', type: 'textarea', rows: 4, placeholder: 'Information requirements supporting H&S and risk management...' }
+      { number: '2.2', name: 'bimUses', label: 'BIM uses', type: 'table', columns: ['BIM Use', 'Priority (High/Med/Low)', 'Description / Goal', 'Responsible Party', 'Project Stage'] },
+      { number: '2.3', name: 'planOfWork', label: 'Plan of work', type: 'textarea', rows: 3, placeholder: 'Reference or describe the plan of work (e.g. RIBA stages)...' },
+      { number: '2.4', name: 'informationDeliveryMilestones', label: 'Information delivery milestones (dates and purposes)', required: true, type: 'milestones-table', columns: ['Stage/Phase', 'Milestone Description', 'Deliverables', 'Due Date', 'Gate', 'Notes'] },
+      { number: '2.5', name: 'informationSecurityRequirements', label: 'Information security requirements', type: 'textarea', rows: 4, placeholder: 'Security classification, access control and handling requirements...' },
+      { number: '2.6', name: 'spatialCoordinationRequirements', label: 'Spatial coordination requirements', type: 'textarea', rows: 3, placeholder: 'Requirements for spatial coordination and clash detection...' },
+      { number: '2.7', name: 'pimRequirements', label: 'Project Information Model (PIM) requirements', type: 'textarea', rows: 4, placeholder: 'PIM requirements for design and construction phases...' },
+      { number: '2.8', name: 'aimRequirements', label: 'Asset Information Model (AIM) requirements (at handover)', type: 'textarea', rows: 4, placeholder: 'AIM requirements at handover and for asset management...' },
+      { number: '2.9', name: 'informationKpis', label: 'Information management key performance indicators (KPIs)', type: 'table', columns: ['KPI', 'Target', 'Measurement', 'Responsibility'] },
+      { number: '2.10', name: 'healthSafetyRiskManagement', label: 'Health and safety and design/construction risk management', type: 'textarea', rows: 4, placeholder: 'Information requirements supporting H&S and risk management...' }
     ]
   },
-  3: {
+  4: {
     number: '3.1',
     title: 'Information Standards',
     fields: [
@@ -61,7 +77,7 @@ export const eirFormFields = {
       { number: '3.1.6', name: 'informationModelQuality', label: 'Information model quality (assurance/checking requirements)', type: 'textarea', rows: 4, placeholder: 'Quality assurance and checking requirements for information models...' }
     ]
   },
-  4: {
+  5: {
     number: '3.2',
     title: 'Information Production Methods and Procedures',
     fields: [
@@ -76,10 +92,11 @@ export const eirFormFields = {
       { number: '3.2.5', name: 'legacyInformationRequirements', label: 'Legacy information and shared resources requirements', type: 'textarea', rows: 3, placeholder: 'Requirements for legacy information and shared resources...' },
       { number: '3.2.6', name: 'captureExistingAssetInformation', label: 'Capture of existing asset information', type: 'textarea', rows: 3, placeholder: 'Requirements for capturing existing asset information...' },
       { number: '3.2.7', name: 'informationContainerBreakdownStructure', label: 'Information container breakdown structure', type: 'textarea', rows: 3, placeholder: 'Breakdown structure for information containers...' },
-      { number: '3.2.8', name: 'lessonsLearnt', label: 'Lessons learnt', type: 'textarea', rows: 3, placeholder: 'Process for capturing and applying lessons learnt...' }
+      { number: '3.2.8', name: 'federationStrategy', label: 'Federation strategy', type: 'textarea', rows: 3, placeholder: 'How models from different task teams are combined into a federated model, including ownership, coordination zones and clash detection responsibilities...' },
+      { number: '3.2.9', name: 'lessonsLearnt', label: 'Lessons learnt', type: 'textarea', rows: 3, placeholder: 'Process for capturing and applying lessons learnt...' }
     ]
   },
-  5: {
+  6: {
     number: 'A',
     title: 'Appendices',
     fields: [

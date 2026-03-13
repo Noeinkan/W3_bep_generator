@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileSearch, Plus, FileText, Trash2, ArrowLeft, Send } from 'lucide-react';
+import { Building2, Plus, FileText, Trash2, Send } from 'lucide-react';
 import { useProject } from '../../../contexts/ProjectContext';
 import apiService from '../../../services/apiService';
 import ConfirmDialog from '../../common/ConfirmDialog';
 import toast from 'react-hot-toast';
 
 /**
- * EIR Manager — list EIR drafts for the current project, create new, open editor, delete.
- * ISO 19650 Exchange Information Requirements (EIR) authoring hub.
+ * OIR Manager — list OIR drafts for the current project, create new, open editor, delete.
+ * ISO 19650 Organizational Information Requirements authoring hub.
  */
-const EirManagerPage = () => {
+const OirManagerPage = () => {
   const navigate = useNavigate();
   const { currentProject } = useProject();
   const [drafts, setDrafts] = useState([]);
@@ -22,12 +22,12 @@ const EirManagerPage = () => {
   const loadDrafts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiService.getEirDrafts(projectId);
+      const res = await apiService.getOirDrafts(projectId);
       if (res?.success && Array.isArray(res.drafts)) {
         setDrafts(res.drafts);
       }
     } catch (err) {
-      toast.error(err?.message || 'Failed to load EIR drafts');
+      toast.error(err?.message || 'Failed to load OIR drafts');
       setDrafts([]);
     } finally {
       setLoading(false);
@@ -38,23 +38,23 @@ const EirManagerPage = () => {
     loadDrafts();
   }, [loadDrafts]);
 
-  const handleNewEir = async () => {
+  const handleNewOir = async () => {
     try {
-      const title = 'Untitled EIR';
-      const res = await apiService.createEirDraft({ projectId, title, data: {} });
+      const title = 'Untitled OIR';
+      const res = await apiService.createOirDraft({ projectId, title, data: {} });
       if (res?.success && res?.draft?.id) {
-        toast.success('EIR created');
-        navigate(`/eir-manager/${res.draft.id}/edit`);
+        toast.success('OIR created');
+        navigate(`/oir-manager/${res.draft.id}/edit`);
       } else {
-        toast.error('Failed to create EIR');
+        toast.error('Failed to create OIR');
       }
     } catch (err) {
-      toast.error(err?.message || 'Failed to create EIR');
+      toast.error(err?.message || 'Failed to create OIR');
     }
   };
 
   const handleOpen = (draft) => {
-    navigate(`/eir-manager/${draft.id}/edit`);
+    navigate(`/oir-manager/${draft.id}/edit`);
   };
 
   const handleDeleteConfirm = async () => {
@@ -62,21 +62,21 @@ const EirManagerPage = () => {
     const id = deleteTarget.id;
     setDeleteTarget(null);
     try {
-      await apiService.deleteEirDraft(id);
-      toast.success('EIR deleted');
+      await apiService.deleteOirDraft(id);
+      toast.success('OIR deleted');
       loadDrafts();
     } catch (err) {
-      toast.error(err?.message || 'Failed to delete EIR');
+      toast.error(err?.message || 'Failed to delete OIR');
     }
   };
 
   const handlePublish = async (draft) => {
     try {
-      await apiService.publishEirDraft(draft.id);
-      toast.success('EIR published — delivery teams can use it when creating a BEP.');
+      await apiService.publishOirDraft(draft.id);
+      toast.success('OIR published — it is now the active organizational reference for this project.');
       loadDrafts();
     } catch (err) {
-      toast.error(err?.message || 'Failed to publish EIR');
+      toast.error(err?.message || 'Failed to publish OIR');
     }
   };
 
@@ -91,59 +91,51 @@ const EirManagerPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-amber-50/30 to-slate-50" data-page-uri="/eir-manager">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-slate-50" data-page-uri="/oir-manager">
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-amber-600 rounded-lg flex items-center justify-center">
-              <FileSearch className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 bg-indigo-600 rounded-lg flex items-center justify-center">
+              <Building2 className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">EIR Manager</h1>
-              <p className="text-sm text-gray-600">Exchange Information Requirements (ISO 19650)</p>
+              <h1 className="text-2xl font-bold text-gray-900">OIR Manager</h1>
+              <p className="text-sm text-gray-600">Organizational Information Requirements (ISO 19650)</p>
             </div>
           </div>
           <button
             type="button"
-            onClick={handleNewEir}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors"
+            onClick={handleNewOir}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
           >
             <Plus className="w-5 h-5" />
-            New EIR
+            New OIR
           </button>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
-          <p className="text-gray-700 mb-4">
-            Create and manage Exchange Information Requirements (EIR) for this project. The EIR defines what, when, how, and in what format information must be exchanged. Publish an EIR to make it the active reference for the project; delivery teams can then link their BEP to it. Your BEP is the delivery team&apos;s response to the EIR.
+          <p className="text-gray-700">
+            Create and manage Organizational Information Requirements (OIR) for this organization. The OIR defines the high-level information needs to support strategic business objectives. It drives downstream requirements including the Asset Information Requirements (AIR) and Exchange Information Requirements (EIR). Publish an OIR to make it the active organizational reference for this project.
           </p>
-          <button
-            type="button"
-            onClick={() => navigate('/bep-generator')}
-            className="inline-flex items-center gap-2 text-amber-700 hover:text-amber-800 font-medium text-sm"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Open BEP Generator
-          </button>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <h2 className="text-lg font-semibold text-gray-900 px-6 py-4 border-b border-gray-200">Your EIR documents</h2>
+          <h2 className="text-lg font-semibold text-gray-900 px-6 py-4 border-b border-gray-200">Your OIR documents</h2>
           {loading ? (
             <div className="px-6 py-12 text-center text-gray-500">Loading…</div>
           ) : drafts.length === 0 ? (
             <div className="px-6 py-12 text-center text-gray-500">
-              No EIR documents yet. Click <strong>New EIR</strong> to create one.
+              No OIR documents yet. Click <strong>New OIR</strong> to create one.
             </div>
           ) : (
             <ul className="divide-y divide-gray-200">
               {drafts.map((draft) => (
                 <li key={draft.id} className="flex items-center justify-between gap-4 px-6 py-4 hover:bg-gray-50">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <FileText className="w-5 h-5 text-amber-600 shrink-0" />
+                    <FileText className="w-5 h-5 text-indigo-600 shrink-0" />
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium text-gray-900 truncate">{draft.title || 'Untitled EIR'}</p>
+                        <p className="font-medium text-gray-900 truncate">{draft.title || 'Untitled OIR'}</p>
                         {draft.status === 'published' && (
                           <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800">
                             Published
@@ -159,7 +151,7 @@ const EirManagerPage = () => {
                         type="button"
                         onClick={() => handlePublish(draft)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
-                        title="Set as the active EIR for this project"
+                        title="Set as the active OIR for this project"
                       >
                         <Send className="w-4 h-4" />
                         Publish
@@ -168,7 +160,7 @@ const EirManagerPage = () => {
                     <button
                       type="button"
                       onClick={() => handleOpen(draft)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
                     >
                       Open
                     </button>
@@ -190,8 +182,8 @@ const EirManagerPage = () => {
 
       <ConfirmDialog
         open={!!deleteTarget}
-        title="Delete EIR"
-        message={deleteTarget ? `Delete "${deleteTarget.title || 'Untitled EIR'}"? This cannot be undone.` : ''}
+        title="Delete OIR"
+        message={deleteTarget ? `Delete "${deleteTarget.title || 'Untitled OIR'}"? This cannot be undone.` : ''}
         confirmText="Delete"
         confirmVariant="danger"
         cancelText="Cancel"
@@ -202,4 +194,4 @@ const EirManagerPage = () => {
   );
 };
 
-export default EirManagerPage;
+export default OirManagerPage;

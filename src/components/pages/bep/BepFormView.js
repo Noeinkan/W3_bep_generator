@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useContext } from 'react';
+import { useCallback, useEffect, useRef, useContext, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useBepForm } from '../../../contexts/BepFormContext';
 import FormStepRHF from '../../steps/FormStepRHF';
@@ -18,6 +18,8 @@ import { cn } from '../../../utils/cn';
 import { ROUTES } from '../../../constants/routes';
 import { EirStepWrapper } from '../../eir';
 import { bepUi } from './bepUiClasses';
+import { useEir } from '../../../contexts/EirContext';
+import apiService from '../../../services/apiService';
 
 /**
  * Decides between static (FormStepRHF) and dynamic (DynamicFormStepRHF) step renderers
@@ -52,6 +54,7 @@ const BepFormViewContent = () => {
     setCurrentDraft,
     getFormData,
     isInitialized,
+    methods,
   } = useBepForm();
 
   const { documentHistory, handleDocumentHistorySave } = useDocumentHistory({ currentDraft, setCurrentDraft });
@@ -131,6 +134,101 @@ const BepFormViewContent = () => {
     projectId: currentProject?.id || null,
   });
 
+  const { setEirAnalysis, clearEirAnalysis, hasAnalysis } = useEir();
+
+  const [eirDrafts, setEirDrafts] = useState([]);
+  const [eirDraftsLoading, setEirDraftsLoading] = useState(false);
+  const [eirDraftsError, setEirDraftsError] = useState(null);
+  const [loadingLinkedEir, setLoadingLinkedEir] = useState(false);
+
+  const linkedEirId = formData?.linkedEirId || null;
+
+  // Load authored EIR drafts for the current project (if any)
+  useEffect(() => {
+    if (!currentProject?.id) return;
+    let cancelled = false;
+    setEirDraftsLoading(true);
+    setEirDraftsError(null);
+    apiService
+      .getEirDrafts(currentProject.id)
+      .then((res) => {
+        if (cancelled) return;
+        if (res?.success && Array.isArray(res.drafts)) {
+          setEirDrafts(res.drafts);
+        } else {
+          setEirDrafts([]);
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error('Failed to load EIR drafts for BEP linking:', err);
+        setEirDraftsError(err?.message || 'Failed to load EIR drafts');
+        setEirDrafts([]);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setEirDraftsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentProject?.id]);
+
+  const loadLinkedEirAnalysis = useCallback(
+    async (eirId) => {
+      if (!eirId) return;
+      setLoadingLinkedEir(true);
+      try {
+        const res = await apiService.getEirDraftAnalysis(eirId);
+        if (res?.success) {
+          setEirAnalysis(res);
+        }
+      } catch (err) {
+        console.error('Failed to load linked EIR analysis:', err);
+      } finally {
+        setLoadingLinkedEir(false);
+      }
+    },
+    [setEirAnalysis]
+  );
+
+  // On mount / form load, if a linkedEirId exists but no analysis is present yet,
+  // fetch the analysis from the authored EIR.
+  useEffect(() => {
+    if (linkedEirId && !hasAnalysis) {
+      loadLinkedEirAnalysis(linkedEirId);
+    }
+  }, [linkedEirId, hasAnalysis, loadLinkedEirAnalysis]);
+
+  // When EIR drafts are loaded and no EIR is linked yet, pre-select the project's published EIR if exactly one.
+  useEffect(() => {
+    if (eirDraftsLoading || eirDrafts.length === 0 || linkedEirId) return;
+    const published = eirDrafts.filter((d) => d.status === 'published');
+    if (published.length === 1) {
+      const id = published[0].id;
+      methods.setValue('linkedEirId', id, { shouldDirty: true });
+      loadLinkedEirAnalysis(id);
+    }
+  }, [eirDraftsLoading, eirDrafts, linkedEirId, methods, loadLinkedEirAnalysis]);
+
+  const handleChangeLinkedEir = useCallback(
+    async (event) => {
+      const value = event.target.value;
+      const newId = value === '' ? null : value;
+      methods.setValue('linkedEirId', newId, { shouldDirty: true });
+
+      if (!newId) {
+        clearEirAnalysis();
+        return;
+      }
+
+      await loadLinkedEirAnalysis(newId);
+    },
+    [methods, clearEirAnalysis, loadLinkedEirAnalysis]
+  );
+
   // Scroll to top when step changes
   useEffect(() => {
     if (contentRef.current) {
@@ -185,6 +283,57 @@ const BepFormViewContent = () => {
           savingDraft={savingDraft}
           user={user}
         />
+
+        {/* Linked EIR banner */}
+        {currentProject?.id && (
+          <div className="px-6 pt-3">
+            <div className="max-w-[231mm] mx-auto">
+              <div className="flex items-center justify-between gap-3 text-xs sm:text-sm px-4 py-2.5 rounded-lg border border-dashed border-amber-300 bg-amber-50/70">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3">
+                  <span className="font-medium text-amber-900">
+                    Linked EIR (authored):
+                  </span>
+                  {eirDraftsLoading ? (
+                    <span className="text-amber-700">Loading EIR drafts…</span>
+                  ) : eirDrafts.length === 0 ? (
+                    <span className="text-amber-700">
+                      No authored EIR documents for this project yet.
+                    </span>
+                  ) : (
+                    <select
+                      value={linkedEirId || ''}
+                      onChange={handleChangeLinkedEir}
+                      className="border border-amber-300 rounded-md px-2 py-1 bg-white text-amber-900 text-xs sm:text-sm"
+                    >
+                      <option value="">
+                        No EIR linked
+                      </option>
+                      {eirDrafts.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.title || 'Untitled EIR'}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {eirDraftsError && (
+                    <span className="text-red-600">
+                      {eirDraftsError}
+                    </span>
+                  )}
+                </div>
+                {linkedEirId && (
+                  <span className="text-amber-800 text-xs">
+                    {loadingLinkedEir
+                      ? 'Loading analysis…'
+                      : hasAnalysis
+                      ? 'Analysis ready for suggestions & matrix'
+                      : 'Link set – analysis pending'}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Form Content */}
         <div ref={contentRef} className={cn('flex-1', bepUi.contentScroll, 'bg-ui-canvas')}>

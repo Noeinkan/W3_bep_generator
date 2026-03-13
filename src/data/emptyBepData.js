@@ -27,6 +27,9 @@ const ISO_19650_DEFINITIONS_DEFAULT = [
 ];
 
 const EMPTY_BEP_DATA = {
+  // Metadata: link to authored EIR draft (optional)
+  linkedEirId: null,
+
   // Section 1 Introduction fields
   eirPirReference: '',
   signpostedDocuments: [...SIGNPOSTED_DOCUMENTS_DEFAULT],

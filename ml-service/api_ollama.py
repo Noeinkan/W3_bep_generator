@@ -431,6 +431,22 @@ class SuggestFromEirResponse(BaseModel):
     model: str = Field(..., description="Model used")
 
 
+class SuggestEirFieldRequest(BaseModel):
+    """Request model for EIR authoring field suggestions (not BEP response)"""
+    field_name: str = Field(..., description="EIR form field name (e.g. executiveSummary, eirPurpose)")
+    field_label: Optional[str] = Field(None, description="Human-readable label for the field")
+    current_text: str = Field("", description="Existing text in the field")
+    eir_draft_data: Optional[Dict[str, Any]] = Field(None, description="Other EIR form data for context")
+    model: Optional[str] = Field(None, description="Ollama model override")
+
+
+class SuggestEirFieldResponse(BaseModel):
+    """Response model for EIR authoring field suggestions"""
+    suggestion: str = Field(..., description="Suggested text for the EIR field")
+    field_name: str = Field(..., description="Field name")
+    model: str = Field(..., description="Model used")
+
+
 # ============================================================================
 # Guided AI Question-based Generation Endpoints
 # ============================================================================
@@ -678,6 +694,84 @@ async def suggest_from_eir(request: SuggestFromEirRequest):
         raise HTTPException(
             status_code=500,
             detail=f"Suggestion generation failed: {str(e)}"
+        )
+
+
+# EIR authoring: suggest content for a specific EIR form field (ISO 19650)
+EIR_FIELD_SUGGEST_PROMPT = """You are an ISO 19650 and UK BIM Framework expert helping to author Exchange Information Requirements (EIR).
+
+Generate concise, professional content for this EIR field only. Use British English. Do not add meta-commentary or "Here is..."; output the content that should appear in the document.
+
+EIR field: {field_label} (internal name: {field_name})
+Existing text in field (may be empty):
+---
+{current_text}
+---
+
+{fragment}
+
+Return ONLY the suggested text for this field (no preamble, no explanation)."""
+
+
+@app.post("/suggest-eir-field", response_model=SuggestEirFieldResponse, tags=["EIR Analysis"])
+async def suggest_eir_field(request: SuggestEirFieldRequest):
+    """
+    Generate a suggestion for an EIR authoring form field.
+
+    Used when the client is writing the EIR (appointing party side). The suggestion
+    is tailored to the EIR field taxonomy (executiveSummary, eirPurpose, goals,
+    informationRequirements, etc.) and optionally uses other filled EIR sections as context.
+    """
+    try:
+        effective_model = request.model or OLLAMA_MODEL
+        generator = get_ollama_generator(model=effective_model)
+
+        field_label = request.field_label or "".join(
+            " " + c if c.isupper() else c for c in request.field_name
+        ).strip().lstrip()
+        fragment = ""
+        if request.eir_draft_data and isinstance(request.eir_draft_data, dict):
+            # Summarise a few key text fields for context (avoid huge payloads)
+            parts = []
+            for key in ("executiveSummary", "eirPurpose", "goals", "objectives", "informationPurpose"):
+                v = request.eir_draft_data.get(key)
+                if v and isinstance(v, str) and v.strip():
+                    parts.append(f"{key}: {v.strip()[:300]}")
+            if parts:
+                fragment = "Context from other EIR sections (for consistency):\n" + "\n".join(parts) + "\n\n"
+            else:
+                fragment = ""
+
+        prompt = EIR_FIELD_SUGGEST_PROMPT.format(
+            field_name=request.field_name,
+            field_label=field_label,
+            current_text=request.current_text or "(empty)",
+            fragment=fragment,
+        )
+
+        suggestion = generator.generate_text(
+            prompt=prompt,
+            max_length=600,
+            temperature=0.5,
+        )
+        if isinstance(suggestion, str):
+            suggestion = suggestion.strip()
+        else:
+            suggestion = str(suggestion).strip()
+
+        logger.info(f"Generated EIR authoring suggestion for {request.field_name}")
+
+        return SuggestEirFieldResponse(
+            suggestion=suggestion,
+            field_name=request.field_name,
+            model=effective_model,
+        )
+
+    except Exception as e:
+        logger.error(f"EIR field suggestion error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"EIR field suggestion failed: {str(e)}"
         )
 
 

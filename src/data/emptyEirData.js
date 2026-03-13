@@ -4,7 +4,17 @@
  */
 
 const EMPTY_EIR_DATA = {
-  // Step 0: Executive Summary
+  // Step 0: Project Information
+  projectName: '',
+  projectNumber: '',
+  clientOrganisation: '',
+  projectAddress: '',
+  projectDescription: '',
+  formOfContract: '',
+  projectPhasing: '',
+  keyContacts: [],
+
+  // Step 1: Executive Summary
   executiveSummary: '',
 
   // Step 1: Introduction
@@ -19,8 +29,9 @@ const EMPTY_EIR_DATA = {
   informationDeliveryRiskAssessment: '',
   deliveryTeamBepRequirement: '',
 
-  // Step 2: Information Requirements
+  // Step 3: Information Requirements
   informationPurpose: '',
+  bimUses: [],
   planOfWork: '',
   informationDeliveryMilestones: [],
   informationSecurityRequirements: '',
@@ -30,7 +41,7 @@ const EMPTY_EIR_DATA = {
   informationKpis: [],
   healthSafetyRiskManagement: '',
 
-  // Step 3: Information Standards
+  // Step 4: Information Standards
   projectSpecificStandards: '',
   informationContainerIdentification: {
     overview: '',
@@ -44,7 +55,7 @@ const EMPTY_EIR_DATA = {
   softwarePlatforms: [],
   informationModelQuality: '',
 
-  // Step 4: Information Production Methods
+  // Step 5: Information Production Methods
   responsibilityMatrix: [],
   cdeWorkflow: '',
   informationExchangeFrequency: '',
@@ -55,9 +66,10 @@ const EMPTY_EIR_DATA = {
   legacyInformationRequirements: '',
   captureExistingAssetInformation: '',
   informationContainerBreakdownStructure: '',
+  federationStrategy: '',
   lessonsLearnt: '',
 
-  // Step 5: Appendices
+  // Step 6: Appendices
   appendixResponsibilityMatrix: [],
   appendixMilestonesTable: [],
   appendixLodLoiMatrix: [],

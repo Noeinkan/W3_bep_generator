@@ -1,5 +1,11 @@
 import React from 'react';
 import { CheckCircle, Calendar, Users, TrendingUp } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+const FADE_UP = {
+  hidden: { opacity: 0, y: 40 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
+};
 
 const cards = [
   {
@@ -19,9 +25,9 @@ const cards = [
     desc: 'Information delivery planning with TIDP/MIDP framework',
   },
   {
-    gradient: 'from-orange-50 to-orange-100',
-    border: 'border-orange-200',
-    bg: 'bg-orange-500',
+    gradient: 'from-violet-50 to-violet-100',
+    border: 'border-violet-200',
+    bg: 'bg-violet-500',
     icon: Users,
     title: 'Annex A',
     desc: 'Responsibility matrices for information management activities and deliverables',
@@ -38,7 +44,13 @@ const cards = [
 
 const ISOComplianceSection = () => {
   return (
-    <div className="bg-white py-12 lg:py-16">
+    <motion.div
+      className="bg-gradient-to-br from-gray-50 to-slate-100 py-12 lg:py-16"
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: '-80px' }}
+      variants={FADE_UP}
+    >
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8 lg:mb-10">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
@@ -53,9 +65,9 @@ const ISOComplianceSection = () => {
           {cards.map(({ gradient, border, bg, icon: Icon, title, desc }) => (
             <div
               key={title}
-              className={`bg-gradient-to-br ${gradient} rounded-xl p-6 border-2 ${border}`}
+              className={`bg-gradient-to-br ${gradient} rounded-xl p-6 border ${border} shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-200`}
             >
-              <div className={`w-12 h-12 ${bg} rounded-lg flex items-center justify-center mb-4`}>
+              <div className={`w-12 h-12 ${bg} rounded-lg flex items-center justify-center mb-4 shadow-sm`}>
                 <Icon className="w-6 h-6 text-white" aria-hidden="true" />
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
@@ -64,7 +76,7 @@ const ISOComplianceSection = () => {
           ))}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

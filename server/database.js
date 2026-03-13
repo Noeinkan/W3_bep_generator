@@ -325,7 +325,36 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_eir_drafts_user_id ON eir_drafts(user_id);
   CREATE INDEX IF NOT EXISTS idx_eir_drafts_project_id ON eir_drafts(project_id);
   CREATE INDEX IF NOT EXISTS idx_eir_drafts_updated_at ON eir_drafts(updated_at);
+
+  -- OIR drafts: Authored Organizational Information Requirements documents (ISO 19650)
+  CREATE TABLE IF NOT EXISTS oir_drafts (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    project_id TEXT,
+    title TEXT NOT NULL,
+    data TEXT NOT NULL DEFAULT '{}',
+    status TEXT DEFAULT 'draft',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_oir_drafts_user_id ON oir_drafts(user_id);
+  CREATE INDEX IF NOT EXISTS idx_oir_drafts_project_id ON oir_drafts(project_id);
+  CREATE INDEX IF NOT EXISTS idx_oir_drafts_updated_at ON oir_drafts(updated_at);
 `);
+
+// Migration: add status to eir_drafts (draft | published) for "Publish EIR" flow
+const eirDraftColumns = db.prepare("PRAGMA table_info(eir_drafts)").all();
+const eirDraftHasStatus = eirDraftColumns.some(col => col.name === 'status');
+if (!eirDraftHasStatus) {
+  try {
+    db.exec("ALTER TABLE eir_drafts ADD COLUMN status TEXT DEFAULT 'draft'");
+    console.log("Migration: added status column to eir_drafts");
+  } catch (err) {
+    console.error("Could not add status to eir_drafts:", err.message);
+  }
+}
 
 // Migration: Add draft_id columns if they don't exist (for existing databases)
 const stepColumns = db.prepare("PRAGMA table_info(bep_step_configs)").all();

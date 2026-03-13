@@ -1,11 +1,14 @@
 /**
  * Shared BEP config loader for server-side use.
- * Loads src/config/bepConfig.js (ESM) via dynamic import() so both
+ * Loads src/config/bepConfigForServer.js (ESM) via dynamic import() so both
  * htmlTemplateService and bepStructureService use the same CONFIG source.
  */
 
 const path = require('path');
+const fs = require('fs');
 const { pathToFileURL } = require('url');
+
+const CONFIG_FILE = 'bepConfigForServer.js';
 
 const DEFAULT_CONFIG = {
   bepTypeDefinitions: {
@@ -22,16 +25,34 @@ let cachedConfig = null;
 let lastLoadResult = { success: false };
 
 /**
- * Load BEP config from ESM (src/config/bepConfig.js). Uses dynamic import()
+ * Resolve path to bepConfigForServer.js: try relative to this file, then cwd.
+ * @returns {string|null} Absolute path or null if not found
+ */
+function resolveConfigPath() {
+  const fromServices = path.resolve(__dirname, '..', '..', 'src', 'config', CONFIG_FILE);
+  if (fs.existsSync(fromServices)) return fromServices;
+  const fromCwd = path.resolve(process.cwd(), 'src', 'config', CONFIG_FILE);
+  if (fs.existsSync(fromCwd)) return fromCwd;
+  return null;
+}
+
+/**
+ * Load BEP config from ESM (bepConfigForServer.js). Uses dynamic import()
  * because the file uses import/export; require() cannot load it.
  * @returns {Promise<{ success: boolean, config: object }>}
  */
 async function loadBepConfigAsync() {
   const result = { success: false, config: { ...DEFAULT_CONFIG } };
 
+  const serverConfigPath = resolveConfigPath();
+  if (!serverConfigPath) {
+    console.warn('⚠️  Could not load BEP config: file not found. Tried:', path.resolve(__dirname, '..', '..', 'src', 'config', CONFIG_FILE), 'and', path.resolve(process.cwd(), 'src', 'config', CONFIG_FILE));
+    lastLoadResult = result;
+    return result;
+  }
+
   try {
-    // Load server-safe config first (no lucide-react); fallback to full bepConfig if missing
-    const serverConfigPath = path.join(__dirname, '..', '..', 'src', 'config', 'bepConfigForServer.js');
+    // Use pathToFileURL so Node treats the path correctly (Windows and ESM)
     const fileUrl = pathToFileURL(serverConfigPath).href;
     const loaded = await import(fileUrl);
 
@@ -55,9 +76,8 @@ async function loadBepConfigAsync() {
     lastLoadResult = result;
     return result;
   } catch (error) {
-    const attemptedPath = path.join(__dirname, '..', '..', 'src', 'config', 'bepConfigForServer.js');
     console.warn('⚠️  Could not load BEP config:', error.message);
-    console.warn('   Code:', error.code || 'none', '| Path:', attemptedPath);
+    console.warn('   Code:', error.code || 'none', '| Path:', serverConfigPath);
     if (error.code === 'ERR_MODULE_NOT_FOUND' || error.code === 'MODULE_NOT_FOUND') {
       console.warn('   Tip: Ensure src/config/bepConfigForServer.js and its deps (bepStepsData.js, bepFormFieldsData.js, bepOptions.js) exist.');
     }

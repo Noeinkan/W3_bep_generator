@@ -12,6 +12,7 @@ const UNGUARDED_PATHS = ['/home', '/projects', '/profile', '/settings', '/role-c
 const WORK_ROUTE_PREFIXES = [
   '/bep-generator',
   '/eir-manager',
+  '/oir-manager',
   '/tidp-midp',
   '/responsibility-matrix',
   '/ifc-import',
@@ -67,7 +68,7 @@ const MainLayout = () => {
     partyRole === PARTY_ROLE.APPOINTING_PARTY
       ? [
           { name: 'EIR Manager', href: '/eir-manager', icon: FileSearch },
-          { name: 'OIR (coming soon)', href: '#', icon: Building2, disabled: true },
+          { name: 'OIR Manager', href: '/oir-manager', icon: Building2 },
           { name: 'PIR (coming soon)', href: '#', icon: FolderInput, disabled: true },
           { name: 'AIR (coming soon)', href: '#', icon: Package, disabled: true }
         ]

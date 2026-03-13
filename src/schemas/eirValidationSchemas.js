@@ -8,6 +8,14 @@ const optionalArray = z.array(z.any()).optional();
 const optionalObject = z.record(z.any()).optional();
 
 export const fullEirSchema = z.object({
+  projectName: optionalString,
+  projectNumber: optionalString,
+  clientOrganisation: optionalString,
+  projectAddress: optionalString,
+  projectDescription: optionalString,
+  formOfContract: optionalString,
+  projectPhasing: optionalString,
+  keyContacts: optionalArray,
   executiveSummary: z.string().min(1, 'Executive summary is required'),
   eirPurpose: optionalString,
   goals: optionalString,
@@ -20,6 +28,7 @@ export const fullEirSchema = z.object({
   informationDeliveryRiskAssessment: optionalString,
   deliveryTeamBepRequirement: optionalString,
   informationPurpose: optionalString,
+  bimUses: optionalArray,
   planOfWork: optionalString,
   informationDeliveryMilestones: optionalArray,
   informationSecurityRequirements: optionalString,
@@ -50,6 +59,7 @@ export const fullEirSchema = z.object({
   legacyInformationRequirements: optionalString,
   captureExistingAssetInformation: optionalString,
   informationContainerBreakdownStructure: optionalString,
+  federationStrategy: optionalString,
   lessonsLearnt: optionalString,
   appendixResponsibilityMatrix: optionalArray,
   appendixMilestonesTable: optionalArray,

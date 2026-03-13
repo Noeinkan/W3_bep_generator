@@ -5,6 +5,10 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/authMiddleware');
 const eirService = require('../services/eirService');
+const {
+  mapEirFormDataToAnalysis,
+  buildBasicEirSummaryMarkdown,
+} = require('../services/eirFormAnalysisMapper');
 
 /**
  * GET /api/eir/drafts
@@ -26,6 +30,40 @@ router.get('/drafts', authenticateToken, (req, res) => {
       success: false,
       message: 'Failed to fetch EIR drafts',
       error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/eir/drafts/:id/analysis
+ * Derive canonical EIR analysis JSON (EirAnalysis shape) from authored EIR form data.
+ * Does not call the ML analyzer – this is a pure mapping from the stored draft.
+ */
+router.get('/drafts/:id/analysis', authenticateToken, (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const draft = eirService.getById(id, userId);
+    if (!draft) {
+      return res.status(404).json({ success: false, message: 'EIR draft not found' });
+    }
+
+    const formData = draft.data && typeof draft.data === 'object' ? draft.data : {};
+    const analysisJson = mapEirFormDataToAnalysis(formData);
+    const summaryMarkdown = buildBasicEirSummaryMarkdown(analysisJson);
+
+    res.json({
+      success: true,
+      draftId: draft.id,
+      analysis_json: analysisJson,
+      summary_markdown: summaryMarkdown,
+    });
+  } catch (error) {
+    console.error('EIR analysis-from-form error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to build EIR analysis from draft data',
+      error: error.message,
     });
   }
 });
@@ -86,14 +124,14 @@ router.post('/drafts', authenticateToken, (req, res) => {
 
 /**
  * PUT /api/eir/drafts/:id
- * Update an EIR draft. Body: { title?, projectId?, data? }.
+ * Update an EIR draft. Body: { title?, projectId?, data?, status? }.
  */
 router.put('/drafts/:id', authenticateToken, (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
-    const { title, projectId, data } = req.body;
-    const draft = eirService.update(id, userId, { title, projectId, data });
+    const { title, projectId, data, status } = req.body;
+    const draft = eirService.update(id, userId, { title, projectId, data, status });
     if (!draft) {
       return res.status(404).json({ success: false, message: 'EIR draft not found' });
     }
@@ -103,6 +141,29 @@ router.put('/drafts/:id', authenticateToken, (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to update EIR draft',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/eir/drafts/:id/publish
+ * Mark this EIR as the published (active) EIR for its project. Unpublishes others in the same project.
+ */
+router.post('/drafts/:id/publish', authenticateToken, (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const draft = eirService.publish(id, userId);
+    if (!draft) {
+      return res.status(404).json({ success: false, message: 'EIR draft not found' });
+    }
+    res.json({ success: true, draft });
+  } catch (error) {
+    console.error('EIR publish error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to publish EIR',
       error: error.message
     });
   }

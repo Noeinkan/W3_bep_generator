@@ -1,78 +1,65 @@
 # CLAUDE.md — BEP Generator
 
-## Project Overview
-BEP Generator — React 19 + Vite + Express + SQLite tool for building/exporting BEP documents.
+## Stack
+React 19 + Vite + Express + better-sqlite3 (SQLite) + Python/Ollama ML service. All start via `npm start`.
 
 ## Environment
-Windows host, but shell is bash — use Unix syntax (forward slashes, `/dev/null` not NUL, `&&` chaining). Do not use PowerShell syntax.
+Windows host, bash shell — Unix syntax only (forward slashes, `&&`, `/dev/null`).
 
-## Workflow rules
+## Workflow
+- **Plan first.** For 3+ steps or multi-file changes, outline and wait for approval.
+- **Subagents for research.** Offload exploration/analysis to subagents; keep main context for implementation.
+- **Verify before done.** Run `npm test` after every code change.
+- **Fix bugs autonomously.** Root cause → failing test → fix.
+- **Stay focused.** No new packages, docs, or scope expansion without approval.
+- **Self-improve.** After corrections, update auto memory (`~/.claude/projects/.../memory/`).
+- **Tailwind tokens.** Dashed keys only (`text-ui-text-muted`, `bg-ui-primary-hover`). Never camelCase.
+- **English only.** All UI copy, comments, commit messages — English.
 
-- **Plan before coding.** For any non-trivial task (3+ steps, architectural decisions, or multi-file changes), outline the approach and wait for approval. Ask clarifying questions before touching a file.
-- **Use subagents to protect context.** Offload research, exploration, and parallel analysis to subagents. Keep the main context window clean for implementation. One focused task per subagent.
-- **Verify before done.** Never mark a task complete without proving it works. Run `npm test` after every code change. Diff behavior against main when relevant.
-- **Fix bugs autonomously.** When given a bug report, just fix it — no hand-holding. Identify root cause → write or find a failing test → fix until it passes.
-- **Demand elegance (balanced).** For non-trivial changes, pause and ask "is there a more elegant way?" Skip this for simple, obvious fixes. Don't over-engineer.
-- **Self-improve after corrections.** Whenever a correction is made, record the lesson in the auto memory system (`~/.claude/projects/.../memory/`). Don't repeat the same mistake.
-- **Tailwind semantic token naming.** Use dashed keys/classes only (e.g., `text-ui-text-muted`, `bg-ui-primary-hover`, `bg-ui-success-bg`); never use camelCase token names in Tailwind config or utility classes; when adding new UI tokens, keep config keys and class usage naming style exactly matched.
-- **Stay focused.** Do not install packages, create extra documentation, or expand scope without explicit user approval.
+## Layout
+- `src/` — React frontend. Components in `src/components/`, hooks in `src/hooks/`, schemas in `src/schemas/`, services in `src/services/`, config in `src/config/`.
+- `server/` — Express backend. Routes in `server/routes/`, services in `server/services/`, DB in `server/db/`, tests in `server/__tests__/`.
+- `ml-service/` — Python/Ollama. Separate process, needs separate restart.
 
-## Project layout
+## Conventions
+- Forms: React Hook Form + Zod (`src/schemas/`)
+- State: React Context + local state (no Redux/Zustand)
+- Styles: Tailwind CSS (no custom CSS unless necessary)
+- Tests: Vitest — frontend `src/__tests__/`, backend `server/__tests__/`. Run: `npm test`
+- DB: better-sqlite3 is **synchronous** — no async patterns around DB calls
 
-- Frontend: `src/` — React 19 + Vite. Feature folders inside `src/components/`.
-- Backend: `server/` — Express + better-sqlite3. Routes in `server/routes/`, business logic in `server/services/`.
-- ML service: `ml-service/` — Python + Ollama. Separate process.
-- All three start together via `npm start` (concurrently).
+## Critical gotchas
 
-## Key conventions
+**BEP config split** — Frontend barrel: `bepConfig.js` (has lucide icons). Edit sub-modules: `bepSteps.js`, `bepTypeDefinitions.js`, `bepOptions.js`, `bepFormFields.js`. Server-safe versions (no icons): `bepStepsData.js`, `bepFormFieldsData.js`, `bepConfigForServer.js` → consumed by `loadBepConfig.js`. Never import icon-bearing files on the server.
 
-- **App language: English only.** Regardless of conversation language, all shipped content must be in English: UI copy, labels, messages, code comments, docs, commit messages.
-- **Forms:** React Hook Form + Zod schemas (schemas live in `src/schemas/`).
-- **State:** React Context + local state. No global store (no Redux/Zustand).
-- **API calls:** Service layer in `src/services/` wraps fetch/axios calls.
-- **Styles:** Tailwind CSS. No custom CSS files unless necessary.
-- **Tests:** Vitest. Frontend tests in `src/__tests__/`. Run with `npm test`.
-- **DB:** SQLite via better-sqlite3 (synchronous). DB files in `server/db/`.
+**Default BEP structure** — `bepConfigForServer.js` is single source of truth. No DB seed needed; changing config is enough.
 
-## Things to watch out for
+**EIR module** — `EirStepWrapper`, `EirFillSummaryModal` in `src/components/eir/`. Fill logic: `useEirFill`. Doc history: `useDocumentHistory`. Never put EIR/doc-history logic in `BepFormView.js`.
 
-- **BEP config is split into sub-modules.** `bepConfig.js` is the frontend barrel (imports lucide icons) — edit `bepSteps.js` (step list + icons), `bepTypeDefinitions.js` (pre/post metadata), `bepOptions.js` (option arrays), or `bepFormFields.js` (field definitions + icons). All frontend consumers import `CONFIG` from `bepConfig.js` unchanged. **For server-side use** (Node can't import lucide-react): use `bepStepsData.js` (step data only), `bepFormFieldsData.js` (field data only), and `bepConfigForServer.js` (server-safe CONFIG barrel) — these are consumed by `server/services/loadBepConfig.js`. Never import the icon-bearing variants on the server.
-- **Default BEP structure: CONFIG is the single source of truth.** The default template (GET /template, clone-to-draft, reset) is built from `bepConfigForServer.js` on the server via `loadBepConfig.js`; no DB default template is read for the global default. Adding or changing fields/sections in config is enough—no seed run or frontend merge required.
-- **EIR pre-step lives in the EIR module.** `EirStepWrapper` and `EirFillSummaryModal` are in `src/components/eir/`. The fill logic (`useEirFill`) and document history logic (`useDocumentHistory`) are in `src/hooks/`. Do not put EIR or document-history domain logic back into `BepFormView.js`.
-- **BepFormView is layout-only.** `BepFormView.js` is pure orchestration — it composes hooks and sub-components. Domain logic belongs in hooks (`useEirFill`, `useDocumentHistory`, `useStepNavigation`, `useDraftSave`).
-- **FormBuilderProvider scope.** `useFormBuilder()` only works inside `<FormBuilderProvider>`. If a layout or wrapper component needs `isEditMode`, `steps`, or any editor state, it must be defined *inside* the provider in the JSX tree — you can't read that context from a parent above it. Pattern: define an inner component inside the provider's children.
-- **form-builder barrel exports.** Sub-modules have their own barrels: import from `form-builder/field-editor`, `form-builder/step-editor`, etc. The top-level `form-builder/index.js` re-exports `FormBuilderProvider`, `useFormBuilder`, and `BepStructureMap`.
-- better-sqlite3 is synchronous — don't accidentally introduce async patterns around DB calls.
-- Puppeteer (PDF export) is heavy; avoid pulling it into frontend bundles.
-- **PDF export pipeline:** PDF uses `htmlTemplateService` (renders HTML with `server/services/templates/bepStyles.css`) → Puppeteer → temp file in `server/temp/` → cleaned up after export. DOCX is a separate client-side pipeline via `src/services/docxGenerator.js`.
-- Security middleware (Helmet, rate-limit) exists but some is commented out in dev — don't remove it.
-- Vite handles frontend bundling and dev server; keep `vite.config.js` aligned with existing proxy/env behavior.
-- The ML service is a separate Python process — changes there need a separate restart.
-- **`.env` files:** Never commit `.env.*` files (only `.env.example`). Secrets go in environment variables or `encryptedSecretService`. `.env.production` is gitignored — keep it that way.
+**EIR authoring flow** — EirManagerPage → EirFormView (author) → `eirFormAnalysisMapper.js` maps form data to EirAnalysis JSON → GET `/api/eir/drafts/:id/analysis` (no ML). Publish: POST `/api/eir/drafts/:id/publish` (one per project). BEP links via `linkedEirId`; analysis feeds EirContext → responsiveness matrix.
+
+**BepFormView is layout-only.** Orchestrates hooks and sub-components. Domain logic belongs in hooks.
+
+**FormBuilderProvider scope** — `useFormBuilder()` only works *inside* `<FormBuilderProvider>`. Components needing editor state must be defined inside the provider's children subtree, not above it.
+
+**form-builder barrels** — Import from `form-builder/field-editor`, `form-builder/step-editor`, etc. Top-level `form-builder/index.js` exports only `FormBuilderProvider`, `useFormBuilder`, `BepStructureMap`.
+
+**PDF export** — `htmlTemplateService` (HTML + `server/services/templates/bepStyles.css`) → Puppeteer → `server/temp/` → stream → cleanup. Keep Puppeteer server-side only.
+
+**DOCX export** — Client-side via `src/services/docxGenerator.js` (separate pipeline).
+
+**Security middleware** — Helmet + rate-limit exist; some commented out in dev. Do not remove.
+
+**`.env` files** — Never commit. Only `.env.example` is tracked. Secrets via env vars or `encryptedSecretService`.
 
 ## Token optimization — MANDATORY
 
-### Step 0: Read the project index FIRST
-Before ANY exploration, read `.claude/project-index.md`. It maps every directory, context provider, API route, schema, and hook in ~130 lines. This replaces 90% of Glob/Grep discovery.
+1. **Read `.claude/project-index.md` first.** It maps every dir, route, schema, hook, and context in ~130 lines. Do this before any Glob/Grep.
+2. **Narrow all searches.** Always scope Grep/Glob to a specific directory.
+3. **Read only what you need.** Use `offset`/`limit` for files >150 lines. Grep for the function first, then read ±30 lines.
+4. **Never:** repo-wide Glob/Grep, speculative reads, reading `build/`, `node_modules/`, `venv/`, `.db` files.
 
-### Step 1: Use the index to locate, then targeted reads
-1. **Look up the location** in the project index (directory → purpose table).
-2. **Grep with a narrow path** — e.g., `Grep pattern="createTIDP" path="server/services/"` not the whole repo.
-3. **Read only the lines you need** — use `offset`/`limit` on Read for files >150 lines. Grep for the function first, then read ±30 lines around it.
-
-### Never do these
-- **No repo-wide Glob/Grep** without a path filter. Always scope to a specific directory.
-- **No speculative file reads.** Don't read a file "just to understand the codebase." Use the index.
-- **No reading entire large files.** If a file is >200 lines, search for the relevant section first.
-- **No re-exploring known paths.** The index already maps: schemas → `src/schemas/`, services → `src/services/`, routes → `server/routes/`, DB → `server/services/`, contexts → `src/contexts/`, hooks → `src/hooks/`, config → `src/config/`, constants → `src/constants/`.
-- **No loading build/, node_modules/, venv/, .db files.**
-
-### Token budget
-- Targeted Grep + 30-line Read = ~200 tokens
-- Full file Read = ~2,000–5,000 tokens
-- Repo-wide Grep = ~5,000–20,000 tokens
-
-## Quick reference
+## Commands
 
 | Task | Command |
 |------|---------|
@@ -81,22 +68,17 @@ Before ANY exploration, read `.claude/project-index.md`. It maps every directory
 | Frontend only | `npm run start:frontend` |
 | Backend only | `npm run start:backend` |
 | Build | `npm run build` |
-| Preview build | `npm run preview` |
-| Deploy (Hetzner) | `bash deploy.sh` (Docker-based, builds + pushes to Hetzner) |
+| Deploy | `bash deploy.sh` |
 
 ## Common patterns
 
-- **New API endpoint:** Route in `server/routes/` → Service in `server/services/` → Frontend call in `src/services/apiService.js`
-- **New protected route:** Apply `server/middleware/authMiddleware.js` before the route handler.
-- **New form:** Schema in `src/schemas/` → Component uses `useForm` with `zodResolver`
-- **New page:** Add to `src/components/pages/` → Register route in `App.js`
-- **PDF export:** Data → `htmlTemplateService.js` (render HTML + CSS from `templates/`) → `puppeteerPdfService.js` (Puppeteer) → temp file in `server/temp/` → stream to client → cleanup
-- **DOCX export:** Uses `docxGenerator` in `src/services/` (client-side, separate pipeline from PDF).
-- **IDS export (LOIN → buildingSMART IDS):** LOIN rows with `ifc_entity` and `loin_property_requirements` → `idsGeneratorService.generateIdsXml()` → XML string; POST `/api/export/loin/:projectId/ids` returns `.ids` file for use in Solibri/BlenderBIM.
-- **IFC import:** Page `/ifc-import` → upload .ifc (Multer, `server/temp/`, max 50MB) → POST `/api/bim/parse-ifc` → `ifcParserService` (STEP text parsing, no extra npm deps) → preview suggested deliverables → import via POST `/api/responsibility-matrix/deliverables` per row.
+- **New API endpoint:** `server/routes/` → `server/services/` → `src/services/apiService.js`
+- **New form:** schema in `src/schemas/` → `useForm` + `zodResolver`
+- **New page:** `src/components/pages/` → register in `App.js`
+- **New protected route:** apply `server/middleware/authMiddleware.js`
+- **IDS export:** LOIN rows → `idsGeneratorService.generateIdsXml()` → POST `/api/export/loin/:projectId/ids`
+- **IFC import:** `/ifc-import` → POST `/api/bim/parse-ifc` → `ifcParserService` (STEP text, no extra deps) → import deliverables
+- **EIR AI suggest:** POST `/api/ai/suggest-eir-field` (proxies to ML service)
 
-## Session Management
-When hitting usage limits mid-task, always save progress by:
-1. Documenting what's been completed
-2. Listing specific next steps
-3. Noting any files with partial edits that need attention
+## Session management
+When hitting limits mid-task: document what's done, list next steps, note any files with partial edits.

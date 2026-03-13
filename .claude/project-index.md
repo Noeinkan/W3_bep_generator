@@ -37,7 +37,7 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 | `src/components/pages/auth/` | Login, Register, ForgotPassword, ResetPassword, VerifyEmail, VerificationPending pages |
 | `src/components/pages/bep/` | BepLayout, BepStartMenuView, BepSelectTypeView, BepFormView, BepPreviewView, BepDraftsView, BepImportView, BepInfoRequirementsView, BepStructureMapView, BepTemplatesView, BepTypeSelector, ImportBepDialog, TemplateGallery; `components/` subfolder: BepHeader, BepSidebar, BepFooter, SuccessToast, EirResponsivenessMatrixModal, DocumentHistoryModal, DocumentStatusWidget |
 | `src/components/pages/loin-tables/` | LoinTablesPage, LoinRowForm, LoinRowsTable, LoinPropertyRequirementsModal — LOIN row manager + IDS properties (IFC entity, property requirements) and Export IDS |
-| `src/components/pages/eir-manager/` | EirManagerPage — EIR document manager |
+| `src/components/pages/eir-manager/` | EirManagerPage, EirFormView — EIR authoring (create/edit drafts, Publish, export); BEP form links to project EIRs and loads analysis |
 | `src/components/pages/drafts/` | DraftManager, DraftListItem, SaveDraftDialog, SearchAndFilters |
 | `src/components/pages/tidp-midp/` | TIDPMIDPDashboard, TidpMidpManager, RiskRegister, ResourcePlan, QualityGates, DependencyMatrix, CascadingImpact; `dashboard/` subfolder: TIDPsView, MIDPsView, StatisticsCards, MIDPAnalyticsDrawer, MIDPSummaryPanel, HelpModal |
 | `src/components/pages/idrm-manager/` | IDRMDashboard; `dashboard/` subfolder: IMActivitiesView, DeliverablesView, TemplatesView, StatisticsCards, QuickActions, HelpModal |
@@ -54,7 +54,7 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 | `src/constants/` | fieldExamples, iso19650ActivitiesTemplate, routes, tidpTemplates, documentHistory, sidebarUi, idsEntities (IFC entity options + suggestIfcEntity) |
 | `src/utils/` | cn, complianceCheck, csvHelpers, imageCompression, markdownToHtml, validationUtils, eirResponsivenessMatrix, snippetUtils |
 | `server/routes/` | auth, tidp, midp, drafts, ai, export, documents, projects, validation, bep-structure, responsibility-matrix, bim, migrate, loin, snippets |
-| `server/services/` | tidpService, midpService, authService, emailService, emailTemplates, projectService, exportService, htmlTemplateService, puppeteerPdfService, bepStructureService, responsibilityMatrixService, eirExportService, tidpSyncService, encryptedSecretService, loinService, idsGeneratorService, snippetService, loadBepConfig, ifcParserService |
+| `server/services/` | tidpService, midpService, authService, emailService, emailTemplates, projectService, exportService, htmlTemplateService, puppeteerPdfService, bepStructureService, responsibilityMatrixService, eirExportService, eirDocumentExportService, eirFormAnalysisMapper, eirService, tidpSyncService, encryptedSecretService, loinService, idsGeneratorService, snippetService, loadBepConfig, ifcParserService |
 | `server/services/templates/` | bepStyles.css (HTML/CSS templates for PDF/export rendering) |
 | `server/database.js` | Primary DB entry point — better-sqlite3 setup, all table creation, sample project seeding; writes to `server/db/bep-generator.db` |
 | `server/db/` | SQLite data directory; `database.js` here is legacy (path differs); `.db` file lives here |
@@ -83,7 +83,7 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 | `/api/drafts` | CRUD + filter by userId/projectId |
 | `/api/tidp` | CRUD + filter by projectId |
 | `/api/midp` | CRUD |
-| `/api/ai` | POST generate, POST analyze-eir, GET health |
+| `/api/ai` | POST generate, POST analyze-eir, POST suggest-eir-field, GET health |
 | `/api/documents` | POST upload (max 20MB), POST analyze/:id, GET /:id, DELETE /:id |
 | `/api/export` | POST tidp/:id/excel, midp/:id/excel, bep/pdf, bep/docx, eir/export, loin/:projectId/ids (.ids XML) |
 | `/api/bep-structure` | Steps + fields CRUD (dynamic form structure) |
@@ -92,14 +92,14 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 | `/api/validation` | POST tidp/:id, POST midp/:id |
 | `/api/migrate` | DB migration endpoints |
 | `/api/loin` | LOIN rows CRUD (withPropertyCount=1 for badge); GET/POST /:rowId/properties, PUT/DELETE /properties/:id |
-| `/api/eir` | EIR drafts CRUD: GET/POST /drafts, GET/PUT/DELETE /drafts/:id |
+| `/api/eir` | EIR drafts: GET/POST /drafts, GET/PUT/DELETE /drafts/:id, GET /drafts/:id/analysis (form→EirAnalysis JSON), POST /drafts/:id/publish |
 | `/api/snippets` | Snippets CRUD + resolve ({{snippet:key}} substitution) |
 
 ## Schemas (Zod)
 
 | File | Validates |
 |------|----------|
-| `bepValidationSchemas.js` | All BEP steps: projectInfo, teamStructure, bimUses, + fullBepSchema. Functions: `getSchemaForStep(i)`, `validateStepData(i, data)` |
+| `bepValidationSchemas.js` | All BEP steps: projectInfo, teamStructure, bimUses, + fullBepSchema (includes linkedEirId). Functions: `getSchemaForStep(i)`, `validateStepData(i, data)` |
 | `authSchemas.js` | loginSchema, registerSchema, forgotPasswordSchema, resetPasswordSchema |
 
 ## Tech Stack
@@ -111,7 +111,7 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 
 ## DB Tables
 
-users, projects, drafts, tidps, containers, midps, documents, steps, fields, field_types, responsibility_matrix (+ related), snippets, loin_rows (ifc_entity), loin_property_requirements
+users, projects, drafts, tidps, containers, midps, documents, steps, fields, field_types, responsibility_matrix (+ related), snippets, loin_rows (ifc_entity), loin_property_requirements, eir_drafts (id, user_id, project_id, title, data, status, created_at, updated_at)
 
 ## Startup
 

@@ -68,8 +68,15 @@ LOIN tables can now drive machine-readable **buildingSMART IDS** (Information De
 #### Snippets Management
 A reusable snippets library is now available within the BEP workflow. Snippets can be inserted inline into rich text fields as rendered chips (`{{snippet:key}}`), making it easy to maintain consistent boilerplate text across multiple BEP sections. The toolbar calls `editor.chain().focus().insertSnippetChip(key)` rather than inserting raw text.
 
+#### EIR Authoring Wizard & BEP Handshake
+The appointing party can now **author** Exchange Information Requirements in-app, not only consume uploaded EIRs. From the EIR Manager (per project), users create and edit EIR drafts via an ISO 19650–aligned form wizard (**EirFormView**). Key additions:
+- **Publish flow** — One EIR per project can be set as “Published”; delivery teams see it when creating a BEP. **Publish** in EirManagerPage calls `POST /api/eir/drafts/:id/publish`.
+- **BEP ↔ EIR linkage** — BEP drafts store `linkedEirId`. In the BEP form, users select a project EIR (or the published one is pre-selected); the app loads **analysis from authored form data** via `GET /api/eir/drafts/:id/analysis` (no ML). That analysis feeds **EirContext** and the **EIR Responsiveness Matrix**, so the BEP responds to the same requirements whether the EIR was uploaded (AI-extracted) or authored in-app.
+- **Ask AI on EIR fields** — Text/textarea fields in the EIR wizard support an “Ask AI” button; `POST /api/ai/suggest-eir-field` (proxied to the ML service) returns ISO 19650–oriented suggestions for the current field.
+- **Export** — Authored EIR documents can be exported to PDF via the existing EIR document export pipeline (`eirDocumentExportService`), which renders the same form data used for analysis.
+
 #### Enhanced EIR Management
-EIR document management now supports full CRUD operations — create, update, and delete EIR records — backed by new API endpoints. Previously EIR documents were upload-only.
+EIR document management supports full CRUD — create, update, delete, and publish EIR drafts — with the above authoring and BEP handshake flows.
 
 #### TipTap Editor Extensions
 The rich text editor has been extended with four new capabilities:
@@ -150,7 +157,8 @@ Most BEP tools are static templates or basic form fillers. BEP Suite is differen
 - **Streaming AI Suggestions** — Token-by-token streaming into the editor for a responsive authoring experience
 - **Guided AI Authoring** — Answer contextual questions and let AI compose professional content from your responses
 - **EIR Document Analysis** — Upload Exchange Information Requirements documents and auto-extract structured data
-- **EIR Responsiveness Matrix** — Visual mapping of EIR requirements to BEP sections with gap tracking
+- **EIR Authoring** — Create and edit EIRs in-app (ISO 19650–aligned form), publish one per project, link a BEP to an authored EIR; analysis is derived from form data and drives the responsiveness matrix
+- **EIR Responsiveness Matrix** — Visual mapping of EIR requirements to BEP sections with gap tracking (works for both uploaded and authored EIRs)
 - **Model Selection** — Switch between any locally installed Ollama model per session
 - **Rich Text Editing** — Professional TipTap editor with formatting, tables, images, and more
 - **Professional Templates** — Pre-built ISO 19650-compliant templates
@@ -375,6 +383,8 @@ These environment variables let you speed up EIR analysis without reducing accur
 - `POST /tidp/:id/pdf` - Export TIDP to PDF
 - `POST /midp/:id/excel` - Export MIDP to Excel
 - `POST /midp/:id/pdf` - Export MIDP to PDF
+- `POST /eir/pdf` - Export EIR analysis (JSON + summary) to PDF
+- `POST /eir-document/pdf` - Export authored EIR document (form data) to PDF
 - `POST /responsibility-matrix/excel` - Export matrices to Excel
 - `POST /project/:projectId/consolidated-excel` - Consolidated project export
 - `POST /acc/package` - Generate ACC ISO 19650 folder-structured ZIP package for manual upload
@@ -385,12 +395,22 @@ These environment variables let you speed up EIR analysis without reducing accur
 - `POST /project/:projectId/comprehensive` - Comprehensive validation
 - `GET /standards/iso19650` - Get ISO 19650 standards
 
+### EIR Routes (`/api/eir`)
+- `GET /drafts` — List EIR drafts (optional `projectId` query)
+- `POST /drafts` — Create EIR draft
+- `GET /drafts/:id` — Get single draft
+- `PUT /drafts/:id` — Update draft (title, projectId, data, status)
+- `GET /drafts/:id/analysis` — Get canonical EirAnalysis JSON from authored form data (no ML)
+- `POST /drafts/:id/publish` — Set this draft as the project’s published EIR
+- `DELETE /drafts/:id` — Delete draft
+
 ### AI Routes (`/api/ai`) — Express Proxy
 - `GET /health` — ML service health check
 - `POST /generate` — Generate text from a prompt
 - `POST /suggest` — Field-specific BEP content suggestions
 - `GET /field-types` — List available BEP field types
 - `POST /suggest-from-eir` — Generate suggestions using EIR analysis data
+- `POST /suggest-eir-field` — EIR authoring: suggest content for a single EIR form field (field name, label, current text, draft data)
 - `POST /generate-questions` — Generate guided authoring questions
 - `POST /generate-from-answers` — Generate content from user answers
 
@@ -404,6 +424,7 @@ These environment variables let you speed up EIR analysis without reducing accur
 - `POST /generate-questions` — Generate guided authoring questions
 - `POST /generate-from-answers` — Generate content from user answers
 - `POST /suggest-from-eir` — EIR-informed field suggestions
+- `POST /suggest-eir-field` — EIR authoring: suggest content for one EIR form field (ISO 19650–oriented)
 
 ---
 

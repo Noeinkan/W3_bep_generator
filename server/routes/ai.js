@@ -359,6 +359,77 @@ router.post('/suggest-from-eir', async (req, res) => {
   }
 });
 
+/**
+ * Suggest content for an EIR authoring form field (appointing party side).
+ *
+ * POST /api/ai/suggest-eir-field
+ * Body: {
+ *   fieldName: string,
+ *   fieldLabel?: string,
+ *   currentText?: string,
+ *   eirDraftData?: object,
+ *   model?: string
+ * }
+ */
+router.post('/suggest-eir-field', async (req, res) => {
+  try {
+    const {
+      fieldName,
+      fieldLabel,
+      currentText = '',
+      eirDraftData,
+      model
+    } = req.body;
+
+    if (!fieldName || typeof fieldName !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request',
+        message: 'fieldName is required and must be a string'
+      });
+    }
+
+    const mlClient = getMLClient();
+    const response = await mlClient.post('/suggest-eir-field', {
+      field_name: fieldName,
+      field_label: fieldLabel || undefined,
+      current_text: currentText,
+      eir_draft_data: eirDraftData || undefined,
+      ...(model && { model })
+    }, {
+      timeout: 60000
+    });
+
+    res.json({
+      success: true,
+      suggestion: response.data.suggestion,
+      field_name: response.data.field_name,
+      model: response.data.model
+    });
+  } catch (error) {
+    console.error('EIR field suggestion error:', error.message);
+    if (error.response) {
+      return res.status(error.response.status).json({
+        success: false,
+        error: 'EIR field suggestion failed',
+        message: error.response.data?.detail || error.message
+      });
+    }
+    if (error.code === 'ECONNREFUSED') {
+      return res.status(503).json({
+        success: false,
+        error: 'ML service unavailable',
+        message: 'AI service is not running'
+      });
+    }
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
 // ============================================================================
 // Guided AI: Question-based Content Generation
 // ============================================================================

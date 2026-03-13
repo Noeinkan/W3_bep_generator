@@ -407,6 +407,12 @@ router.get('/template', async (req, res, next) => {
     if (!isConfigLoaded()) {
       await loadBepConfigAsync();
     }
+    if (!isConfigLoaded()) {
+      return res.status(503).json({
+        success: false,
+        error: 'Could not load BEP config (src/config/bepFormFields.js and bepSteps.js). Default template unavailable.'
+      });
+    }
     const { bepType } = req.query;
     const effectiveType = bepType === 'pre-appointment' ? 'pre-appointment' : 'post-appointment';
     const template = bepStructureService.getDefaultTemplateFromConfig(effectiveType);
@@ -427,6 +433,15 @@ router.get('/template', async (req, res, next) => {
  */
 router.get('/project/:projectId', async (req, res, next) => {
   try {
+    if (!bepStructureService.hasCustomStructure(req.params.projectId) && !isConfigLoaded()) {
+      await loadBepConfigAsync();
+    }
+    if (!bepStructureService.hasCustomStructure(req.params.projectId) && !isConfigLoaded()) {
+      return res.status(503).json({
+        success: false,
+        error: 'Could not load BEP config (src/config/bepFormFields.js and bepSteps.js). Default template unavailable.'
+      });
+    }
     const { projectId } = req.params;
     const { bepType } = req.query;
 

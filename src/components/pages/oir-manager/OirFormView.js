@@ -1,69 +1,41 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ChevronLeft, ChevronRight, Save, FileDown } from 'lucide-react';
-import { EirFormProvider, useEirForm } from '../../../contexts/EirFormContext';
-import EIR_CONFIG from '../../../config/eirConfig';
+import { ArrowLeft, ChevronLeft, ChevronRight, Save } from 'lucide-react';
+import { OirFormProvider, useOirForm } from '../../../contexts/OirFormContext';
+import OIR_CONFIG from '../../../config/oirConfig';
 import FormStepRHF from '../../steps/FormStepRHF';
 import apiService from '../../../services/apiService';
 import toast from 'react-hot-toast';
 import { cn } from '../../../utils/cn';
 
-const EIR_STEPS = EIR_CONFIG.steps;
-const TOTAL_STEPS = EIR_STEPS.length;
+const OIR_STEPS = OIR_CONFIG.steps;
+const TOTAL_STEPS = OIR_STEPS.length;
 
 /**
- * EIR editor content — step navigation, sidebar, save. Must be inside EirFormProvider.
+ * OIR editor content — step navigation, sidebar, save. Must be inside OirFormProvider.
  */
-const EirFormViewContent = ({ draftId, draftTitle }) => {
+const OirFormViewContent = ({ draftId, draftTitle }) => {
   const navigate = useNavigate();
   const { stepIndex: stepParam } = useParams();
   const contentRef = useRef(null);
 
   const {
-    currentDraft,
     setCurrentDraft,
     getFormData,
-    updateField,
     completedSections,
     validateStep,
     markStepCompleted,
-  } = useEirForm();
+  } = useOirForm();
 
   const currentStep = Math.min(Math.max(parseInt(stepParam, 10) || 0, 0), TOTAL_STEPS - 1);
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === TOTAL_STEPS - 1;
 
-  const stepConfig = EIR_CONFIG.getFormFields(currentStep);
-
-  // Field names that support "Ask AI" in this step (textarea/text only)
-  const eirAiSuggestFieldNames = React.useMemo(() => {
-    if (!stepConfig?.fields) return [];
-    return stepConfig.fields
-      .filter((f) => f.name && (f.type === 'textarea' || f.type === 'text'))
-      .map((f) => f.name);
-  }, [stepConfig]);
-
-  const handleEirSuggest = useCallback(
-    async (fieldName, fieldLabel) => {
-      const formData = getFormData();
-      const currentText = (formData && formData[fieldName]) ?? '';
-      const res = await apiService.suggestEirField({
-        fieldName,
-        fieldLabel,
-        currentText: typeof currentText === 'string' ? currentText : '',
-        eirDraftData: formData,
-      });
-      if (res?.suggestion != null) {
-        updateField(fieldName, res.suggestion);
-        toast.success('Suggestion applied');
-      }
-    },
-    [getFormData, updateField]
-  );
+  const stepConfig = OIR_CONFIG.getFormFields(currentStep);
 
   const navigateToStep = useCallback((step) => {
     const next = Math.min(Math.max(step, 0), TOTAL_STEPS - 1);
-    navigate(`/eir-manager/${draftId}/edit/step/${next}`);
+    navigate(`/oir-manager/${draftId}/edit/step/${next}`);
   }, [draftId, navigate]);
 
   useEffect(() => {
@@ -90,51 +62,31 @@ const EirFormViewContent = ({ draftId, draftTitle }) => {
   }, [navigateToStep]);
 
   const [saving, setSaving] = useState(false);
-  const [exporting, setExporting] = useState(false);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
       const data = getFormData();
-      await apiService.updateEirDraft(draftId, { data });
+      await apiService.updateOirDraft(draftId, { data });
       setCurrentDraft((prev) => (prev ? { ...prev, title: draftTitle } : { id: draftId, title: draftTitle }));
-      toast.success('EIR saved');
+      toast.success('OIR saved');
     } catch (err) {
-      toast.error(err?.message || 'Failed to save EIR');
+      toast.error(err?.message || 'Failed to save OIR');
     } finally {
       setSaving(false);
     }
   }, [draftId, draftTitle, getFormData, setCurrentDraft]);
 
-  const handleExportPdf = useCallback(async () => {
-    setExporting(true);
-    try {
-      const data = getFormData();
-      const blob = await apiService.exportEirDocumentPdf(data, draftTitle);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `EIR_${draftTitle.replace(/[^a-z0-9]+/gi, '_') || 'document'}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success('PDF downloaded');
-    } catch (err) {
-      toast.error(err?.message || 'Failed to export PDF');
-    } finally {
-      setExporting(false);
-    }
-  }, [draftTitle, getFormData]);
-
   return (
-    <div className="flex h-screen bg-gray-50" data-page-uri={`/eir-manager/${draftId}/edit`}>
+    <div className="flex h-screen bg-gray-50" data-page-uri={`/oir-manager/${draftId}/edit`}>
       {/* Sidebar */}
       <aside className="w-56 shrink-0 border-r border-gray-200 bg-white flex flex-col">
         <div className="p-4 border-b border-gray-200">
-          <h2 className="text-sm font-semibold text-gray-900 truncate" title={draftTitle}>{draftTitle || 'EIR'}</h2>
+          <h2 className="text-sm font-semibold text-gray-900 truncate" title={draftTitle}>{draftTitle || 'OIR'}</h2>
           <p className="text-xs text-gray-500 mt-0.5">{TOTAL_STEPS} sections</p>
         </div>
         <nav className="flex-1 overflow-y-auto p-2">
-          {EIR_STEPS.map((step, idx) => (
+          {OIR_STEPS.map((step, idx) => (
             <button
               key={idx}
               type="button"
@@ -142,9 +94,9 @@ const EirFormViewContent = ({ draftId, draftTitle }) => {
               className={cn(
                 'w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                 currentStep === idx
-                  ? 'bg-amber-100 text-amber-900'
+                  ? 'bg-indigo-100 text-indigo-900'
                   : 'text-gray-700 hover:bg-gray-100',
-                completedSections.has(idx) && currentStep !== idx && 'text-amber-700'
+                completedSections.has(idx) && currentStep !== idx && 'text-indigo-700'
               )}
             >
               <span className="block truncate">{step.number}. {step.title}</span>
@@ -160,7 +112,7 @@ const EirFormViewContent = ({ draftId, draftTitle }) => {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => navigate('/eir-manager')}
+              onClick={() => navigate('/oir-manager')}
               className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -174,18 +126,9 @@ const EirFormViewContent = ({ draftId, draftTitle }) => {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={handleExportPdf}
-              disabled={exporting}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-800 font-medium rounded-lg transition-colors"
-            >
-              <FileDown className="w-4 h-4" />
-              {exporting ? 'Exporting…' : 'Export PDF'}
-            </button>
-            <button
-              type="button"
               onClick={handleSave}
               disabled={saving}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
             >
               <Save className="w-4 h-4" />
               {saving ? 'Saving…' : 'Save'}
@@ -200,8 +143,6 @@ const EirFormViewContent = ({ draftId, draftTitle }) => {
               <FormStepRHF
                 stepIndex={currentStep}
                 stepConfig={stepConfig}
-                eirAiSuggestFieldNames={eirAiSuggestFieldNames}
-                onEirSuggest={handleEirSuggest}
               />
             </div>
           </div>
@@ -222,7 +163,7 @@ const EirFormViewContent = ({ draftId, draftTitle }) => {
             type="button"
             onClick={handleNext}
             disabled={isLastStep}
-            className="inline-flex items-center gap-2 px-4 py-2 text-amber-700 hover:bg-amber-50 disabled:opacity-50 disabled:pointer-events-none rounded-lg transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 disabled:pointer-events-none rounded-lg transition-colors"
           >
             Next
             <ChevronRight className="w-4 h-4" />
@@ -234,9 +175,9 @@ const EirFormViewContent = ({ draftId, draftTitle }) => {
 };
 
 /**
- * EIR Form View — load draft, wrap in EirFormProvider, render editor.
+ * OIR Form View — load draft, wrap in OirFormProvider, render editor.
  */
-const EirFormView = () => {
+const OirFormView = () => {
   const { draftId } = useParams();
   const navigate = useNavigate();
   const [draft, setDraft] = useState(null);
@@ -244,13 +185,13 @@ const EirFormView = () => {
 
   useEffect(() => {
     if (!draftId) {
-      navigate('/eir-manager');
+      navigate('/oir-manager');
       return;
     }
     let cancelled = false;
     setLoading(true);
     apiService
-      .getEirDraft(draftId)
+      .getOirDraft(draftId)
       .then((res) => {
         if (cancelled) return;
         const d = res?.draft ?? res;
@@ -272,26 +213,26 @@ const EirFormView = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500">Loading EIR…</p>
+        <p className="text-gray-500">Loading OIR…</p>
       </div>
     );
   }
 
   if (!draft) {
-    navigate('/eir-manager');
+    navigate('/oir-manager');
     return null;
   }
 
   const initialData = draft.data && typeof draft.data === 'object' ? draft.data : undefined;
 
   return (
-    <EirFormProvider initialData={initialData}>
-      <EirFormViewContent
+    <OirFormProvider initialData={initialData}>
+      <OirFormViewContent
         draftId={draft.id}
-        draftTitle={draft.title || 'Untitled EIR'}
+        draftTitle={draft.title || 'Untitled OIR'}
       />
-    </EirFormProvider>
+    </OirFormProvider>
   );
 };
 
-export default EirFormView;
+export default OirFormView;

@@ -1,5 +1,5 @@
 /**
- * EIR drafts CRUD — Exchange Information Requirements document storage.
+ * OIR drafts CRUD — Organizational Information Requirements document storage.
  * Synchronous better-sqlite3; no async.
  */
 const db = require('../database');
@@ -9,14 +9,14 @@ function listByUser(userId, projectId = null) {
   if (projectId) {
     return db.prepare(`
       SELECT id, user_id, project_id, title, data, status, created_at, updated_at
-      FROM eir_drafts
+      FROM oir_drafts
       WHERE user_id = ? AND project_id = ?
       ORDER BY updated_at DESC
     `).all(userId, projectId);
   }
   return db.prepare(`
     SELECT id, user_id, project_id, title, data, status, created_at, updated_at
-    FROM eir_drafts
+    FROM oir_drafts
     WHERE user_id = ?
     ORDER BY updated_at DESC
   `).all(userId);
@@ -25,7 +25,7 @@ function listByUser(userId, projectId = null) {
 function getById(id, userId) {
   const row = db.prepare(`
     SELECT id, user_id, project_id, title, data, status, created_at, updated_at
-    FROM eir_drafts
+    FROM oir_drafts
     WHERE id = ? AND user_id = ?
   `).get(id, userId);
   if (!row) return null;
@@ -40,14 +40,14 @@ function create({ userId, projectId, title, data }) {
   const id = createId();
   const now = new Date().toISOString();
   db.prepare(`
-    INSERT INTO eir_drafts (id, user_id, project_id, title, data, status, created_at, updated_at)
+    INSERT INTO oir_drafts (id, user_id, project_id, title, data, status, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, 'draft', ?, ?)
   `).run(id, userId, projectId || null, title, JSON.stringify(data || {}), now, now);
   return getById(id, userId);
 }
 
 function update(id, userId, { title, projectId, data, status }) {
-  const existing = db.prepare('SELECT id, project_id FROM eir_drafts WHERE id = ? AND user_id = ?').get(id, userId);
+  const existing = db.prepare('SELECT id, project_id FROM oir_drafts WHERE id = ? AND user_id = ?').get(id, userId);
   if (!existing) return null;
   const now = new Date().toISOString();
   const updates = [];
@@ -72,36 +72,36 @@ function update(id, userId, { title, projectId, data, status }) {
   updates.push('updated_at = ?');
   values.push(now);
   values.push(id, userId);
-  db.prepare(`UPDATE eir_drafts SET ${updates.join(', ')} WHERE id = ? AND user_id = ?`).run(...values);
+  db.prepare(`UPDATE oir_drafts SET ${updates.join(', ')} WHERE id = ? AND user_id = ?`).run(...values);
   return getById(id, userId);
 }
 
 /**
- * Mark this EIR draft as published for its project. Unpublish any other EIR for the same project.
+ * Mark this OIR draft as published for its project. Unpublish any other OIR for the same project.
  */
 function publish(id, userId) {
-  const draft = db.prepare('SELECT id, project_id FROM eir_drafts WHERE id = ? AND user_id = ?').get(id, userId);
+  const draft = db.prepare('SELECT id, project_id FROM oir_drafts WHERE id = ? AND user_id = ?').get(id, userId);
   if (!draft) return null;
   const now = new Date().toISOString();
   if (draft.project_id) {
     db.prepare(`
-      UPDATE eir_drafts SET status = 'draft', updated_at = ? WHERE project_id = ? AND user_id = ?
+      UPDATE oir_drafts SET status = 'draft', updated_at = ? WHERE project_id = ? AND user_id = ?
     `).run(now, draft.project_id, userId);
   }
   db.prepare(`
-    UPDATE eir_drafts SET status = 'published', updated_at = ? WHERE id = ? AND user_id = ?
+    UPDATE oir_drafts SET status = 'published', updated_at = ? WHERE id = ? AND user_id = ?
   `).run(now, id, userId);
   return getById(id, userId);
 }
 
 /**
- * Get the published EIR draft for a project (if any). userId optional for same-user only.
+ * Get the published OIR draft for a project (if any). userId optional for same-user only.
  */
 function getPublishedByProject(projectId, userId = null) {
   if (!projectId) return null;
   const sql = userId
-    ? 'SELECT id, user_id, project_id, title, data, status, created_at, updated_at FROM eir_drafts WHERE project_id = ? AND user_id = ? AND status = ? ORDER BY updated_at DESC LIMIT 1'
-    : 'SELECT id, user_id, project_id, title, data, status, created_at, updated_at FROM eir_drafts WHERE project_id = ? AND status = ? ORDER BY updated_at DESC LIMIT 1';
+    ? 'SELECT id, user_id, project_id, title, data, status, created_at, updated_at FROM oir_drafts WHERE project_id = ? AND user_id = ? AND status = ? ORDER BY updated_at DESC LIMIT 1'
+    : 'SELECT id, user_id, project_id, title, data, status, created_at, updated_at FROM oir_drafts WHERE project_id = ? AND status = ? ORDER BY updated_at DESC LIMIT 1';
   const row = userId
     ? db.prepare(sql).get(projectId, userId, 'published')
     : db.prepare(sql).get(projectId, 'published');
@@ -113,7 +113,7 @@ function getPublishedByProject(projectId, userId = null) {
 }
 
 function remove(id, userId) {
-  const result = db.prepare('DELETE FROM eir_drafts WHERE id = ? AND user_id = ?').run(id, userId);
+  const result = db.prepare('DELETE FROM oir_drafts WHERE id = ? AND user_id = ?').run(id, userId);
   return result.changes > 0;
 }
 

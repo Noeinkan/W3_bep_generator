@@ -1,4 +1,6 @@
 {
+    "css.validate": false,
+    "scss.validate": false,
     "codegraphy.connectionType": "Interaction",
     "codegraphy.nodeSize": "Lines",
     "codegraphy.showNodeModules": false,

@@ -1,5 +1,6 @@
 import EMPTY_BEP_DATA from './emptyBepData';
 import COMMERCIAL_OFFICE_TEMPLATE from './templates/commercialOfficeTemplate';
+import COMMERCIAL_OFFICE_EIR_TEMPLATE from './templates/commercialOfficeEirTemplate';
 
 const deepClone = (value) => {
   if (typeof structuredClone === 'function') {
@@ -81,7 +82,8 @@ export const TEMPLATE_REGISTRY = [
     bepType: 'pre-appointment',
     thumbnail: null,
     tags: ['commercial', 'office', 'sustainable', 'smart building'],
-    data: COMMERCIAL_OFFICE_TEMPLATE
+    data: COMMERCIAL_OFFICE_TEMPLATE,
+    eirData: COMMERCIAL_OFFICE_EIR_TEMPLATE
   },
   {
     id: 'commercial-office-post',
@@ -91,7 +93,8 @@ export const TEMPLATE_REGISTRY = [
     bepType: 'post-appointment',
     thumbnail: null,
     tags: ['commercial', 'office', 'sustainable', 'smart building'],
-    data: COMMERCIAL_OFFICE_TEMPLATE
+    data: COMMERCIAL_OFFICE_TEMPLATE,
+    eirData: COMMERCIAL_OFFICE_EIR_TEMPLATE
   },
   // Future templates can be added here:
   // {
@@ -187,4 +190,15 @@ export const getAvailableTemplates = (filters = {}) => {
 export const getTemplateCategories = () => {
   const categories = new Set(TEMPLATE_REGISTRY.map(t => t.category));
   return Array.from(categories).sort();
+};
+
+/**
+ * Get the pre-filled EIR data for a given template ID, or null if none exists.
+ * @param {string} templateId
+ * @returns {Object|null}
+ */
+export const getEirTemplateById = (templateId) => {
+  const template = TEMPLATE_REGISTRY.find(t => t.id === templateId);
+  if (!template?.eirData) return null;
+  return deepClone(template.eirData);
 };

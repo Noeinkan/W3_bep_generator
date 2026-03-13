@@ -820,6 +820,23 @@ class ApiService {
     return this._get(`/eir/drafts/${id}`, `Failed to fetch EIR draft ${id}`);
   }
 
+  getEirDraftAnalysis(id) {
+    return this._get(`/eir/drafts/${id}/analysis`, `Failed to fetch EIR analysis for draft ${id}`);
+  }
+
+  /**
+   * Get AI suggestion for an EIR authoring form field.
+   * @param {{ fieldName: string, fieldLabel?: string, currentText?: string, eirDraftData?: object }} params
+   * @returns {Promise<{ success: boolean, suggestion: string }>}
+   */
+  suggestEirField({ fieldName, fieldLabel, currentText = '', eirDraftData }) {
+    return this._post(
+      '/ai/suggest-eir-field',
+      { fieldName, fieldLabel, currentText, eirDraftData },
+      `Failed to get EIR field suggestion for ${fieldName}`
+    );
+  }
+
   createEirDraft({ projectId, title, data }) {
     return this._post('/eir/drafts', { projectId, title, data: data || {} }, 'Failed to create EIR draft');
   }
@@ -832,6 +849,10 @@ class ApiService {
     return this._delete(`/eir/drafts/${id}`, `Failed to delete EIR draft ${id}`);
   }
 
+  publishEirDraft(id) {
+    return this._post(`/eir/drafts/${id}/publish`, {}, `Failed to publish EIR draft ${id}`);
+  }
+
   /**
    * Export EIR document (authored form data) to PDF. Returns blob; caller should trigger download.
    * @param {Object} data - EIR form data
@@ -841,6 +862,32 @@ class ApiService {
   async exportEirDocumentPdf(data, title) {
     const response = await apiClient.post('/export/eir-document/pdf', { data, title }, { responseType: 'blob' });
     return response.data;
+  }
+
+  // OIR drafts (Organizational Information Requirements)
+  getOirDrafts(projectId = null) {
+    const params = projectId ? { projectId } : {};
+    return this._get('/oir/drafts', 'Failed to fetch OIR drafts', { params });
+  }
+
+  getOirDraft(id) {
+    return this._get(`/oir/drafts/${id}`, `Failed to fetch OIR draft ${id}`);
+  }
+
+  createOirDraft({ projectId, title, data }) {
+    return this._post('/oir/drafts', { projectId, title, data: data || {} }, 'Failed to create OIR draft');
+  }
+
+  updateOirDraft(id, { title, projectId, data }) {
+    return this._put(`/oir/drafts/${id}`, { title, projectId, data }, `Failed to update OIR draft ${id}`);
+  }
+
+  deleteOirDraft(id) {
+    return this._delete(`/oir/drafts/${id}`, `Failed to delete OIR draft ${id}`);
+  }
+
+  publishOirDraft(id) {
+    return this._post(`/oir/drafts/${id}/publish`, {}, `Failed to publish OIR draft ${id}`);
   }
 }
 

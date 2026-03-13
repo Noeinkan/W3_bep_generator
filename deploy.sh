@@ -29,6 +29,10 @@ ssh "$SERVER" bash -s << 'REMOTE'
   docker compose up -d --build
 
   echo ""
+  echo "==> Reloading nginx (re-resolves backend DNS after container recreation) ..."
+  docker compose restart nginx
+
+  echo ""
   echo "==> Waiting for backend to be ready ..."
   for i in $(seq 1 15); do
     STATUS=$(curl -sk -o /dev/null -w "%{http_code}" https://77.42.70.26.nip.io/health || true)

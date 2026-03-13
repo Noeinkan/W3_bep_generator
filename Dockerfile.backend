@@ -34,6 +34,7 @@ RUN addgroup -S app && adduser -S app -G app
 
 WORKDIR /app
 COPY --from=frontend-build /app/build ./build
+COPY --from=frontend-build /app/src/config ./src/config
 COPY --from=backend-deps /app/server/node_modules ./server/node_modules
 COPY server ./server
 

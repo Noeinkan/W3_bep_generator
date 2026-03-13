@@ -257,6 +257,11 @@ export const fullBepSchema = z.object({
   ...coordinationRiskSchema.shape,
   // Step 13
   ...appendicesSchema.shape,
+
+  // Metadata (not user-facing fields)
+  // Optional link to an authored EIR draft so the BEP can be
+  // explicitly associated with a specific EIR.
+  linkedEirId: z.string().nullable().optional(),
 });
 
 // Map step index to schema (14 steps total: 0-13)
