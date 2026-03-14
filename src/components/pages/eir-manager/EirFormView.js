@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ChevronLeft, ChevronRight, Save, FileDown } from 'lucide-react';
+import { Save, FileDown } from 'lucide-react';
 import { EirFormProvider, useEirForm } from '../../../contexts/EirFormContext';
 import EIR_CONFIG from '../../../config/eirConfig';
 import FormStepRHF from '../../steps/FormStepRHF';
 import apiService from '../../../services/apiService';
 import toast from 'react-hot-toast';
-import { cn } from '../../../utils/cn';
+import { DocumentEditorLayout, DocumentEditorSidebar, DocumentEditorHeader, DocumentEditorFooter } from '../../document-editor';
+import { bepUi } from '../bep/bepUiClasses';
 
 const EIR_STEPS = EIR_CONFIG.steps;
 const TOTAL_STEPS = EIR_STEPS.length;
@@ -125,111 +126,81 @@ const EirFormViewContent = ({ draftId, draftTitle }) => {
     }
   }, [draftTitle, getFormData]);
 
+  const headerActions = (
+    <>
+      <button
+        type="button"
+        onClick={handleExportPdf}
+        disabled={exporting}
+        className={`${bepUi.btnSecondary} inline-flex items-center gap-2 px-3 py-2 rounded-md shadow-sm disabled:opacity-50`}
+      >
+        <FileDown className="w-4 h-4" />
+        {exporting ? 'Exporting…' : 'Export PDF'}
+      </button>
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={saving}
+        className={`${bepUi.btnPrimary} inline-flex items-center gap-2 px-3 py-2 rounded-md shadow-sm disabled:opacity-50`}
+      >
+        <Save className="w-4 h-4" />
+        {saving ? 'Saving…' : 'Save'}
+      </button>
+    </>
+  );
+
   return (
-    <div className="flex h-screen bg-gray-50" data-page-uri={`/eir-manager/${draftId}/edit`}>
-      {/* Sidebar */}
-      <aside className="w-56 shrink-0 border-r border-gray-200 bg-white flex flex-col">
-        <div className="p-4 border-b border-gray-200">
-          <h2 className="text-sm font-semibold text-gray-900 truncate" title={draftTitle}>{draftTitle || 'EIR'}</h2>
-          <p className="text-xs text-gray-500 mt-0.5">{TOTAL_STEPS} sections</p>
-        </div>
-        <nav className="flex-1 overflow-y-auto p-2">
-          {EIR_STEPS.map((step, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => handleStepClick(idx)}
-              className={cn(
-                'w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                currentStep === idx
-                  ? 'bg-amber-100 text-amber-900'
-                  : 'text-gray-700 hover:bg-gray-100',
-                completedSections.has(idx) && currentStep !== idx && 'text-amber-700'
-              )}
-            >
-              <span className="block truncate">{step.number}. {step.title}</span>
-            </button>
-          ))}
-        </nav>
-      </aside>
-
-      {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <header className="shrink-0 flex items-center justify-between gap-4 px-6 py-3 bg-white border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate('/eir-manager')}
-              className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to list
-            </button>
-            <span className="text-gray-400">|</span>
-            <span className="text-sm text-gray-600">
-              Section {currentStep + 1} of {TOTAL_STEPS}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleExportPdf}
-              disabled={exporting}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-800 font-medium rounded-lg transition-colors"
-            >
-              <FileDown className="w-4 h-4" />
-              {exporting ? 'Exporting…' : 'Export PDF'}
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
-            >
-              <Save className="w-4 h-4" />
-              {saving ? 'Saving…' : 'Save'}
-            </button>
-          </div>
-        </header>
-
-        {/* Content */}
-        <div ref={contentRef} className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-6 py-8">
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8">
-              <FormStepRHF
-                stepIndex={currentStep}
-                stepConfig={stepConfig}
-                eirAiSuggestFieldNames={eirAiSuggestFieldNames}
-                onEirSuggest={handleEirSuggest}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <footer className="shrink-0 flex items-center justify-between px-6 py-3 bg-white border-t border-gray-200">
-          <button
-            type="button"
-            onClick={handlePrevious}
-            disabled={isFirstStep}
-            className="inline-flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none rounded-lg transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Previous
-          </button>
-          <button
-            type="button"
-            onClick={handleNext}
-            disabled={isLastStep}
-            className="inline-flex items-center gap-2 px-4 py-2 text-amber-700 hover:bg-amber-50 disabled:opacity-50 disabled:pointer-events-none rounded-lg transition-colors"
-          >
-            Next
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </footer>
-      </div>
-    </div>
+    <DocumentEditorLayout
+      contentRef={contentRef}
+      dataPageUri={`/eir-manager/${draftId}/edit`}
+      contentMaxWidth="max-w-[231mm]"
+      sidebar={
+        <DocumentEditorSidebar
+          title="EIR"
+          subtitle={`${TOTAL_STEPS} sections`}
+          documentName={draftTitle || 'Untitled EIR'}
+          steps={EIR_STEPS}
+          currentStep={currentStep}
+          completedSections={completedSections}
+          onStepClick={handleStepClick}
+          validateStep={validateStep}
+          categories={EIR_CONFIG.categories}
+          sidebarIcon={EIR_STEPS[0]?.icon}
+        />
+      }
+      header={
+        <DocumentEditorHeader
+          stepTitle={EIR_STEPS[currentStep]?.title}
+          currentStep={currentStep}
+          totalSteps={TOTAL_STEPS}
+          isFirstStep={isFirstStep}
+          isLastStep={isLastStep}
+          onBack={() => navigate('/eir-manager')}
+          backLabel="Back to list"
+          onPrevious={handlePrevious}
+          onNext={handleNext}
+          showProgressBar
+          headerActions={headerActions}
+        />
+      }
+      footer={
+        <DocumentEditorFooter
+          currentStep={currentStep}
+          totalSteps={TOTAL_STEPS}
+          isFirstStep={isFirstStep}
+          isLastStep={isLastStep}
+          onPrevious={handlePrevious}
+          onNext={handleNext}
+        />
+      }
+    >
+      <FormStepRHF
+        stepIndex={currentStep}
+        stepConfig={stepConfig}
+        eirAiSuggestFieldNames={eirAiSuggestFieldNames}
+        onEirSuggest={handleEirSuggest}
+      />
+    </DocumentEditorLayout>
   );
 };
 

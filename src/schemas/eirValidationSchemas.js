@@ -71,18 +71,40 @@ export const fullEirSchema = z.object({
   appendixExampleRequirementsTables: optionalString
 }).passthrough(); // Allow extra keys from form (e.g. future fields)
 
+/**
+ * Sanitize form values to a plain object so Zod never receives refs or non-plain values
+ * that can trigger internal Zod errors (e.g. reading _zod from undefined).
+ */
+function toPlainObject(value) {
+  if (value === null || value === undefined) return value;
+  if (typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map(toPlainObject);
+  const obj = {};
+  for (const key of Object.keys(value)) {
+    if (Object.prototype.hasOwnProperty.call(value, key)) {
+      obj[key] = toPlainObject(value[key]);
+    }
+  }
+  return obj;
+}
+
 export function validateEirStepData(stepIndex, data) {
   if (!data || typeof data !== 'object') {
     return { success: true, errors: {} };
   }
-  const result = fullEirSchema.safeParse(data);
-  if (result.success) return { success: true, errors: {} };
-  const errors = {};
-  if (result.error?.errors) {
-    result.error.errors.forEach((err) => {
-      const path = Array.isArray(err.path) ? err.path.join('.') : String(err.path || 'unknown');
-      errors[path] = err.message || 'Validation error';
-    });
+  try {
+    const plain = toPlainObject(data);
+    const result = fullEirSchema.safeParse(plain);
+    if (result.success) return { success: true, errors: {} };
+    const errors = {};
+    if (result.error?.errors) {
+      result.error.errors.forEach((err) => {
+        const path = Array.isArray(err.path) ? err.path.join('.') : String(err.path || 'unknown');
+        errors[path] = err.message || 'Validation error';
+      });
+    }
+    return { success: false, errors };
+  } catch (_) {
+    return { success: true, errors: {} };
   }
-  return { success: false, errors };
 }

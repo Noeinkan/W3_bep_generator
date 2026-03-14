@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useRef, useContext, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { Save, ChevronDown, Eye, Zap, FolderOpen, Upload, Sparkles, CheckCircle } from 'lucide-react';
 import { useBepForm } from '../../../contexts/BepFormContext';
 import FormStepRHF from '../../steps/FormStepRHF';
 import { FormBuilderProvider, DynamicFormStepRHF, FormBuilderContext } from '../../form-builder';
 import CONFIG from '../../../config/bepConfig';
-import { useTidpData } from '../../../hooks/useTidpData';
-import { useMidpData } from '../../../hooks/useMidpData';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useProject } from '../../../contexts/ProjectContext';
 import SaveDraftDialog from '../drafts/SaveDraftDialog';
@@ -13,7 +12,10 @@ import HiddenComponentsRenderer from '../../export/HiddenComponentsRenderer';
 import useStepNavigation from '../../../hooks/useStepNavigation';
 import useDraftSave from '../../../hooks/useDraftSave';
 import { useDocumentHistory } from '../../../hooks/useDocumentHistory';
-import { BepSidebar, BepHeader, BepFooter, SuccessToast } from './components';
+import { SuccessToast } from './components';
+import DocumentStatusWidget from './components/DocumentStatusWidget';
+import { DocumentEditorLayout, DocumentEditorSidebar, DocumentEditorHeader, DocumentEditorFooter } from '../../document-editor';
+import useOutsideClick from '../../../hooks/useOutsideClick';
 import { cn } from '../../../utils/cn';
 import { ROUTES } from '../../../constants/routes';
 import { EirStepWrapper } from '../../eir';
@@ -31,6 +33,74 @@ const FormStepRenderer = ({ stepIndex, bepType }) => {
     return <DynamicFormStepRHF stepIndex={stepIndex} />;
   }
   return <FormStepRHF stepIndex={stepIndex} bepType={bepType} />;
+};
+
+/** BEP header actions: Save dropdown + Preview. Used inside DocumentEditorHeader. */
+const BepHeaderActions = ({
+  onSave,
+  onSaveAs,
+  showSaveDropdown,
+  onToggleSaveDropdown,
+  onCloseSaveDropdown,
+  savingDraft,
+  user,
+  onPreview,
+}) => {
+  const saveDropdownRef = useRef(null);
+  useOutsideClick(saveDropdownRef, onCloseSaveDropdown, showSaveDropdown);
+
+  return (
+    <>
+      <div className="relative" ref={saveDropdownRef}>
+        <button
+          type="button"
+          onClick={onToggleSaveDropdown}
+          disabled={savingDraft || !user}
+          className={cn(
+            bepUi.btnSecondary,
+            'px-3 py-2 rounded-md shadow-sm disabled:opacity-50 disabled:cursor-not-allowed'
+          )}
+          title="Save Options"
+        >
+          <Save className="w-4 h-4" />
+          <span className="hidden lg:inline ml-2">{savingDraft ? 'Saving...' : 'Save'}</span>
+          <ChevronDown className="w-3 h-3 ml-1" />
+        </button>
+        {showSaveDropdown && (
+          <div className={cn(bepUi.panel, 'absolute right-0 mt-1 w-40 py-1 z-50 shadow-card')}>
+            <button
+              type="button"
+              onClick={() => {
+                onCloseSaveDropdown();
+                onSave();
+              }}
+              className="w-full text-left px-4 py-2 text-sm text-ui-text-muted hover:bg-ui-muted flex items-center"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={onSaveAs}
+              className="w-full text-left px-4 py-2 text-sm text-ui-text-muted hover:bg-ui-muted flex items-center"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Save As...
+            </button>
+          </div>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={onPreview}
+        className={cn(bepUi.btnPrimary, 'px-3 py-2 rounded-md shadow-sm')}
+        title="Preview BEP"
+      >
+        <Eye className="w-4 h-4" />
+        <span className="hidden lg:inline ml-2">Preview</span>
+      </button>
+    </>
+  );
 };
 
 /**
@@ -61,9 +131,6 @@ const BepFormViewContent = () => {
 
   const formBuilderContext = useContext(FormBuilderContext);
   const isDynamicMode = formBuilderContext !== null;
-
-  const { tidps } = useTidpData();
-  const { midps } = useMidpData();
 
   const currentStep = parseInt(stepParam, 10) || 0;
 
@@ -249,115 +316,154 @@ const BepFormViewContent = () => {
     return null;
   }
 
-  return (
-    <div className={cn('h-screen flex relative', bepUi.shell)} data-page-uri={location.pathname}>
-      {/* Sidebar */}
-      <BepSidebar
-        bepType={bepType}
-        currentDraft={currentDraft}
-        currentStep={currentStep}
-        completedSections={completedSections}
-        onStepClick={handleStepClick}
-        validateStep={validateStep}
-        tidpData={tidps}
-        midpData={midps}
-        user={user}
-        documentHistory={documentHistory}
-        onDocumentHistorySave={handleDocumentHistorySave}
-      />
+  const steps = isDynamicMode ? (formBuilderContext?.visibleSteps ?? CONFIG.steps) : CONFIG.steps;
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        <BepHeader
-          currentStep={currentStep}
-          isFirstStep={isFirstStep}
-          isLastStep={isLastStep}
-          onNext={handleNext}
-          onPrevious={handlePrevious}
-          onPreview={handlePreview}
-          onSave={handleSaveDraft}
-          onSaveAs={handleSaveAs}
-          showSaveDropdown={showSaveDropdown}
-          onToggleSaveDropdown={toggleSaveDropdown}
-          onCloseSaveDropdown={closeSaveDropdown}
-          savingDraft={savingDraft}
-          user={user}
-        />
+  const goToEirStep = useCallback(() => {
+    const basePath = location.pathname.split('/step/')[0];
+    navigate(`${basePath}/step/eir`);
+  }, [location.pathname, navigate]);
 
-        {/* Linked EIR banner */}
-        {currentProject?.id && (
-          <div className="px-6 pt-3">
-            <div className="max-w-[231mm] mx-auto">
-              <div className="flex items-center justify-between gap-3 text-xs sm:text-sm px-4 py-2.5 rounded-lg border border-dashed border-amber-300 bg-amber-50/70">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3">
-                  <span className="font-medium text-amber-900">
-                    Linked EIR (authored):
-                  </span>
-                  {eirDraftsLoading ? (
-                    <span className="text-amber-700">Loading EIR drafts…</span>
-                  ) : eirDrafts.length === 0 ? (
-                    <span className="text-amber-700">
-                      No authored EIR documents for this project yet.
-                    </span>
-                  ) : (
-                    <select
-                      value={linkedEirId || ''}
-                      onChange={handleChangeLinkedEir}
-                      className="border border-amber-300 rounded-md px-2 py-1 bg-white text-amber-900 text-xs sm:text-sm"
-                    >
-                      <option value="">
-                        No EIR linked
-                      </option>
-                      {eirDrafts.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.title || 'Untitled EIR'}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  {eirDraftsError && (
-                    <span className="text-red-600">
-                      {eirDraftsError}
-                    </span>
-                  )}
-                </div>
-                {linkedEirId && (
-                  <span className="text-amber-800 text-xs">
-                    {loadingLinkedEir
-                      ? 'Loading analysis…'
-                      : hasAnalysis
-                      ? 'Analysis ready for suggestions & matrix'
-                      : 'Link set – analysis pending'}
-                  </span>
-                )}
-              </div>
-            </div>
+  const topBanner = currentProject?.id ? (
+    <div className="px-6 pt-3">
+      <div className="max-w-[231mm] mx-auto">
+        <div className="flex items-center justify-between gap-3 text-xs sm:text-sm px-4 py-2.5 rounded-lg border border-dashed border-amber-300 bg-amber-50/70">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3">
+            <span className="font-medium text-amber-900">Linked EIR (authored):</span>
+            {eirDraftsLoading ? (
+              <span className="text-amber-700">Loading EIR drafts…</span>
+            ) : eirDrafts.length === 0 ? (
+              <span className="text-amber-700">No authored EIR documents for this project yet.</span>
+            ) : (
+              <select
+                value={linkedEirId || ''}
+                onChange={handleChangeLinkedEir}
+                className="border border-amber-300 rounded-md px-2 py-1 bg-white text-amber-900 text-xs sm:text-sm"
+              >
+                <option value="">No EIR linked</option>
+                {eirDrafts.map((d) => (
+                  <option key={d.id} value={d.id}>{d.title || 'Untitled EIR'}</option>
+                ))}
+              </select>
+            )}
+            {eirDraftsError && <span className="text-red-600">{eirDraftsError}</span>}
           </div>
-        )}
-
-        {/* Form Content */}
-        <div ref={contentRef} className={cn('flex-1', bepUi.contentScroll, 'bg-ui-canvas')}>
-          <div className={`mx-auto px-6 py-8 ${currentStep === totalSteps - 1 ? 'max-w-[327mm]' : 'max-w-[231mm]'}`}>
-            <div
-              className={cn(
-                bepUi.panel,
-                'bg-ui-surface border border-ui-border rounded-xl shadow-sm p-8 transition-all duration-300 ease-in-out',
-                isTransitioning ? 'opacity-50 transform scale-95' : 'opacity-100 transform scale-100'
-              )}
-            >
-              <FormStepRenderer stepIndex={currentStep} bepType={bepType} />
-            </div>
-          </div>
+          {linkedEirId && (
+            <span className="text-amber-800 text-xs">
+              {loadingLinkedEir ? 'Loading analysis…' : hasAnalysis ? 'Analysis ready for suggestions & matrix' : 'Link set – analysis pending'}
+            </span>
+          )}
         </div>
-
-        <BepFooter
-          currentStep={currentStep}
-          isFirstStep={isFirstStep}
-          isLastStep={isLastStep}
-          onNext={handleNext}
-          onPrevious={handlePrevious}
-        />
       </div>
+    </div>
+  ) : null;
+
+  return (
+    <>
+      <DocumentEditorLayout
+        contentRef={contentRef}
+        dataPageUri={location.pathname}
+        contentMaxWidth={currentStep === totalSteps - 1 ? 'max-w-[327mm]' : 'max-w-[231mm]'}
+        isTransitioning={isTransitioning}
+        sidebar={
+          <DocumentEditorSidebar
+            title="BEP Generator"
+            subtitle={CONFIG.bepTypeDefinitions[bepType]?.title}
+            documentName={currentDraft?.name}
+            steps={steps}
+            currentStep={currentStep}
+            completedSections={completedSections}
+            onStepClick={handleStepClick}
+            validateStep={validateStep}
+            categories={CONFIG.categories}
+            sidebarIcon={Zap}
+            children={
+              <>
+                <button
+                  type="button"
+                  onClick={() => navigate(ROUTES.BEP_DRAFTS)}
+                  disabled={!user}
+                  className={cn(bepUi.btnSecondary, 'w-full px-3 py-2 rounded-md shadow-sm disabled:opacity-50 disabled:cursor-not-allowed')}
+                >
+                  <FolderOpen className="w-4 h-4 mr-2" />
+                  Drafts
+                </button>
+                <button
+                  type="button"
+                  onClick={goToEirStep}
+                  className={cn(
+                    bepUi.btnBase,
+                    'w-full mt-2 px-3 py-2 rounded-md shadow-sm',
+                    hasAnalysis
+                      ? 'border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                      : 'border-violet-300 text-violet-700 bg-violet-50 hover:bg-violet-100'
+                  )}
+                >
+                  {hasAnalysis ? (
+                    <><CheckCircle className="w-4 h-4 mr-2" /> EIR Analyzed</>
+                  ) : (
+                    <><Upload className="w-4 h-4 mr-2" /> Upload EIR</>
+                  )}
+                </button>
+                {hasAnalysis && (
+                  <div className="mt-2 p-2 bg-violet-50 rounded-md border border-violet-200">
+                    <div className="flex items-center gap-2 text-xs text-violet-700">
+                      <Sparkles className="w-3 h-3" />
+                      <span>AI suggestions active</span>
+                    </div>
+                  </div>
+                )}
+                {documentHistory && (
+                  <div className="pt-2 border-b border-ui-border">
+                    <DocumentStatusWidget
+                      documentHistory={documentHistory}
+                      onSave={handleDocumentHistorySave}
+                    />
+                  </div>
+                )}
+              </>
+            }
+          />
+        }
+        header={
+          <DocumentEditorHeader
+            stepTitle={CONFIG.steps[currentStep]?.title}
+            currentStep={currentStep}
+            totalSteps={totalSteps}
+            isFirstStep={isFirstStep}
+            isLastStep={isLastStep}
+            onPrevious={handlePrevious}
+            onNext={handleNext}
+            showProgressBar
+            headerActions={
+              <BepHeaderActions
+                onSave={handleSaveDraft}
+                onSaveAs={handleSaveAs}
+                showSaveDropdown={showSaveDropdown}
+                onToggleSaveDropdown={toggleSaveDropdown}
+                onCloseSaveDropdown={closeSaveDropdown}
+                savingDraft={savingDraft}
+                user={user}
+                onPreview={handlePreview}
+              />
+            }
+            nextLabel={isLastStep ? 'Preview' : 'Next'}
+          />
+        }
+        footer={
+          <DocumentEditorFooter
+            currentStep={currentStep}
+            totalSteps={totalSteps}
+            isFirstStep={isFirstStep}
+            isLastStep={isLastStep}
+            onPrevious={handlePrevious}
+            onNext={handleNext}
+            nextLabel={isLastStep ? 'Preview' : 'Next'}
+          />
+        }
+        topBanner={topBanner}
+      >
+        <FormStepRenderer stepIndex={currentStep} bepType={bepType} />
+      </DocumentEditorLayout>
 
       <SuccessToast show={showSuccessToast} />
 
@@ -374,9 +480,8 @@ const BepFormViewContent = () => {
         onSaveAsNew={handleSaveAsNewDraft}
       />
 
-      {/* Hidden components for PDF screenshot capture */}
       <HiddenComponentsRenderer formData={formData} bepType={bepType} />
-    </div>
+    </>
   );
 };
 

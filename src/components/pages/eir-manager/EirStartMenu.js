@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { FolderOpen, Upload, FileSearch, ChevronRight, Grid3x3, Sparkles } from 'lucide-react';
 
 const EirStartMenu = ({
@@ -43,7 +43,7 @@ const EirStartMenu = ({
       color: 'purple',
       action: onLoadTemplate,
       enabled: true,
-      badge: 'Soon'
+      badge: null
     },
     {
       id: 'draft',

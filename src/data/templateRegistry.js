@@ -202,3 +202,25 @@ export const getEirTemplateById = (templateId) => {
   if (!template?.eirData) return null;
   return deepClone(template.eirData);
 };
+
+/**
+ * Get EIR templates deduplicated by (name, category). Returns one entry per logical
+ * EIR template; id is the first matching registry id so getEirTemplateById(id) still works.
+ * @returns {Array} Template metadata (id, name, category, description, tags) without data/eirData
+ */
+export const getEirTemplates = () => {
+  const withEir = TEMPLATE_REGISTRY.filter(t => t.eirData);
+  const seen = new Set();
+  return withEir.filter((t) => {
+    const key = `${t.name}\n${t.category}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).map(({ id, name, category, description, tags }) => ({
+    id,
+    name,
+    category,
+    description,
+    tags: tags || []
+  }));
+};
