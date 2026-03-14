@@ -383,7 +383,8 @@ class EirAnalyzer:
                 max_length=2000,  # Reduced from 3000 - JSON structure rarely needs more
                 temperature=0.3,  # Low temperature for structured output
                 num_ctx=8192,  # Larger context window to handle bigger documents in one pass
-                format_schema=EirAnalysis.model_json_schema()  # Native Ollama structured output (v0.5+)
+                format_schema=EirAnalysis.model_json_schema(),  # Native Ollama structured output (v0.5+)
+                thinking_mode=True  # Qwen3: deep reasoning for complex EIR extraction
             )
 
             # Parse JSON from response with robust parsing
@@ -893,7 +894,8 @@ class EirAnalyzer:
                 prompt=prompt,
                 max_length=800,  # Reduced from 1500 - summaries are concise by nature
                 temperature=0.5,
-                num_ctx=4096  # Sufficient context for summary generation
+                num_ctx=4096,  # Sufficient context for summary generation
+                thinking_mode=True  # Qwen3: reasoning improves EIR summary quality
             )
             return summary.strip()
         except (ConnectionError, TimeoutError) as e:
@@ -964,7 +966,8 @@ class EirAnalyzer:
             suggestion = self.generator.generate_text(
                 prompt=prompt,
                 max_length=500,
-                temperature=0.5
+                temperature=0.5,
+                thinking_mode=False  # Analysis already done; fast text generation
             )
             return suggestion.strip()
         except (ConnectionError, TimeoutError) as e:

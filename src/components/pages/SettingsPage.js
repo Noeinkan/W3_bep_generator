@@ -5,7 +5,7 @@ import apiService from '../../services/apiService';
 import toast from 'react-hot-toast';
 
 const PREFERRED_MODEL_KEY = 'preferredOllamaModel';
-const DEFAULT_MODEL = 'llama3.1:8b';
+const DEFAULT_MODEL = 'qwen3:8b';
 
 const SettingsPage = () => {
   const { user } = useAuth();

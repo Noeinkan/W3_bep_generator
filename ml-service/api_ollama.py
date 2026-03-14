@@ -24,7 +24,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Get model and base URL from environment or use defaults
-OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.1:8b')
+OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'qwen3:8b')
 OLLAMA_QUESTIONS_MODEL = os.getenv('OLLAMA_QUESTIONS_MODEL', '').strip() or OLLAMA_MODEL
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
 
@@ -52,6 +52,7 @@ class GenerateRequest(BaseModel):
     max_length: int = Field(200, ge=50, le=1000, description="Maximum characters to generate")
     temperature: float = Field(0.7, ge=0.1, le=2.0, description="Sampling temperature")
     model: Optional[str] = Field(None, description="Ollama model override (defaults to OLLAMA_MODEL env var)")
+    thinking_mode: Optional[bool] = Field(None, description="Qwen3 thinking mode: True=/think, False=/no_think, None=default")
 
 
 class GenerateResponse(BaseModel):
@@ -140,7 +141,8 @@ async def generate_text(request: GenerateRequest):
             generated = generator.suggest_for_field(
                 field_type=request.field_type,
                 partial_text=request.prompt,
-                max_length=request.max_length
+                max_length=request.max_length,
+                thinking_mode=request.thinking_mode if request.thinking_mode is not None else False
             )
             prompt_used = request.prompt
         else:
@@ -148,7 +150,8 @@ async def generate_text(request: GenerateRequest):
             generated = generator.generate_text(
                 prompt=request.prompt,
                 max_length=request.max_length,
-                temperature=request.temperature
+                temperature=request.temperature,
+                thinking_mode=request.thinking_mode
             )
             prompt_used = request.prompt
 
@@ -174,6 +177,7 @@ class SuggestRequest(BaseModel):
     partial_text: str = Field("", description="Existing text in the field")
     max_length: int = Field(200, ge=50, le=1000, description="Maximum characters to generate")
     model: Optional[str] = Field(None, description="Ollama model override")
+    thinking_mode: Optional[bool] = Field(False, description="Qwen3 thinking mode (default False for speed)")
 
 
 @app.post("/suggest", response_model=GenerateResponse, tags=["Generation"])
@@ -195,7 +199,8 @@ async def suggest_for_field(request: SuggestRequest):
         suggestion = generator.suggest_for_field(
             field_type=request.field_type,
             partial_text=request.partial_text,
-            max_length=request.max_length
+            max_length=request.max_length,
+            thinking_mode=request.thinking_mode
         )
 
         logger.info(f"Generated suggestion for {request.field_type}: {len(suggestion)} chars")
@@ -232,7 +237,8 @@ async def suggest_for_field_stream(request: SuggestRequest):
             for event in generator.suggest_for_field_stream(
                 field_type=request.field_type,
                 partial_text=request.partial_text,
-                max_length=request.max_length
+                max_length=request.max_length,
+                thinking_mode=request.thinking_mode
             ):
                 yield f"data: {json.dumps(event)}\n\n"
         except Exception as exc:
@@ -501,6 +507,7 @@ class GenerateFromAnswersRequest(BaseModel):
     answers: list = Field(..., description="List of answer objects")
     field_context: Optional[FieldContext] = Field(None, description="Field context information")
     model: Optional[str] = Field(None, description="Ollama model override")
+    thinking_mode: Optional[bool] = Field(False, description="Qwen3 thinking mode (default False for speed)")
 
 
 class GenerateFromAnswersResponse(BaseModel):
@@ -594,7 +601,8 @@ async def generate_from_answers(request: GenerateFromAnswersRequest):
             field_type=request.field_type,
             answers=answers_list,
             field_context=field_context_dict,
-            field_label=request.field_label
+            field_label=request.field_label,
+            thinking_mode=request.thinking_mode
         )
 
         questions_answered = sum(1 for a in answers_list if a.get('answer'))
@@ -642,7 +650,8 @@ async def generate_from_answers_stream(request: GenerateFromAnswersRequest):
                 field_type=request.field_type,
                 answers=answers_list,
                 field_context=request.field_context.dict() if request.field_context else None,
-                field_label=request.field_label
+                field_label=request.field_label,
+                thinking_mode=request.thinking_mode
             ):
                 yield f"data: {json.dumps(event)}\n\n"
         except Exception as exc:
@@ -753,6 +762,7 @@ async def suggest_eir_field(request: SuggestEirFieldRequest):
             prompt=prompt,
             max_length=600,
             temperature=0.5,
+            thinking_mode=False  # Fast generation for EIR authoring fields
         )
         if isinstance(suggestion, str):
             suggestion = suggestion.strip()

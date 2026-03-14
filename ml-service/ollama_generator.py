@@ -97,7 +97,7 @@ class OllamaGenerator:
                            Set to False for faster startup in tests.
         """
         self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "").strip() or "http://localhost:11434"
-        self.model = model or os.getenv("OLLAMA_MODEL", "").strip() or "llama3.1:8b"
+        self.model = model or os.getenv("OLLAMA_MODEL", "").strip() or "qwen3:8b"
         _timeout_str = os.getenv("OLLAMA_TIMEOUT", "").strip()
         self.timeout = timeout or (int(_timeout_str) if _timeout_str else 60)
         _temp_str = os.getenv("OLLAMA_DEFAULT_TEMPERATURE", "").strip()
@@ -215,6 +215,24 @@ class OllamaGenerator:
         self._connection_verified = False
         return False
 
+    def _apply_thinking_mode(self, prompt: str, thinking_mode: Optional[bool]) -> str:
+        """
+        Prepend Qwen3 thinking mode directive to the prompt if applicable.
+
+        - True  → /think prefix  (chain-of-thought reasoning, higher quality)
+        - False → /no_think prefix (fast mode, no reasoning trace)
+        - None  → no prefix (model default behaviour)
+
+        Silently ignored for non-Qwen3 models so callers don't need to
+        check the model name themselves.
+        """
+        if thinking_mode is None:
+            return prompt
+        if not self.model.startswith('qwen3'):
+            return prompt
+        prefix = '/think' if thinking_mode else '/no_think'
+        return f"{prefix}\n{prompt}"
+
     def _calculate_timeout(self, max_length: int) -> int:
         """
         Calculate dynamic timeout based on generation length.
@@ -254,7 +272,8 @@ class OllamaGenerator:
         temperature: Optional[float] = None,
         retries: int = 2,
         num_ctx: Optional[int] = None,
-        format_schema: Optional[dict] = None
+        format_schema: Optional[dict] = None,
+        thinking_mode: Optional[bool] = None
     ) -> str:
         """
         Generate text based on a prompt.
@@ -276,6 +295,7 @@ class OllamaGenerator:
         if temperature is None:
             temperature = self.default_temperature
 
+        prompt = self._apply_thinking_mode(prompt, thinking_mode)
         effective_timeout = self._calculate_timeout(max_length)
         last_error: Optional[Exception] = None
 
@@ -391,7 +411,8 @@ class OllamaGenerator:
         partial_text: str = '',
         max_length: int = 200,
         temperature: Optional[float] = None,
-        use_cache: bool = True
+        use_cache: bool = True,
+        thinking_mode: Optional[bool] = False
     ) -> str:
         """
         Generate field-specific suggestion.
@@ -456,7 +477,8 @@ class OllamaGenerator:
         generated = self.generate_text(
             prompt=prompt,
             max_length=max_length,
-            temperature=temperature
+            temperature=temperature,
+            thinking_mode=thinking_mode
         )
 
         # Clean up the suggestion
@@ -469,7 +491,8 @@ class OllamaGenerator:
         field_type: str,
         partial_text: str = '',
         max_length: int = 200,
-        temperature: Optional[float] = None
+        temperature: Optional[float] = None,
+        thinking_mode: Optional[bool] = False
     ):
         """
         Generator: yields SSE event dicts for streaming field suggestions.
@@ -503,6 +526,7 @@ class OllamaGenerator:
         else:
             prompt = f"{context}\n\nGenerate professional content for this section."
 
+        prompt = self._apply_thinking_mode(prompt, thinking_mode)
         effective_timeout = self._calculate_timeout(max_length)
         output_q: _queue.Queue = _queue.Queue()
         first_token_event = threading.Event()
@@ -715,7 +739,8 @@ class OllamaGenerator:
 
         _schema = _QuestionsList.model_json_schema()
         raw = self.generate_text(
-            prompt=prompt, max_length=220, temperature=0.4, num_ctx=1024, format_schema=_schema
+            prompt=prompt, max_length=220, temperature=0.4, num_ctx=1024,
+            format_schema=_schema, thinking_mode=False
         )
 
         # Parse questions — structured output makes this reliable; keep fallback for edge cases
@@ -725,7 +750,8 @@ class OllamaGenerator:
         if len(questions) < 2:
             logger.warning("First question generation produced < 2 questions, retrying…")
             raw = self.generate_text(
-                prompt=prompt, max_length=220, temperature=0.5, num_ctx=1024, format_schema=_schema
+                prompt=prompt, max_length=220, temperature=0.5, num_ctx=1024,
+                format_schema=_schema, thinking_mode=False
             )
             questions = self._parse_questions_json(raw)
 
@@ -794,7 +820,8 @@ class OllamaGenerator:
         field_type: str,
         answers: list,
         field_context: Optional[dict] = None,
-        field_label: Optional[str] = None
+        field_label: Optional[str] = None,
+        thinking_mode: Optional[bool] = False
     ) -> str:
         """
         Generate BEP content incorporating user answers to guided questions.
@@ -847,7 +874,8 @@ class OllamaGenerator:
             "Generate content (150-250 words):"
         )
 
-        generated = self.generate_text(prompt=prompt, max_length=400, temperature=0.5)
+        generated = self.generate_text(prompt=prompt, max_length=400, temperature=0.5,
+                                       thinking_mode=thinking_mode)
         cleaned = self._clean_suggestion(generated, '')
 
         return cleaned
@@ -857,7 +885,8 @@ class OllamaGenerator:
         field_type: str,
         answers: list,
         field_context: Optional[dict] = None,
-        field_label: Optional[str] = None
+        field_label: Optional[str] = None,
+        thinking_mode: Optional[bool] = False
     ):
         """
         Generator: yields SSE event dicts for streaming answer-based content generation.
@@ -869,7 +898,8 @@ class OllamaGenerator:
 
         if not answered:
             logger.info("All answers skipped – streaming autonomous generation for %s", field_type)
-            yield from self.suggest_for_field_stream(field_type=field_type, max_length=300)
+            yield from self.suggest_for_field_stream(field_type=field_type, max_length=300,
+                                                     thinking_mode=thinking_mode)
             return
 
         formatted = []
@@ -897,6 +927,7 @@ class OllamaGenerator:
             "Generate content (150-250 words):"
         )
 
+        prompt = self._apply_thinking_mode(prompt, thinking_mode)
         effective_timeout = self._calculate_timeout(400)
         output_q: _queue.Queue = _queue.Queue()
         first_token_event = threading.Event()

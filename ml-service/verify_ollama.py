@@ -90,7 +90,7 @@ def get_installed_models(base_url: str = "http://localhost:11434") -> List[Dict]
                 return models
             else:
                 print_warning("Nessun modello installato")
-                print_info("Scarica un modello con: ollama pull llama3.2:3b")
+                print_info("Scarica un modello con: ollama pull qwen3:8b")
                 return []
         else:
             print_error(f"Errore nel recupero modelli: HTTP {response.status_code}")
@@ -99,7 +99,7 @@ def get_installed_models(base_url: str = "http://localhost:11434") -> List[Dict]
         print_error(f"Errore: {e}")
         return []
 
-def check_recommended_model(models: List[Dict], recommended: str = "llama3.2:3b") -> bool:
+def check_recommended_model(models: List[Dict], recommended: str = "qwen3:8b") -> bool:
     """Check if recommended model is installed"""
     print_header("🎯 STEP 3: Modello Raccomandato")
 
@@ -123,12 +123,12 @@ def check_recommended_model(models: List[Dict], recommended: str = "llama3.2:3b"
     print_info(f"Scaricalo con: ollama pull {recommended}")
     print()
     print_info("Modelli alternativi:")
-    print("  • llama3.2:1b  - Più veloce, ottima qualità (2GB)")
-    print("  • mistral:7b   - Migliore qualità, più lento (4GB)")
+    print("  • qwen3:4b     - Più veloce, ottima qualità (2.6GB)")
+    print("  • llama3.1:8b  - Alternativa solida (4.7GB)")
 
     return False
 
-def test_generation(base_url: str = "http://localhost:11434", model: str = "llama3.2:3b") -> bool:
+def test_generation(base_url: str = "http://localhost:11434", model: str = "qwen3:8b") -> bool:
     """Test text generation"""
     print_header("🚀 STEP 4: Test Generazione Testo")
 
@@ -186,7 +186,7 @@ def test_generation(base_url: str = "http://localhost:11434", model: str = "llam
     except requests.exceptions.Timeout:
         print_error("Timeout nella generazione (>60s)")
         print_info("Il modello potrebbe essere troppo lento per il tuo hardware")
-        print_info("Prova un modello più leggero: ollama pull llama3.2:1b")
+        print_info("Prova un modello più leggero: ollama pull qwen3:4b")
         return False
     except Exception as e:
         print_error(f"Errore: {e}")
@@ -198,7 +198,7 @@ def test_api_compatibility(base_url: str = "http://localhost:11434") -> bool:
 
     endpoints = [
         ("/api/tags", "GET", None),
-        ("/api/generate", "POST", {"model": "llama3.2:3b", "prompt": "test", "stream": False}),
+        ("/api/generate", "POST", {"model": "qwen3:8b", "prompt": "test", "stream": False}),
     ]
 
     all_ok = True
@@ -266,7 +266,7 @@ def main():
     print(f"{Colors.END}\n")
 
     base_url = "http://localhost:11434"
-    recommended_model = "llama3.2:3b"
+    recommended_model = "qwen3:8b"
 
     # Run checks
     checks = {}

@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 REPORT_PATH = os.path.join(os.path.dirname(__file__), "benchmark_report.md")
 
 # ── Models to benchmark ─────────────────────────────────────────────────────
-MODELS = ["llama3.2:3b", "gemma3:4b", "qwen3:4b"]
+MODELS = ["llama3.1:8b", "qwen3:8b", "qwen3:4b"]
 
 # ── Sample EIR document (same as eir_analyzer.py __main__) ──────────────────
 SAMPLE_EIR = """
