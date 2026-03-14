@@ -59,6 +59,9 @@ The output: a complete, professional, ISO 19650-compliant BEP in hours instead o
 
 ### March 2026
 
+#### OIR Module (Owner Information Requirements)
+A new **OIR Manager** mirrors the EIR authoring module for the asset owner's perspective. Owners can create and edit OIR drafts (Owner Information Requirements) via an ISO 19650–aligned form wizard, publish one OIR per project, and export it to PDF. The module follows the same architecture as the EIR authoring flow: `OirManagerPage` → `OirFormView` → `oirService` → `POST /api/oir/drafts/:id/publish`. Config split (`oirConfig.js`, `oirStepsData.js`, `oirConfigForServer.js`) mirrors the BEP and EIR config pattern; OIR form data is stored in the `oir_drafts` table.
+
 #### LOIN Tables Management
 A new Level of Information Need (LOIN) tables module has been added with full CRUD operations. BIM managers can now define, edit, and delete LOIN tables directly within the platform — complete with a database schema, API routes, and a dedicated UI component.
 
@@ -220,7 +223,7 @@ Most BEP tools are static templates or basic form fillers. BEP Suite is differen
 - **bcryptjs + jsonwebtoken** - Authentication
 
 ### ML/AI Service
-- **Ollama** — Local LLM runtime (llama3.1:8b default, any Ollama model supported)
+- **Ollama** — Local LLM runtime (qwen3 default, any Ollama model supported)
 - **Python 3.8+** — ML runtime environment
 - **FastAPI 0.104.1+** — High-performance API server (Port 8000)
 - **Uvicorn** — ASGI server
@@ -255,7 +258,7 @@ The application follows a modern three-tier architecture:
                                                                    │
                                                            ┌───────▼───────┐
                                                            │  Ollama       │
-                                                           │  llama3.1:8b  │
+                                                           │    qwen3      │
                                                            │  (Port 11434) │
                                                            └───────────────┘
 ```
@@ -279,6 +282,8 @@ The application follows a modern three-tier architecture:
 - `information_deliverables` - Information deliverables with TIDP linkage
 - `loin_tables` - Level of Information Need (LOIN) table definitions per project
 - `snippets` - Reusable text snippets inserted as chips in rich text fields
+- `eir_drafts` - EIR drafts with status (draft / published), scoped to project
+- `oir_drafts` - OIR drafts with status (draft / published), scoped to project
 
 ---
 
@@ -326,7 +331,7 @@ Executive summary · Project objectives · BIM objectives · Stakeholders · Rol
 1. Install Ollama from [ollama.ai](https://ollama.ai)
 2. Pull the default model:
 ```bash
-ollama pull llama3.1:8b
+ollama pull qwen3
 ```
 3. Verify installation:
 ```bash
@@ -342,7 +347,7 @@ These environment variables let you speed up EIR analysis without reducing accur
 | `EIR_CHUNK_TOKENS` | `7000` | Chunk size used when the document is split |
 | `OLLAMA_MAX_CONCURRENCY` | `auto` | Max parallel workers (`auto` adapts to the machine) |
 | `EIR_AUTO_CONCURRENCY_LATENCY` | `60` | Seconds threshold to reduce workers when Ollama is slow |
-| `OLLAMA_MODEL` | `llama3.1:8b` | Ollama model to use (any Ollama-compatible model) |
+| `OLLAMA_MODEL` | `qwen3` | Ollama model to use (any Ollama-compatible model) |
 | `OLLAMA_QUESTIONS_MODEL` | _(same as OLLAMA_MODEL)_ | Optional: smaller/faster model for Guided AI question generation only (e.g. `qwen3:4b`, `llama3.2:3b`). Omit to use `OLLAMA_MODEL` for everything. |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server address |
 
@@ -404,6 +409,14 @@ These environment variables let you speed up EIR analysis without reducing accur
 - `POST /drafts/:id/publish` — Set this draft as the project’s published EIR
 - `DELETE /drafts/:id` — Delete draft
 
+### OIR Routes (`/api/oir`)
+- `GET /drafts` — List OIR drafts (optional `projectId` query)
+- `POST /drafts` — Create OIR draft
+- `GET /drafts/:id` — Get single draft
+- `PUT /drafts/:id` — Update draft (title, projectId, data, status)
+- `POST /drafts/:id/publish` — Set this draft as the project's published OIR
+- `DELETE /drafts/:id` — Delete draft
+
 ### AI Routes (`/api/ai`) — Express Proxy
 - `GET /health` — ML service health check
 - `POST /generate` — Generate text from a prompt
@@ -454,7 +467,7 @@ These environment variables let you speed up EIR analysis without reducing accur
 
    Install Ollama from [ollama.ai](https://ollama.ai), then pull the default model:
    ```bash
-   ollama pull llama3.1:8b
+   ollama pull qwen3
    ```
 
    Create a Python virtual environment for the ML service:
@@ -510,6 +523,8 @@ bep-generator/
 │   │   ├── forms/               # Form controls, AI assistant, rich text editor
 │   │   ├── pages/               # Main application pages
 │   │   │   ├── bep/            # BEP generator views and components
+│   │   │   ├── eir-manager/    # EIR authoring wizard (create/edit/publish EIR drafts)
+│   │   │   ├── oir-manager/    # OIR authoring wizard (create/edit/publish OIR drafts)
 │   │   │   ├── tidp-midp/      # TIDP/MIDP dashboard and management
 │   │   │   └── idrm-manager/   # Information Deliverables & Responsibility Matrix
 │   │   ├── layout/              # MainLayout (sidebar, header)
@@ -668,7 +683,7 @@ Returns whether SMTP is configured and whether the server can verify the SMTP co
 - **CPU:** Quad-core processor or better
 - **RAM:** 8 GB (16 GB for optimal AI performance)
 - **Storage:** 5 GB free space (for Ollama and models)
-- **Ollama:** Latest version with llama3.1:8b (~5 GB download)
+- **Ollama:** Latest version with qwen3 (~5 GB download)
 
 ---
 
@@ -691,7 +706,7 @@ taskkill /PID <PID> /F
 
 ### ML Service Not Starting
 - Verify Ollama is installed: `ollama list`
-- Pull the model: `ollama pull llama3.1:8b`
+- Pull the model: `ollama pull qwen3`
 - Verify Python: `python --version`
 - Install dependencies: `pip install -r ml-service/requirements.txt`
 - Check port 8000 is available
@@ -834,6 +849,6 @@ This project is proprietary software. All rights reserved.
 
 ---
 
-**Version:** 2.2.0
+**Version:** 2.3.0
 **Last Updated:** March 2026
 **Developed with:** React 19, Node.js, Python, and Ollama

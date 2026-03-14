@@ -25,6 +25,7 @@ import BimImportPage from './components/pages/bim-import/BimImportPage';
 import EirManagerPage from './components/pages/eir-manager/EirManagerPage';
 import EirFormView from './components/pages/eir-manager/EirFormView';
 import EirDraftsView from './components/pages/eir-manager/EirDraftsView';
+import EirTemplatesView from './components/pages/eir-manager/EirTemplatesView';
 import OirManagerPage from './components/pages/oir-manager/OirManagerPage';
 import OirFormView from './components/pages/oir-manager/OirFormView';
 import OirDraftsView from './components/pages/oir-manager/OirDraftsView';
@@ -130,6 +131,7 @@ function App() {
             {/* EIR Manager */}
             <Route path="/eir-manager" element={<ProtectedRoute><EirManagerPage /></ProtectedRoute>} />
             <Route path="/eir-manager/drafts" element={<ProtectedRoute><EirDraftsView /></ProtectedRoute>} />
+            <Route path="/eir-manager/templates" element={<ProtectedRoute><EirTemplatesView /></ProtectedRoute>} />
             <Route path="/eir-manager/:draftId/edit" element={<ProtectedRoute><EirFormView /></ProtectedRoute>} />
             <Route path="/eir-manager/:draftId/edit/step/:stepIndex" element={<ProtectedRoute><EirFormView /></ProtectedRoute>} />
 

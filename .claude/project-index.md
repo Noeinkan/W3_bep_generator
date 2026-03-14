@@ -1,7 +1,7 @@
 # Project Index — BEP Generator
 
 > **Purpose:** Compact codebase map so Claude reads this FIRST instead of exploring.
-> ~160 lines vs ~50,000+ lines of source code.
+> ~175 lines vs ~50,000+ lines of source code.
 
 ## Architecture
 
@@ -18,11 +18,11 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 | Directory | What's there |
 |-----------|-------------|
 | `src/components/auth/` | Login, Register, ProtectedRoute |
-| `src/components/common/` | Button, Select, Modal, FormField, ConfirmDialog |
+| `src/components/common/` | Button, Select, Modal, FormField, ConfirmDialog, RootErrorBoundary |
 | `src/components/eir/` | EIR upload, analysis view, suggest button, EirStepWrapper (pre-step flow), EirFillSummaryModal |
 | `src/components/export/` | BEP preview renderer, hidden component renderer |
 | `src/components/form-builder/` | Dynamic form structure editor (steps, fields, drag-drop) |
-| `src/components/forms/ai/` | AI assistant tabs, suggestion buttons, smart help |
+| `src/components/forms/ai/` | AI assistant tabs, suggestion buttons, smart help, GuidedAIWizardTab (inline step-by-step AI wizard) |
 | `src/components/forms/base/` | Base inputs: text, textarea, checkbox, editable table |
 | `src/components/forms/controls/` | Progress bar/sidebar, command palette, search filter |
 | `src/components/forms/custom/` | CDE platform, naming convention, federation, RACI, clash matrix |
@@ -33,11 +33,12 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 | `src/components/forms/dialogs/` | TableInsertDialog |
 | `src/components/layout/` | MainLayout (sidebar, header, Outlet) |
 | `src/components/midp/` | MIDP form, list, evolution dashboard |
-| `src/components/pages/` | HomePage (+ sections: Integration, ISOCompliance, ProductCard, SocialProof), ProjectsPage, BEPGeneratorWrapper, PreviewExportPage, ProfilePage, SettingsPage, TidpEditorPage |
+| `src/components/pages/` | HomePage (+ sections: Integration, ISOCompliance, ProductCard, SocialProof), ProjectsPage, BEPGeneratorWrapper, PreviewExportPage, ProfilePage, SettingsPage, TidpEditorPage, RoleChoicePage |
 | `src/components/pages/auth/` | Login, Register, ForgotPassword, ResetPassword, VerifyEmail, VerificationPending pages |
 | `src/components/pages/bep/` | BepLayout, BepStartMenuView, BepSelectTypeView, BepFormView, BepPreviewView, BepDraftsView, BepImportView, BepInfoRequirementsView, BepStructureMapView, BepTemplatesView, BepTypeSelector, ImportBepDialog, TemplateGallery; `components/` subfolder: BepHeader, BepSidebar, BepFooter, SuccessToast, EirResponsivenessMatrixModal, DocumentHistoryModal, DocumentStatusWidget |
 | `src/components/pages/loin-tables/` | LoinTablesPage, LoinRowForm, LoinRowsTable, LoinPropertyRequirementsModal — LOIN row manager + IDS properties (IFC entity, property requirements) and Export IDS |
-| `src/components/pages/eir-manager/` | EirManagerPage, EirFormView — EIR authoring (create/edit drafts, Publish, export); BEP form links to project EIRs and loads analysis |
+| `src/components/pages/eir-manager/` | EirManagerPage, EirFormView, EirDraftsView, EirStartMenu, EirStartMenuView — EIR authoring (create/edit drafts, Publish, export); BEP form links to project EIRs and loads analysis |
+| `src/components/pages/oir-manager/` | OirManagerPage, OirFormView, OirDraftsView, OirStartMenu, OirStartMenuView — OIR (Owner Information Requirements) authoring, mirrors EIR module structure |
 | `src/components/pages/drafts/` | DraftManager, DraftListItem, SaveDraftDialog, SearchAndFilters |
 | `src/components/pages/tidp-midp/` | TIDPMIDPDashboard, TidpMidpManager, RiskRegister, ResourcePlan, QualityGates, DependencyMatrix, CascadingImpact; `dashboard/` subfolder: TIDPsView, MIDPsView, StatisticsCards, MIDPAnalyticsDrawer, MIDPSummaryPanel, HelpModal |
 | `src/components/pages/idrm-manager/` | IDRMDashboard; `dashboard/` subfolder: IMActivitiesView, DeliverablesView, TemplatesView, StatisticsCards, QuickActions, HelpModal |
@@ -45,24 +46,24 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 | `src/components/responsibility-matrix/` | RACI matrix manager, IM activities, deliverables, export, TIDP sync |
 | `src/components/tidp/` | TIDP dashboard, form, list, details, import, Excel editor |
 | `src/components/steps/` | FormStepRHF (RHF step wrapper) |
-| `src/contexts/` | AuthContext, ProjectContext, BepFormContext, EirContext |
-| `src/schemas/` | bepValidationSchemas.js, authSchemas.js (Zod) |
+| `src/contexts/` | AuthContext, ProjectContext, BepFormContext, EirContext, EirFormContext (RHF for EIR authoring), OirFormContext (RHF for OIR authoring), PartyRoleContext (appointing/lead party role selection) |
+| `src/schemas/` | bepValidationSchemas.js, authSchemas.js, eirValidationSchemas.js, oirValidationSchemas.js (Zod) |
 | `src/services/` | apiService, documentService, draftApiService, backendPdfService, bepFormatter, docxGenerator, bimService (parseIfcFile) |
 | `src/hooks/` | useAISuggestion, useDrafts, useDraftSave, useDraftFilters, useDraftOperations, useExport, useTidpData, useTIDPFilters, useMidpData, useMidpSubPage, useResponsibilityMatrix, useStepNavigation, useMindmapD3, useOutsideClick, useUndoRedo, useDocumentHistory, useEirFill, useSnippets |
-| `src/data/` | emptyBepData, templateRegistry, helpContentData, cdePlatformLibrary; `templates/`: commercialOfficeTemplate; `helpContent/`: loin |
-| `src/config/` | bepConfig.js (barrel — re-exports CONFIG unchanged, imports lucide icons for frontend), bepSteps.js (14-step list + categories + icons), bepTypeDefinitions.js (pre/post-appointment metadata), bepOptions.js (bimUses, fileFormats, software, projectTypes), bepFormFields.js (all field definitions + getFormFields, imports lucide); **server-safe variants (no lucide-react):** bepStepsData.js (step data only), bepFormFieldsData.js (field data only), bepConfigForServer.js (server-safe CONFIG barrel used by Node for GET /template, clone, reset) |
+| `src/data/` | emptyBepData, emptyEirData, emptyOirData, templateRegistry, helpContentData, cdePlatformLibrary; `templates/`: commercialOfficeTemplate, commercialOfficeEirTemplate; `helpContent/`: loin |
+| `src/config/` | bepConfig.js (barrel — re-exports CONFIG unchanged, imports lucide icons for frontend), bepSteps.js (14-step list + categories + icons), bepTypeDefinitions.js (pre/post-appointment metadata), bepOptions.js (bimUses, fileFormats, software, projectTypes), bepFormFields.js (all field definitions + getFormFields, imports lucide); **server-safe variants (no lucide-react):** bepStepsData.js (step data only), bepFormFieldsData.js (field data only), bepConfigForServer.js (server-safe CONFIG barrel); **EIR config (same split pattern):** eirConfig.js, eirSteps.js, eirFormFieldsData.js, eirStepsData.js, eirConfigForServer.js; **OIR config:** oirConfig.js, oirSteps.js, oirFormFieldsData.js, oirStepsData.js, oirConfigForServer.js |
 | `src/constants/` | fieldExamples, iso19650ActivitiesTemplate, routes, tidpTemplates, documentHistory, sidebarUi, idsEntities (IFC entity options + suggestIfcEntity) |
 | `src/utils/` | cn, complianceCheck, csvHelpers, imageCompression, markdownToHtml, validationUtils, eirResponsivenessMatrix, snippetUtils |
-| `server/routes/` | auth, tidp, midp, drafts, ai, export, documents, projects, validation, bep-structure, responsibility-matrix, bim, migrate, loin, snippets |
-| `server/services/` | tidpService, midpService, authService, emailService, emailTemplates, projectService, exportService, htmlTemplateService, puppeteerPdfService, bepStructureService, responsibilityMatrixService, eirExportService, eirDocumentExportService, eirFormAnalysisMapper, eirService, tidpSyncService, encryptedSecretService, loinService, idsGeneratorService, snippetService, loadBepConfig, ifcParserService |
+| `server/routes/` | auth, tidp, midp, drafts, ai, export, documents, projects, validation, bep-structure, responsibility-matrix, bim, migrate, loin, snippets, eir, oir |
+| `server/services/` | tidpService, midpService, authService, emailService, emailTemplates, projectService, exportService, htmlTemplateService, puppeteerPdfService, bepStructureService, responsibilityMatrixService, eirExportService, eirDocumentExportService, eirFormAnalysisMapper, eirService, oirService, tidpSyncService, encryptedSecretService, loinService, idsGeneratorService, snippetService, loadBepConfig, ifcParserService, guidedAiQuestionsCache |
 | `server/services/templates/` | bepStyles.css (HTML/CSS templates for PDF/export rendering) |
 | `server/database.js` | Primary DB entry point — better-sqlite3 setup, all table creation, sample project seeding; writes to `server/db/bep-generator.db` |
 | `server/db/` | SQLite data directory; `database.js` here is legacy (path differs); `.db` file lives here |
 | `server/middleware/` | authMiddleware.js (JWT verify) |
 | `server/validators/` | authValidator.js, midpValidator.js, tidpValidator.js (request validation) |
 | `server/scripts/` | One-off migration scripts (migrate-add-*, migrate-localStorage-to-db) + audit-orphaned-records, seed-bep-structure, backup-database |
-| `server/__tests__/` | Vitest server-side tests: tidp, midp, projects, htmlTemplateService |
-| `ml-service/` | api_ollama.py (FastAPI), eir_analyzer.py, ollama_generator.py (OLLAMA_MODEL env var, default `llama3.1:8b`), text_extractor.py |
+| `server/__tests__/` | Vitest server-side tests: tidp, midp, projects, htmlTemplateService, eirAnalysisApi, eirFormAnalysisMapper |
+| `ml-service/` | api_ollama.py (FastAPI), eir_analyzer.py, ollama_generator.py (OLLAMA_MODEL env var, default `qwen3`), text_extractor.py, benchmark_models.py, verify_ollama.py |
 
 ## Context Providers
 
@@ -72,6 +73,9 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 | `ProjectContext` | currentProject, projects, loadProjects/selectProject | `useProject()` |
 | `BepFormContext` | RHF form methods, errors, isDirty, isValid | `useBepForm()` |
 | `EirContext` | EIR analysis data, field→EIR path mappings | `useEir()` |
+| `EirFormContext` | RHF form methods for EIR authoring | `useEirForm()` |
+| `OirFormContext` | RHF form methods for OIR authoring | `useOirForm()` |
+| `PartyRoleContext` | Appointing party / lead appointed party role selection | `usePartyRole()` |
 | `FormBuilderContext` | Form structure editing state (steps, fields, isEditMode) | `useFormBuilder()` |
 
 ## API Routes Quick Reference
@@ -93,6 +97,7 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 | `/api/migrate` | DB migration endpoints |
 | `/api/loin` | LOIN rows CRUD (withPropertyCount=1 for badge); GET/POST /:rowId/properties, PUT/DELETE /properties/:id |
 | `/api/eir` | EIR drafts: GET/POST /drafts, GET/PUT/DELETE /drafts/:id, GET /drafts/:id/analysis (form→EirAnalysis JSON), POST /drafts/:id/publish |
+| `/api/oir` | OIR drafts: GET/POST /drafts, GET/PUT/DELETE /drafts/:id, POST /drafts/:id/publish |
 | `/api/snippets` | Snippets CRUD + resolve ({{snippet:key}} substitution) |
 
 ## Schemas (Zod)
@@ -101,6 +106,8 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 |------|----------|
 | `bepValidationSchemas.js` | All BEP steps: projectInfo, teamStructure, bimUses, + fullBepSchema (includes linkedEirId). Functions: `getSchemaForStep(i)`, `validateStepData(i, data)` |
 | `authSchemas.js` | loginSchema, registerSchema, forgotPasswordSchema, resetPasswordSchema |
+| `eirValidationSchemas.js` | EIR step schemas; mirrors BEP schema pattern |
+| `oirValidationSchemas.js` | OIR step schemas; mirrors BEP schema pattern |
 
 ## Tech Stack
 
@@ -111,7 +118,7 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 
 ## DB Tables
 
-users, projects, drafts, tidps, containers, midps, documents, steps, fields, field_types, responsibility_matrix (+ related), snippets, loin_rows (ifc_entity), loin_property_requirements, eir_drafts (id, user_id, project_id, title, data, status, created_at, updated_at)
+users, projects, drafts, tidps, containers, midps, documents, steps, fields, field_types, responsibility_matrix (+ related), snippets, loin_rows (ifc_entity), loin_property_requirements, eir_drafts (id, user_id, project_id, title, data, status, created_at, updated_at), oir_drafts (same schema as eir_drafts)
 
 ## Startup
 

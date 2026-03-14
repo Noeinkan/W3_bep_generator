@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -35,8 +35,8 @@ const EirStartMenuView = () => {
   }, [navigate]);
 
   const handleImportEir = useCallback(() => {
-    navigate('/eir-manager/import');
-  }, [navigate]);
+    toast('EIR import coming soon', { icon: '🚧' });
+  }, []);
 
   return (
     <EirStartMenu
