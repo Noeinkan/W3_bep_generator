@@ -1,31 +1,26 @@
 /**
  * ArcquioLogo — inline SVG logomark
- * Geometric arc + Q-tail motif: connects "Arc" (architecture/NeoArc) with the "q" in Arcquio.
- * Use className to control size and color (stroke inherits currentColor).
+ * Design: Q-ring (bold circle) + A-arch (crossing arc) — faithful recreation of the brand mark.
+ * variant="light"  → white ring + indigo arc (for dark backgrounds: sidebar, footer, hero)
+ * variant="dark"   → blue ring + indigo arc  (for light backgrounds: navbar on white)
  */
-const ArcquioLogo = ({ className }) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    className={className}
-    aria-hidden="true"
-  >
-    {/* Main arc — 270° circle open on the right, forming a bold C/Q body */}
-    <path
-      d="M17.2 6.8 A7.5 7.5 0 1 0 17.2 17.2"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-    />
-    {/* Q-tail — short diagonal extending bottom-right from arc end */}
-    <line
-      x1="16.5" y1="17.2"
-      x2="21" y2="21"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-    />
-  </svg>
-);
+const ArcquioLogo = ({ className, variant = 'light' }) => {
+  const ringColor  = variant === 'light' ? '#ffffff'  : '#2563eb';
+  const archColor  = variant === 'light' ? '#818cf8'  : '#6366f1';
+
+  return (
+    <svg viewBox="0 0 100 100" fill="none" className={className} aria-hidden="true">
+      {/* Q-ring — bold circle ring */}
+      <circle cx="50" cy="40" r="24" stroke={ringColor} strokeWidth="7.5" />
+      {/* A-arch — wide arc crossing through the lower portion of the ring */}
+      <path
+        d="M 14 72 C 26 46, 74 46, 86 72"
+        stroke={archColor}
+        strokeWidth="10"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+};
 
 export default ArcquioLogo;

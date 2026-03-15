@@ -25,7 +25,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, navigation }) => {
               aria-label="Go to Home"
               title="Home"
             >
-              <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 bg-brand rounded flex items-center justify-center flex-shrink-0">
                 <ArcquioLogo className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold text-gray-900 whitespace-nowrap">Arcquio</span>
@@ -42,8 +42,8 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, navigation }) => {
           </>
         ) : (
           <div className="flex flex-col items-center space-y-2 w-full">
-            <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
-              <FileText className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 bg-brand rounded flex items-center justify-center">
+              <ArcquioLogo className="w-5 h-5 text-white" />
             </div>
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}

@@ -6,6 +6,11 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        brand: {
+          DEFAULT: '#2D3FA1',   // Arcquio cobalt blue (sampled from logo)
+          hover:   '#243388',   // darker for hover states
+          light:   '#818cf8',   // arch accent / light variant
+        },
         ui: {
           canvas: "var(--ui-canvas)",
           surface: "var(--ui-surface)",
