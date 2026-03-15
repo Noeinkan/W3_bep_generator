@@ -56,7 +56,7 @@ const apFeatures = [
 const lapFeatures = [
   {
     icon: FileText,
-    title: 'BEP Generator',
+    title: 'Arcquio',
     desc: 'AI-powered BIM Execution Plans, 14-step wizard',
     color: 'text-blue-600',
   },
@@ -334,7 +334,7 @@ const HomePage = () => {
       {/* ── Floating Navbar ───────────────────────────────────────────────── */}
       <nav className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-white/85 backdrop-blur-xl border border-white/60 shadow-2xl rounded-3xl px-5 py-2.5 flex items-center gap-3">
         <div className="flex items-center gap-2 font-bold text-indigo-700 text-sm">
-          <FileText className="w-4 h-4" aria-hidden="true" /> BEP Suite
+          <FileText className="w-4 h-4" aria-hidden="true" /> Arcquio
         </div>
         <div className="w-px h-5 bg-gray-200" />
         <div className="flex items-center gap-1 text-sm">
@@ -617,10 +617,10 @@ const HomePage = () => {
             <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-indigo-500 rounded flex items-center justify-center">
               <FileText className="w-3 h-3 text-white" aria-hidden="true" />
             </div>
-            <span className="text-white font-semibold">BEP Suite</span>
+            <span className="text-white font-semibold">Arcquio</span>
             <span>— ISO 19650 information management for BIM professionals</span>
           </div>
-          <span>© 2024–{new Date().getFullYear()} BEP Suite · v2.0.0</span>
+          <span>© 2024–{new Date().getFullYear()} Arcquio · v2.0.0</span>
         </div>
       </footer>
 

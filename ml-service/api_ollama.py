@@ -706,20 +706,131 @@ async def suggest_from_eir(request: SuggestFromEirRequest):
         )
 
 
-# EIR authoring: suggest content for a specific EIR form field (ISO 19650)
-EIR_FIELD_SUGGEST_PROMPT = """You are an ISO 19650 and UK BIM Framework expert helping to author Exchange Information Requirements (EIR).
+# EIR fields where Qwen3 thinking mode produces meaningfully better ISO 19650 content
+# (complex authoring tasks that require understanding the requirements hierarchy).
+# Applied on the appointing party (EIR authoring) side only.
+COMPLEX_EIR_FIELDS = {
+    'executiveSummary', 'eirPurpose', 'goals', 'objectives',
+    'informationPurpose', 'informationRequirementsHierarchy',
+    'pimRequirements', 'aimRequirements',
+    'authorisationAcceptanceProcess', 'informationModelQuality',
+    'federationStrategy', 'informationDeliveryRiskAssessment',
+}
 
-Generate concise, professional content for this EIR field only. Use British English. Do not add meta-commentary or "Here is..."; output the content that should appear in the document.
+# Field-specific ISO 19650 guidance for EIR authoring suggestions (appointing party)
+EIR_FIELD_GUIDANCE: dict = {
+    'executiveSummary': (
+        "Write a 150–250 word executive summary stating: the project purpose, why this EIR is issued, "
+        "the information management standard (ISO 19650), and what the delivery team must demonstrate in their BEP response."
+    ),
+    'eirPurpose': (
+        "Define the purpose of this EIR per ISO 19650-2:2018 §5.1. State that it defines the appointing party's "
+        "information requirements, how the delivery team should respond with a BEP, and how it relates to any OIR and PIR. "
+        "100–180 words."
+    ),
+    'goals': (
+        "Write 3–5 high-level outcome-focused information management goals "
+        "(e.g. 'Reduce on-site coordination errors by enabling federated clash detection'). Bulleted list."
+    ),
+    'objectives': (
+        "Write 4–6 SMART information management objectives. Each should be specific and measurable "
+        "(e.g. 'All design models federated and checked weekly from RIBA Stage 3'). Bulleted list."
+    ),
+    'informationPurpose': (
+        "Describe the purpose of information to be produced under ISO 19650-2:2018 §5.5. "
+        "Cover OIR, PIR, and AIR linkage. Explain how information serves design, construction, and asset management. "
+        "100–180 words."
+    ),
+    'informationRequirementsHierarchy': (
+        "Describe the document hierarchy: OIR → PIR/AIR → EIR → BEP. Explain how OIR feeds into PIR and AIR, "
+        "which are reflected in this EIR. Delivery teams respond via pre-appointment BEP then confirmed post-appointment BEP. "
+        "100–150 words."
+    ),
+    'informationSecurityRequirements': (
+        "Describe information security requirements following ISO 19650-5 principles. Cover classification tiers, "
+        "data handling rules, CDE access control, and any sensitivity requirements (e.g. UK OFFICIAL). 80–150 words."
+    ),
+    'pimRequirements': (
+        "Describe PIM requirements at each RIBA stage. Cover geometric fidelity (LOD), information richness (LOI), "
+        "format requirements (IFC/NWD), and federation approach. 100–180 words."
+    ),
+    'aimRequirements': (
+        "Describe AIM requirements at handover per ISO 19650-3. Cover COBie data, geometric accuracy, attribute completeness, "
+        "and how the AIM feeds into the client's asset management system. 100–180 words."
+    ),
+    'trainingRequirements': (
+        "State minimum BIM competency standards for the delivery team. Reference ISO 19650 Practitioner or equivalent. "
+        "List software certifications and project-specific training. 60–120 words."
+    ),
+    'authorisationAcceptanceProcess': (
+        "Describe the process for information authorisation and acceptance. Reference suitability codes (S0–S5 or equivalent), "
+        "responsible parties, and how information moves from WIP to Shared to Published in the CDE. 100–150 words."
+    ),
+    'informationModelQuality': (
+        "Describe QA and checking requirements for information models. Cover automated checking tools (e.g. Solibri, Navisworks), "
+        "clash detection procedures, and validation gate criteria. 80–150 words."
+    ),
+    'federationStrategy': (
+        "Describe the strategy for combining models from different task teams. Cover ownership, coordination zones, "
+        "clash detection responsibilities, and federation frequency. 80–150 words."
+    ),
+    'informationDeliveryRiskAssessment': (
+        "Identify information delivery risks and mitigations. Cover data loss, version control, coordination failures, "
+        "software compatibility, and dependency on third-party data. Bullet format. 80–150 words."
+    ),
+}
+
+_EIR_DEFAULT_FIELD_GUIDANCE = (
+    "Write concise, professional content for this EIR field per ISO 19650. British English. 80–150 words. "
+    "No preamble, no meta-commentary — output only the document text."
+)
+
+
+def _build_eir_context_fragment(eir_draft_data: dict, current_field: str) -> str:
+    """Build a budget-capped context snippet from other filled EIR sections."""
+    CONTEXT_FIELDS = [
+        ('projectDescription', 150),
+        ('executiveSummary', 200),
+        ('eirPurpose', 200),
+        ('goals', 150),
+        ('objectives', 150),
+        ('informationPurpose', 200),
+        ('informationRequirementsHierarchy', 150),
+        ('planOfWork', 100),
+    ]
+    parts = []
+    total = 0
+    budget = 1200
+    for key, limit in CONTEXT_FIELDS:
+        if key == current_field:
+            continue
+        v = eir_draft_data.get(key)
+        if v and isinstance(v, str) and v.strip():
+            snippet = v.strip()[:limit]
+            entry = f"{key}: {snippet}"
+            if total + len(entry) > budget:
+                break
+            parts.append(entry)
+            total += len(entry)
+    if not parts:
+        return ""
+    return "Context from other EIR sections (for consistency):\n" + "\n".join(parts) + "\n\n"
+
+
+# EIR authoring: suggest content for a specific EIR form field (ISO 19650)
+EIR_FIELD_SUGGEST_PROMPT = """You are an ISO 19650 and UK BIM Framework expert helping to author Exchange Information Requirements (EIR) for an appointing party.
 
 EIR field: {field_label} (internal name: {field_name})
-Existing text in field (may be empty):
+
+Field guidance:
+{field_guidance}
+
+{fragment}Current text (empty = write from scratch):
 ---
 {current_text}
 ---
 
-{fragment}
-
-Return ONLY the suggested text for this field (no preamble, no explanation)."""
+Return ONLY the suggested text. British English. No preamble, no "Here is...", no meta-commentary."""
 
 
 @app.post("/suggest-eir-field", response_model=SuggestEirFieldResponse, tags=["EIR Analysis"])
@@ -730,6 +841,7 @@ async def suggest_eir_field(request: SuggestEirFieldRequest):
     Used when the client is writing the EIR (appointing party side). The suggestion
     is tailored to the EIR field taxonomy (executiveSummary, eirPurpose, goals,
     informationRequirements, etc.) and optionally uses other filled EIR sections as context.
+    Complex authoring fields use Qwen3 thinking mode for higher-quality ISO 19650 content.
     """
     try:
         effective_model = request.model or OLLAMA_MODEL
@@ -738,38 +850,35 @@ async def suggest_eir_field(request: SuggestEirFieldRequest):
         field_label = request.field_label or "".join(
             " " + c if c.isupper() else c for c in request.field_name
         ).strip().lstrip()
-        fragment = ""
-        if request.eir_draft_data and isinstance(request.eir_draft_data, dict):
-            # Summarise a few key text fields for context (avoid huge payloads)
-            parts = []
-            for key in ("executiveSummary", "eirPurpose", "goals", "objectives", "informationPurpose"):
-                v = request.eir_draft_data.get(key)
-                if v and isinstance(v, str) and v.strip():
-                    parts.append(f"{key}: {v.strip()[:300]}")
-            if parts:
-                fragment = "Context from other EIR sections (for consistency):\n" + "\n".join(parts) + "\n\n"
-            else:
-                fragment = ""
+
+        fragment = _build_eir_context_fragment(
+            request.eir_draft_data if isinstance(request.eir_draft_data, dict) else {},
+            request.field_name,
+        )
+
+        field_guidance = EIR_FIELD_GUIDANCE.get(request.field_name, _EIR_DEFAULT_FIELD_GUIDANCE)
+        use_thinking = request.field_name in COMPLEX_EIR_FIELDS
 
         prompt = EIR_FIELD_SUGGEST_PROMPT.format(
             field_name=request.field_name,
             field_label=field_label,
+            field_guidance=field_guidance,
             current_text=request.current_text or "(empty)",
             fragment=fragment,
         )
 
         suggestion = generator.generate_text(
             prompt=prompt,
-            max_length=600,
-            temperature=0.5,
-            thinking_mode=False  # Fast generation for EIR authoring fields
+            max_length=900 if use_thinking else 600,
+            temperature=0.4,
+            thinking_mode=use_thinking,
         )
         if isinstance(suggestion, str):
             suggestion = suggestion.strip()
         else:
             suggestion = str(suggestion).strip()
 
-        logger.info(f"Generated EIR authoring suggestion for {request.field_name}")
+        logger.info(f"Generated EIR authoring suggestion for {request.field_name} (thinking={use_thinking})")
 
         return SuggestEirFieldResponse(
             suggestion=suggestion,

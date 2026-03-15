@@ -14,7 +14,7 @@ import BepPreviewView from './bep/BepPreviewView';
 import { useAuth } from '../../contexts/AuthContext';
 
 /**
- * BEP Generator Wrapper using nested routes and React Hook Form
+ * BEP module wrapper using nested routes and React Hook Form
  *
  * Route structure:
  * - /bep-generator                           -> Start menu

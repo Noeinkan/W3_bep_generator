@@ -293,6 +293,70 @@ function buildInformationRequirements(data) {
 }
 
 /**
+ * Build training requirements from EIR form data.
+ */
+function buildTrainingRequirements(data) {
+  return {
+    bim_competency_standards: safeString(data.trainingRequirements),
+    required_certifications: textToList(data.trainingRequirements),
+    project_specific_training: [],
+  };
+}
+
+/**
+ * Build security requirements from EIR form data.
+ */
+function buildSecurityRequirements(data) {
+  const securityMetaRows = safeArray(data.appendixSecurityMetadata);
+  const accessPolicyParts = securityMetaRows
+    .map((row) => {
+      const cols = ['Classification', 'Description', 'Controls'];
+      return cols.map((c) => safeString(row[c])).filter(Boolean).join(' — ');
+    })
+    .filter(Boolean);
+
+  return {
+    classification_scheme: null,
+    data_handling_requirements: safeString(data.informationSecurityRequirements),
+    access_control_policy: accessPolicyParts.length > 0 ? accessPolicyParts.join('; ') : null,
+  };
+}
+
+/**
+ * Build information protocols from EIR form data.
+ */
+function buildInformationProtocols(data) {
+  const meetings = textToList(data.informationExchangeFrequency);
+  return {
+    exchange_events: [],
+    coordination_frequency: safeString(data.informationExchangeFrequency),
+    bcf_workflow_required: false,
+    collaboration_meetings: meetings,
+  };
+}
+
+/**
+ * Build LOIN/LOD/LOI requirements from EIR lodLoiMatrix table rows.
+ */
+function buildLoinRequirements(data) {
+  const rows = safeArray(data.lodLoiMatrix);
+  return rows
+    .map((row) => {
+      const stage = safeString(row['Project Stage'] || row.Stage || row['RIBA Stage']);
+      const discipline = safeString(row['Element Category / Discipline'] || row.Discipline || row.Element);
+      if (!stage && !discipline) return null;
+      return {
+        stage,
+        discipline,
+        lod: safeString(row.LOD || row['Level of Detail']),
+        loi: safeString(row.LoI || row.LOI || row['Level of Information']),
+        notes: safeString(row.Notes || row.Note),
+      };
+    })
+    .filter(Boolean);
+}
+
+/**
  * Map authored EIR form data into the canonical EIR analysis JSON shape.
  *
  * @param {object} formData - EIR form data from eir_drafts.data (EMPTY_EIR_DATA shape)
@@ -366,6 +430,10 @@ function mapEirFormDataToAnalysis(formData) {
     handover_requirements,
     specific_risks,
     other_requirements,
+    training_requirements: buildTrainingRequirements(data),
+    security_requirements: buildSecurityRequirements(data),
+    information_protocols: buildInformationProtocols(data),
+    loin_requirements: buildLoinRequirements(data),
   };
 }
 
@@ -383,7 +451,7 @@ function buildBasicEirSummaryMarkdown(analysis) {
   if (pi.description) {
     lines.push(pi.description);
   } else {
-    lines.push('Exchange Information Requirements authored in BEP Suite.');
+    lines.push('Exchange Information Requirements authored in Arcquio.');
   }
 
   if (analysis.bim_objectives && analysis.bim_objectives.length > 0) {

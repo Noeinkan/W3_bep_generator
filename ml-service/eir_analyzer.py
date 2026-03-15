@@ -103,6 +103,37 @@ class HandoverRequirements(BaseModel):
     documentation: List[str] = Field(default_factory=list)
 
 
+class TrainingRequirements(BaseModel):
+    """Training and competency requirements for the delivery team."""
+    bim_competency_standards: Optional[str] = None
+    required_certifications: List[str] = Field(default_factory=list)
+    project_specific_training: List[str] = Field(default_factory=list)
+
+
+class SecurityRequirements(BaseModel):
+    """Information security and data handling requirements."""
+    classification_scheme: Optional[str] = None
+    data_handling_requirements: Optional[str] = None
+    access_control_policy: Optional[str] = None
+
+
+class InformationProtocols(BaseModel):
+    """Information exchange protocols, events, and coordination cadence."""
+    exchange_events: List[str] = Field(default_factory=list)
+    coordination_frequency: Optional[str] = None
+    bcf_workflow_required: bool = False
+    collaboration_meetings: List[str] = Field(default_factory=list)
+
+
+class LoinEntry(BaseModel):
+    """Single LOIN/LOD/LOI entry for a stage and discipline."""
+    stage: Optional[str] = None
+    discipline: Optional[str] = None
+    lod: Optional[str] = None
+    loi: Optional[str] = None
+    notes: Optional[str] = None
+
+
 class EirAnalysis(BaseModel):
     """Complete EIR analysis structure with validation."""
     project_info: ProjectInfo = Field(default_factory=ProjectInfo)
@@ -118,6 +149,10 @@ class EirAnalysis(BaseModel):
     handover_requirements: HandoverRequirements = Field(default_factory=HandoverRequirements)
     specific_risks: List[str] = Field(default_factory=list)
     other_requirements: List[str] = Field(default_factory=list)
+    training_requirements: TrainingRequirements = Field(default_factory=TrainingRequirements)
+    security_requirements: SecurityRequirements = Field(default_factory=SecurityRequirements)
+    information_protocols: InformationProtocols = Field(default_factory=InformationProtocols)
+    loin_requirements: List[LoinEntry] = Field(default_factory=list)
 
 
 # ============================================================================
@@ -180,11 +215,37 @@ Required JSON structure:
     "documentation": ["list of required documentation"]
   }},
   "specific_risks": ["identified specific risks or requirements"],
-  "other_requirements": ["other uncategorized requirements"]
+  "other_requirements": ["other uncategorized requirements"],
+  "training_requirements": {{
+    "bim_competency_standards": "e.g. ISO 19650 Practitioner required or null",
+    "required_certifications": ["certification names, or empty list"],
+    "project_specific_training": ["project-specific training items, or empty list"]
+  }},
+  "security_requirements": {{
+    "classification_scheme": "e.g. UK OFFICIAL SENSITIVE or null",
+    "data_handling_requirements": "data handling or retention requirements or null",
+    "access_control_policy": "role-based access or authentication requirements or null"
+  }},
+  "information_protocols": {{
+    "exchange_events": ["named trigger points for information delivery, e.g. Design Freeze, Stage Gate 3"],
+    "coordination_frequency": "e.g. fortnightly or null",
+    "bcf_workflow_required": false,
+    "collaboration_meetings": ["coordination or BIM meeting types mentioned, or empty list"]
+  }},
+  "loin_requirements": [
+    {{"stage": "RIBA Stage X or null", "discipline": "Discipline or null", "lod": "LOD 300 or null", "loi": "LOI description or null", "notes": "null"}}
+  ]
 }}
 
 If a field is not present in the document, use null for strings or empty array [] for lists.
 Extract real information from the document - do not invent data.
+
+Pay particular attention to extracting:
+- Exchange events: named trigger points for information delivery (e.g. "Design Freeze", "Stage Gate 3", "Handover")
+- Security classifications: any mention of sensitivity tiers, GDPR controls, data handling or retention requirements
+- Training and competency: ISO 19650 certification requirements, software training obligations for the delivery team
+- LOIN/LOD/LOI tables: any matrix or table of Level of Detail or Information Need by stage and/or discipline
+Place these in their dedicated fields; do not put them in other_requirements.
 
 EIR DOCUMENT TO ANALYZE:
 {eir_text}
@@ -228,25 +289,68 @@ JSON ANALYSIS:
 ENGLISH MARKDOWN SUMMARY:"""
 
 
-# Prompt for field-specific suggestions based on EIR analysis (output in English for BEP)
-FIELD_SUGGESTION_PROMPT = """You are a BIM ISO 19650 expert. Based on the provided EIR analysis, generate a specific suggestion for the "{field_type}" field of the BEP.
+# Field-specific ISO 19650 guidance for BEP field suggestion generation
+FIELD_GUIDANCE: dict = {
+    'bimGoals': "Write 3–5 numbered high-level BIM outcomes for this project drawn from bim_objectives (e.g. 'Reduce on-site coordination errors through federated clash detection'). 80–150 words.",
+    'bimObjectives': "Write 4–6 SMART BIM objectives aligned to bim_objectives and information_requirements.PIR. Bullet list, each specific and measurable. 80–150 words.",
+    'primaryObjectives': "List specific, measurable BIM objectives aligned to bim_objectives and information_requirements.PIR. Bullet format. 60–120 words.",
+    'bimUses': "List the BIM uses required by the EIR. Extract from bim_objectives and information_requirements.EIR_specifics. Group by use category where possible.",
+    'projectObjectives': "Describe confirmed project objectives drawing from bim_objectives and information_requirements.PIR. 80–120 words.",
+    'cdeStrategy': "Explain the CDE approach using cde_requirements (platform, workflow_states, access_control, folder_structure). Reference ISO 19650-1:2018 §12. 80–150 words.",
+    'cdePlatforms': "Describe the CDE platform from cde_requirements.platform and workflow_states. 60–100 words.",
+    'workflowStates': "List and describe the CDE workflow states from cde_requirements.workflow_states. For each state, note access level and transition criteria.",
+    'namingConventions': "Define the information container naming scheme from standards_protocols.naming_conventions. Reference BS EN ISO 19650-2 metadata fields if present. 60–120 words.",
+    'modelValidation': "Describe model checking and validation procedures from quality_requirements (model_checking, clash_detection, validation_procedures). Reference specific tools if mentioned. 60–120 words.",
+    'qualityAssurance': "Compose the QA framework from quality_requirements. Cover model checking, clash detection, validation procedures. Reference checking tools. 80–150 words.",
+    'qaFramework': "Describe the QA framework from quality_requirements. Cover model checking, clash detection, validation procedures, and review gates. 80–150 words.",
+    'clashDetection': "Describe clash detection requirements from quality_requirements.clash_detection. Specify responsible parties, frequency, software, and resolution process. 60–120 words.",
+    'modelReviewAuthorisation': "Describe model review and authorisation procedures from quality_requirements.validation_procedures. Reference suitability codes and responsible roles. 60–120 words.",
+    'complianceVerification': "Describe compliance verification procedures from quality_requirements.validation_procedures. 60–100 words.",
+    'keyMilestones': "List stage-gate milestones from delivery_milestones as a markdown table with Phase, Description, and Date columns. Preserve all phases exactly as extracted.",
+    'projectInformationRequirements': "Summarise PIR from information_requirements.PIR and EIR_specifics. Explain what information is required at each stage gate. 80–150 words.",
+    'informationPurposes': "Describe information purposes from information_requirements (OIR, AIR, PIR, EIR_specifics). Format as categorised bullet list by OIR/AIR/PIR. 80–150 words.",
+    'handoverRequirements': "Describe AIM/COBie requirements from handover_requirements (cobie_required, asset_data, documentation). Reference ISO 19650-3 if applicable. 80–130 words.",
+    'cobieRequirements': "Describe COBie data requirements from handover_requirements. Specify component types and data attributes required. 80–130 words.",
+    'informationRisks': "List information risks from specific_risks as bullets with a brief mitigation note for each. 80–150 words.",
+    'classificationSystems': "List the classification systems from standards_protocols.classification_systems. For each, state the application area and code format. Plain list format.",
+    'bimSoftware': "List required software from software_requirements. Group by category: authoring, coordination/viewing, CDE, analysis. Plain list format.",
+    'softwarePlatforms': "List required or preferred software platforms from software_requirements. Plain list format.",
+    'fileFormats': "List required file formats from standards_protocols.file_formats. Group by purpose: native, exchange (IFC), archival. Plain list format.",
+    'informationFormats': "List required information formats from standards_protocols.file_formats. Plain list format.",
+    'lodRequirements': "Describe LOD/LOI requirements from standards_protocols.lod_loi_requirements and loin_requirements. 60–120 words.",
+    'loiRequirements': "Describe LOI requirements from standards_protocols.lod_loi_requirements and loin_requirements. 60–120 words.",
+    'levelOfInformationMatrix': "List LOIN requirements from loin_requirements as a markdown table with Stage, Discipline, LOD, LOI, and Notes columns. If loin_requirements is empty, use standards_protocols.lod_loi_requirements.",
+    'trainingRequirements': "Describe BIM competency and training requirements from training_requirements (bim_competency_standards, required_certifications, project_specific_training). 60–120 words.",
+    'bimCompetencyLevels': "Describe BIM competency standards from training_requirements.bim_competency_standards and required_certifications. 60–100 words.",
+    'certificationNeeds': "List required certifications from training_requirements.required_certifications. Plain list format.",
+    'dataClassification': "Describe security tiers and data handling rules from security_requirements. Align to UK Gov security classifications if referenced. 60–100 words.",
+    'accessPermissions': "Describe access control policy from security_requirements.access_control_policy. Detail user groups, roles, and authentication requirements. 60–100 words.",
+    'coordinationMeetings': "Describe the coordination meeting schedule from information_protocols (collaboration_meetings, coordination_frequency). Specify meeting type, frequency, and attendees. 60–100 words.",
+    'taskTeamExchange': "Describe task team information exchange from information_protocols (exchange_events, bcf_workflow_required). Mention BCF if required. 60–100 words.",
+    'communicationProtocols': "Describe communication protocols from information_protocols (coordination_frequency, collaboration_meetings). 60–100 words.",
+}
 
-The suggestion must:
-- Be in English
-- Be directly relevant to the requested field
-- Be based on data extracted from the EIR
-- Be ready for insertion in the BEP (formal and professional text)
-- Be between 50 and 200 words
+_DEFAULT_FIELD_GUIDANCE = (
+    "Generate concise, professional BEP content of 80–150 words. "
+    "British English. Base content strictly on the EIR analysis provided — do not invent data."
+)
+
+# Prompt for field-specific suggestions based on EIR analysis (output in English for BEP)
+FIELD_SUGGESTION_PROMPT = """You are a BIM ISO 19650 expert. Based on the EIR analysis below, generate content for the "{field_type}" BEP field.
+
+Field guidance:
+{field_guidance}
+
+Requirements:
+- British English
+- Based only on data in the EIR analysis — do not invent data
+- Formal document prose, ready for insertion into the BEP
+- Do not include "Here is...", "Based on...", or any preamble
 
 EIR ANALYSIS:
 {analysis_json}
-
-EXISTING TEXT IN FIELD (if empty, generate from scratch):
-{partial_text}
-
-BEP FIELD: {field_type}
-
-ENGLISH SUGGESTION:"""
+{partial_text_block}
+CONTENT:"""
 
 
 # ============================================================================
@@ -286,9 +390,28 @@ class EirAnalyzer:
         'classificationSystems': 'standards_protocols.classification_systems',
         'modelValidation': 'quality_requirements.model_checking',
         'qualityAssurance': 'quality_requirements',
+        'qaFramework': 'quality_requirements',
+        'clashDetection': 'quality_requirements.clash_detection',
+        'modelReviewAuthorisation': 'quality_requirements.validation_procedures',
+        'complianceVerification': 'quality_requirements.validation_procedures',
         'cobieRequirements': 'handover_requirements',
         'handoverRequirements': 'handover_requirements',
         'informationRisks': 'specific_risks',
+        # New schema sections
+        'trainingRequirements': 'training_requirements',
+        'bimCompetencyLevels': 'training_requirements.bim_competency_standards',
+        'certificationNeeds': 'training_requirements.required_certifications',
+        'projectSpecificTraining': 'training_requirements.project_specific_training',
+        'dataClassification': 'security_requirements',
+        'accessPermissions': 'security_requirements.access_control_policy',
+        'coordinationMeetings': 'information_protocols.collaboration_meetings',
+        'taskTeamExchange': 'information_protocols.exchange_events',
+        'communicationProtocols': 'information_protocols.coordination_frequency',
+        'levelOfInformationMatrix': 'loin_requirements',
+        'lodRequirements': 'standards_protocols.lod_loi_requirements',
+        'loiRequirements': 'standards_protocols.lod_loi_requirements',
+        'geometricalInfo': 'standards_protocols.lod_loi_requirements',
+        'alphanumericalInfo': 'standards_protocols.lod_loi_requirements',
     }
 
     def __init__(self, model: Optional[str] = None):
@@ -614,6 +737,53 @@ class EirAnalyzer:
                             elif not merged[dict_key].get(key):
                                 merged[dict_key][key] = value
 
+            # Merge training_requirements (prefer non-null scalar, merge lists)
+            if 'training_requirements' in analysis and analysis['training_requirements']:
+                src = analysis['training_requirements']
+                tgt = merged.setdefault('training_requirements', {})
+                if src.get('bim_competency_standards') and not tgt.get('bim_competency_standards'):
+                    tgt['bim_competency_standards'] = src['bim_competency_standards']
+                for list_key in ['required_certifications', 'project_specific_training']:
+                    tgt.setdefault(list_key, [])
+                    for item in (src.get(list_key) or []):
+                        if item and not self._is_duplicate_fuzzy(item, tgt[list_key], self.FUZZY_THRESHOLD_GENERAL):
+                            tgt[list_key].append(item)
+
+            # Merge security_requirements (prefer non-null scalar)
+            if 'security_requirements' in analysis and analysis['security_requirements']:
+                src = analysis['security_requirements']
+                tgt = merged.setdefault('security_requirements', {})
+                for key in ['classification_scheme', 'data_handling_requirements', 'access_control_policy']:
+                    if src.get(key) and not tgt.get(key):
+                        tgt[key] = src[key]
+
+            # Merge information_protocols (lists fuzzy-deduped, scalar prefer non-null)
+            if 'information_protocols' in analysis and analysis['information_protocols']:
+                src = analysis['information_protocols']
+                tgt = merged.setdefault('information_protocols', {})
+                if src.get('coordination_frequency') and not tgt.get('coordination_frequency'):
+                    tgt['coordination_frequency'] = src['coordination_frequency']
+                if src.get('bcf_workflow_required'):
+                    tgt['bcf_workflow_required'] = True
+                for list_key in ['exchange_events', 'collaboration_meetings']:
+                    tgt.setdefault(list_key, [])
+                    for item in (src.get(list_key) or []):
+                        if item and not self._is_duplicate_fuzzy(item, tgt[list_key], self.FUZZY_THRESHOLD_GENERAL):
+                            tgt[list_key].append(item)
+
+            # Merge loin_requirements (keyed by stage+discipline)
+            if 'loin_requirements' in analysis and analysis['loin_requirements']:
+                existing_keys = {
+                    (e.get('stage', ''), e.get('discipline', ''))
+                    for e in merged.get('loin_requirements', [])
+                }
+                merged.setdefault('loin_requirements', [])
+                for entry in analysis['loin_requirements']:
+                    key = (entry.get('stage', ''), entry.get('discipline', ''))
+                    if key not in existing_keys:
+                        merged['loin_requirements'].append(entry)
+                        existing_keys.add(key)
+
         return self._sanitize_analysis(merged)
 
     def _sanitize_analysis(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
@@ -681,7 +851,57 @@ class EirAnalyzer:
         # Roles & responsibilities
         validated['roles_responsibilities'] = self._clean_roles(validated.get('roles_responsibilities', []))
 
+        # Training requirements (new)
+        training = validated.get('training_requirements', {})
+        if isinstance(training, dict):
+            training['bim_competency_standards'] = self._clean_string(training.get('bim_competency_standards'))
+            training['required_certifications'] = self._clean_list(training.get('required_certifications', []))
+            training['project_specific_training'] = self._clean_list(training.get('project_specific_training', []))
+        validated['training_requirements'] = training if isinstance(training, dict) else {}
+
+        # Security requirements (new)
+        security = validated.get('security_requirements', {})
+        if isinstance(security, dict):
+            security['classification_scheme'] = self._clean_string(security.get('classification_scheme'))
+            security['data_handling_requirements'] = self._clean_string(security.get('data_handling_requirements'))
+            security['access_control_policy'] = self._clean_string(security.get('access_control_policy'))
+        validated['security_requirements'] = security if isinstance(security, dict) else {}
+
+        # Information protocols (new)
+        protocols = validated.get('information_protocols', {})
+        if isinstance(protocols, dict):
+            protocols['exchange_events'] = self._clean_list(protocols.get('exchange_events', []))
+            protocols['coordination_frequency'] = self._clean_string(protocols.get('coordination_frequency'))
+            if not isinstance(protocols.get('bcf_workflow_required'), bool):
+                protocols['bcf_workflow_required'] = False
+            protocols['collaboration_meetings'] = self._clean_list(protocols.get('collaboration_meetings', []))
+        validated['information_protocols'] = protocols if isinstance(protocols, dict) else {}
+
+        # LOIN requirements (new)
+        validated['loin_requirements'] = self._clean_loin_entries(validated.get('loin_requirements', []))
+
         return validated
+
+    def _clean_loin_entries(self, entries: Any) -> List[Dict[str, Any]]:
+        """Clean LOIN/LOD/LOI entry list and drop empty entries."""
+        if not isinstance(entries, list):
+            return []
+        cleaned = []
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            stage = self._clean_string(entry.get('stage'))
+            discipline = self._clean_string(entry.get('discipline'))
+            if not stage and not discipline:
+                continue
+            cleaned.append({
+                'stage': stage,
+                'discipline': discipline,
+                'lod': self._clean_string(entry.get('lod')),
+                'loi': self._clean_string(entry.get('loi')),
+                'notes': self._clean_string(entry.get('notes')),
+            })
+        return cleaned
 
     def _clean_string(self, value: Optional[str]) -> Optional[str]:
         """Normalize and validate a string value."""
@@ -955,19 +1175,27 @@ class EirAnalyzer:
         if direct_value and not partial_text:
             return direct_value
 
+        # Build field-specific guidance and partial text block
+        field_guidance = FIELD_GUIDANCE.get(field_type, _DEFAULT_FIELD_GUIDANCE)
+        partial_text_block = (
+            f"\nEXISTING TEXT (extend or refine):\n{partial_text}\n"
+            if partial_text else ""
+        )
+
         # Generate suggestion using LLM with retry logic
         prompt = FIELD_SUGGESTION_PROMPT.format(
             field_type=field_type,
+            field_guidance=field_guidance,
             analysis_json=json.dumps(analysis_json, indent=2, ensure_ascii=False),
-            partial_text=partial_text or "(nessun testo)"
+            partial_text_block=partial_text_block,
         )
 
         try:
             suggestion = self.generator.generate_text(
                 prompt=prompt,
-                max_length=500,
-                temperature=0.5,
-                thinking_mode=False  # Analysis already done; fast text generation
+                max_length=600,
+                temperature=0.4,
+                thinking_mode=True  # Qwen3: deeper reasoning over EIR analysis produces higher-quality field content
             )
             return suggestion.strip()
         except (ConnectionError, TimeoutError) as e:

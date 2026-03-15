@@ -274,7 +274,7 @@ const BepFormViewContent = () => {
         isTransitioning={isTransitioning}
         sidebar={
           <DocumentEditorSidebar
-            title="BEP Generator"
+            title="Arcquio"
             subtitle={CONFIG.bepTypeDefinitions[bepType]?.title}
             documentName={currentDraft?.name}
             steps={steps}

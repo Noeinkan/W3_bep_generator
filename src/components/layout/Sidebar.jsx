@@ -27,7 +27,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, navigation }) => {
               <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center flex-shrink-0">
                 <FileText className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-gray-900 whitespace-nowrap">BEP Suite</span>
+              <span className="text-xl font-bold text-gray-900 whitespace-nowrap">Arcquio</span>
             </NavLink>
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}

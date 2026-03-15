@@ -1,4 +1,4 @@
-# Project Index — BEP Generator
+# Project Index — Arcquio
 
 > **Purpose:** Compact codebase map so Claude reads this FIRST instead of exploring.
 > ~175 lines vs ~50,000+ lines of source code.

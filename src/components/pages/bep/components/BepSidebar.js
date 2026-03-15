@@ -97,7 +97,7 @@ const BepSidebar = ({
           <div>
             <h1 className="text-xl font-semibold text-ui-text flex items-center">
               <Zap className="w-5 h-5 text-ui-primary mr-2" />
-              BEP Generator
+              Arcquio
             </h1>
             <p className="text-sm text-ui-text-muted mt-1">
               {CONFIG.bepTypeDefinitions[bepType]?.title}

@@ -1,4 +1,4 @@
-# CLAUDE.md — BEP Generator
+# CLAUDE.md — Arcquio
 
 ## Stack
 React 19 + Vite + Express + better-sqlite3 (SQLite) + Python/Ollama ML service. All start via `npm start`.

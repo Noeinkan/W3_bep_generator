@@ -1,5 +1,5 @@
 {
-  "name": "bep-generator-backend",
+  "name": "arcquio-backend",
   "version": "1.0.0",
   "description": "Backend API for BEP, TIDP, and MIDP management",
   "main": "server.js",
@@ -43,6 +43,6 @@
     "MIDP",
     "BEP"
   ],
-  "author": "BEP Generator Team",
+  "author": "NeoArc Solutions",
   "license": "MIT"
 }

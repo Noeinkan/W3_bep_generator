@@ -26,7 +26,7 @@ const BepLayout = () => {
               <Zap className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">BEP Generator</h1>
+              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Arcquio</h1>
               <p className="text-sm lg:text-base text-gray-600">Create professional BIM Execution Plans</p>
             </div>
           </div>

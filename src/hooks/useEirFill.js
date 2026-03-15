@@ -19,6 +19,48 @@ const EIR_FIELD_LABELS = {
   bimSoftware: 'BIM Software',
   bimUses: 'BIM Uses',
   informationPurposes: 'Information Purposes',
+  // New fields
+  trainingRequirements: 'Training Requirements',
+  bimCompetencyLevels: 'BIM Competency Levels',
+  dataClassification: 'Data Classification',
+  accessPermissions: 'Access Permissions',
+  coordinationMeetings: 'Coordination Meetings',
+  taskTeamExchange: 'Task Team Exchange Protocols',
+  communicationProtocols: 'Communication Protocols',
+  modelReviewAuthorisation: 'Model Review & Authorisation',
+  complianceVerification: 'Compliance Verification',
+  lodRequirements: 'LOD / LOI Requirements',
+  cdeStrategy: 'CDE Strategy',
+  namingConventions: 'Naming Conventions',
+  projectContext:                        'Project Context',
+  bimStrategy:                           'BIM Strategy',
+  keyCommitments:                        'Key Commitments',
+  informationManagementResponsibilities: 'Information Management Responsibilities',
+  federationStrategy:                    'Federation Strategy',
+  accessControl:                         'Access Control',
+  securityOnExchanges:                   'Security on Exchanges',
+  securityOnExchangesFramework:          'Security Framework',
+  securityMeasures:                      'Security Measures',
+  encryptionRequirements:                'Encryption Requirements',
+  dataTransferProtocols:                 'Data Transfer Protocols',
+  privacyConsiderations:                 'Privacy Considerations',
+  backupProcedures:                      'Backup Procedures',
+  networkRequirements:                   'Network Requirements',
+  hardwareRequirements:                  'Hardware Requirements',
+  softwareHardwareInfrastructure:        'Software & Hardware Infrastructure',
+  interoperabilityNeeds:                 'Interoperability Needs',
+  modelingStandards:                     'Modelling Standards',
+  classificationStandards:              'Classification Standards',
+  dataExchangeProtocols:                 'Data Exchange Protocols',
+  reviewProcesses:                       'Review Processes',
+  approvalWorkflows:                     'Approval Workflows',
+  informationRiskRegister:               'Information Risk Register',
+  technologyRisks:                       'Technology Risks',
+  riskMitigation:                        'Risk Mitigation',
+  contingencyPlans:                      'Contingency Plans',
+  tidpRequirements:                      'TIDP Requirements',
+  informationDeliverablesMatrix:         'Information Deliverables Matrix',
+  issueResolution:                       'Issue Resolution',
 };
 
 const TEXT_FIELDS = [
@@ -26,6 +68,24 @@ const TEXT_FIELDS = [
   'bimGoals', 'primaryObjectives', 'bimObjectives',
   'projectInformationRequirements', 'modelValidation',
   'qualityAssurance', 'informationRisks',
+  // New text fields from extended schema
+  'trainingRequirements', 'bimCompetencyLevels',
+  'dataClassification', 'accessPermissions',
+  'coordinationMeetings', 'taskTeamExchange', 'communicationProtocols',
+  'modelReviewAuthorisation', 'complianceVerification',
+  'lodRequirements', 'cdeStrategy', 'namingConventions',
+  // Additional mappable fields
+  'projectContext', 'bimStrategy', 'keyCommitments',
+  'informationManagementResponsibilities', 'federationStrategy',
+  'accessControl', 'securityOnExchanges', 'securityOnExchangesFramework',
+  'securityMeasures', 'encryptionRequirements', 'dataTransferProtocols',
+  'privacyConsiderations', 'backupProcedures', 'networkRequirements',
+  'hardwareRequirements', 'softwareHardwareInfrastructure',
+  'interoperabilityNeeds', 'modelingStandards', 'classificationStandards',
+  'dataExchangeProtocols', 'reviewProcesses', 'approvalWorkflows',
+  'informationRiskRegister', 'technologyRisks', 'riskMitigation',
+  'contingencyPlans', 'tidpRequirements', 'informationDeliverablesMatrix',
+  'issueResolution',
 ];
 
 const CHECKBOX_FIELDS = [
@@ -36,19 +96,31 @@ const CHECKBOX_FIELDS = [
   { fieldName: 'informationPurposes', path: 'information_requirements',         options: CONFIG.options.informationPurposes },
 ];
 
+function normaliseForMatch(str) {
+  return str.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 function matchOptions(rawEirValue, predefinedOptions) {
   if (!rawEirValue) return [];
   const eirText = Array.isArray(rawEirValue)
     ? rawEirValue.join(' ')
     : String(rawEirValue);
   const eirValues = Array.isArray(rawEirValue) ? rawEirValue.map(String) : [];
+  const eirNorm = normaliseForMatch(eirText);
+  const eirWords = new Set(eirNorm.split(' ').filter((w) => w.length > 3));
+
   return predefinedOptions.filter((option) => {
-    const optLower = option.toLowerCase();
-    const eirLower = eirText.toLowerCase();
-    if (eirLower.includes(optLower)) return true;
-    return eirValues.some(
-      (v) => optLower.includes(v.toLowerCase()) || v.toLowerCase().includes(optLower)
-    );
+    const optNorm = normaliseForMatch(option);
+    // Exact substring match (forward and reverse)
+    if (eirNorm.includes(optNorm)) return true;
+    if (eirValues.some((v) => {
+      const vn = normaliseForMatch(v);
+      return optNorm.includes(vn) || vn.includes(optNorm);
+    })) return true;
+    // Word-overlap: ≥2 significant words of the option appear in EIR text
+    const optWords = optNorm.split(' ').filter((w) => w.length > 3);
+    if (optWords.length >= 2 && optWords.filter((w) => eirWords.has(w)).length >= 2) return true;
+    return false;
   });
 }
 

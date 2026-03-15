@@ -1,6 +1,6 @@
 /**
  * Shared UI constants for sidebar collapse/expand toggles.
- * Used by both the main app sidebar (BEP Suite) and the BEP Generator sidebar
+ * Used by both the main app sidebar (Arcquio) and the BEP module sidebar
  * so collapse icons and button styling are identical and recallable.
  */
 

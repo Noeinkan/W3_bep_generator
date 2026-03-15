@@ -49,7 +49,8 @@
       "Bash(npm test:*)",
       "Bash(npx vitest:*)",
       "Bash(curl:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(xargs grep:*)"
     ],
     "deny": [],
     "ask": []
