@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useCallback, useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { fullEirSchema, validateEirStepData } from '../schemas/eirValidationSchemas';
+import { fullEirSchema, validateEirStepData, toPlainObject } from '../schemas/eirValidationSchemas';
 import EMPTY_EIR_DATA from '../data/emptyEirData';
 
-const EirFormContext = createContext(null);
+export const EirFormContext = createContext(null);
 
 export const useEirForm = () => {
   const context = useContext(EirFormContext);
@@ -21,7 +21,10 @@ export const EirFormProvider = ({ children, initialData = null }) => {
 
   const methods = useForm({
     mode: 'onChange',
-    resolver: zodResolver(fullEirSchema),
+    resolver: async (values, context, options) => {
+      const plain = toPlainObject(values);
+      return zodResolver(fullEirSchema)(plain, context, options);
+    },
     defaultValues,
     shouldUnregister: false,
   });
@@ -54,7 +57,9 @@ export const EirFormProvider = ({ children, initialData = null }) => {
   }, []);
 
   const updateField = useCallback((fieldName, value) => {
-    setValue(fieldName, value, { shouldDirty: true, shouldValidate: true });
+    // Use shouldValidate: false to avoid triggering the resolver on programmatic updates.
+    // Full validation still runs on submit and via validateStep/trigger when needed.
+    setValue(fieldName, value, { shouldDirty: true, shouldValidate: false });
   }, [setValue]);
 
   const resetForm = useCallback(() => {

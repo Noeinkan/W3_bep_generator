@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useContext } from 'react';
 import {
   X,
   Sparkles,
@@ -15,6 +15,9 @@ import { markdownToTipTapHtml } from '../../../utils/markdownToHtml';
 import FIELD_EXAMPLES from '../../../constants/fieldExamples';
 import AIAssistantTab from './AIAssistantTab';
 import { useAISuggestion } from '../../../hooks/useAISuggestion';
+import { EirFormContext } from '../../../contexts/EirFormContext';
+import apiService from '../../../services/apiService';
+import toast from 'react-hot-toast';
 
 /**
  * SmartHelpDialog - Context-aware help dialog
@@ -29,10 +32,12 @@ const SmartHelpDialog = ({
   fieldName,
   fieldType,
   fieldState,
+  fieldLabel,
   helpContent,
   onClose
 }) => {
   const contentRef = useRef(null);
+  const eirFormCtx = useContext(EirFormContext);
 
   // Tab configuration based on field state
   const getTabsConfig = () => {
@@ -55,6 +60,8 @@ const SmartHelpDialog = ({
     thinkingStage,
     generateSuggestionStream,
     generateSuggestion,
+    generateFromPrompt,
+    setError: setAiError,
     clearError
   } = useAISuggestion();
   const [aiSuccess, setAiSuccess] = useState(false);
@@ -67,6 +74,36 @@ const SmartHelpDialog = ({
     expand: false,
     concise: false
   });
+
+  // EIR Suggest (when in EIR Manager)
+  const [eirSuggestLoading, setEirSuggestLoading] = useState(false);
+  const [eirSuggestError, setEirSuggestError] = useState(null);
+
+  const handleEirSuggest = async () => {
+    if (!eirFormCtx || !fieldName) return;
+    setEirSuggestError(null);
+    setEirSuggestLoading(true);
+    try {
+      const formData = eirFormCtx.getFormData();
+      const currentText = (formData && formData[fieldName]) ?? '';
+      const res = await apiService.suggestEirField({
+        fieldName,
+        fieldLabel: fieldLabel || fieldName,
+        currentText: typeof currentText === 'string' ? currentText : '',
+        eirDraftData: formData,
+      });
+      if (res?.suggestion != null) {
+        const plainSuggestion = typeof res.suggestion === 'string' ? res.suggestion : String(res.suggestion ?? '');
+        eirFormCtx.updateField(fieldName, plainSuggestion);
+        toast.success('Suggestion applied');
+        onClose();
+      }
+    } catch (err) {
+      setEirSuggestError(err?.message || 'Suggestion failed');
+    } finally {
+      setEirSuggestLoading(false);
+    }
+  };
 
   // Load example text
   const handleLoadExample = () => {
@@ -149,7 +186,11 @@ const SmartHelpDialog = ({
       : `Reformat the following text into a clean, professional structure. ${tableGuidance} Output ONLY the final result — no introduction, commentary, or duplication of content.\n\nText to reformat:\n${currentContent}`;
 
     const insertAndClose = (text) => {
-      const htmlContent = markdownToTipTapHtml(text);
+      if (!text || typeof text !== 'string' || text.trim().length < 10) {
+        setAiError('AI returned empty content — try again or choose a different style.');
+        return;
+      }
+      const htmlContent = markdownToTipTapHtml(text.trim());
       if (replaceAll) {
         editor.chain().focus().clearContent().insertContent(htmlContent).run();
       } else {
@@ -160,17 +201,10 @@ const SmartHelpDialog = ({
     };
 
     try {
-      await generateSuggestionStream(fieldType || fieldName, prompt, 300, {
-        onDone: insertAndClose
-      });
+      const text = await generateFromPrompt(prompt, null, 1500, { thinkingMode: false });
+      insertAndClose(text);
     } catch {
-      // Streaming failed — try non-streaming fallback
-      try {
-        const text = await generateSuggestion(fieldType || fieldName, prompt, 300);
-        insertAndClose(text);
-      } catch {
-        // hook already set error state
-      }
+      // hook already set error state
     }
   };
 
@@ -178,23 +212,58 @@ const SmartHelpDialog = ({
   const renderTabContent = () => {
     switch (activeTab) {
       case 'ai-assistant':
-        return <AIAssistantTab
-          editor={editor}
-          fieldName={fieldName}
-          fieldType={fieldType}
-          fieldState={fieldState}
-          onClose={onClose}
-          aiLoading={aiLoading}
-          aiError={aiError}
-          aiSuccess={aiSuccess}
-          handleAIGenerate={handleAIGenerate}
-          handleAIImprove={handleAIImprove}
-          improveOptions={improveOptions}
-          setImproveOptions={setImproveOptions}
-          streamingText={streamingText}
-          thinkingStage={thinkingStage}
-          isStreaming={isStreaming}
-        />;
+        return (
+          <div className="space-y-3">
+            {eirFormCtx && (
+              <div className="px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h4 className="font-semibold text-amber-900 text-sm">EIR field suggestion</h4>
+                  <p className="text-xs text-amber-800 mt-0.5">
+                    Get an AI suggestion tailored to this EIR field based on your current draft.
+                  </p>
+                  {eirSuggestError && (
+                    <p className="mt-1 text-xs text-red-600">{eirSuggestError}</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleEirSuggest}
+                  disabled={eirSuggestLoading}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-md hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-xs whitespace-nowrap flex-shrink-0"
+                >
+                  {eirSuggestLoading ? (
+                    <>
+                      <span className="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Suggesting…
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Suggest for this EIR field
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+            <AIAssistantTab
+              editor={editor}
+              fieldName={fieldName}
+              fieldType={fieldType}
+              fieldState={fieldState}
+              onClose={onClose}
+              aiLoading={aiLoading}
+              aiError={aiError}
+              aiSuccess={aiSuccess}
+              handleAIGenerate={handleAIGenerate}
+              handleAIImprove={handleAIImprove}
+              improveOptions={improveOptions}
+              setImproveOptions={setImproveOptions}
+              streamingText={streamingText}
+              thinkingStage={thinkingStage}
+              isStreaming={isStreaming}
+            />
+          </div>
+        );
 
       case 'examples':
         return <ExamplesTab
@@ -219,18 +288,18 @@ const SmartHelpDialog = ({
       open={true}
       onClose={onClose}
       size="xl"
-      className="max-h-[90vh] overflow-hidden flex flex-col"
+      className="max-h-[85vh] overflow-hidden flex flex-col"
     >
-        {/* Custom gradient header */}
-        <div className="bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-500 text-white p-6 flex-shrink-0 -mx-6 -mt-6">
-          <div className="flex justify-between items-start">
+        {/* Gradient header */}
+        <div className="bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-500 text-white px-5 py-4 flex-shrink-0 -mx-6 -mt-6">
+          <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-white bg-opacity-20 rounded-lg">
-                <Sparkles size={24} />
+              <div className="p-1.5 bg-white bg-opacity-20 rounded-lg">
+                <Sparkles size={20} />
               </div>
               <div>
-                <h3 className="text-xl font-bold">Smart Help</h3>
-                <p className="text-blue-100 text-sm mt-1">
+                <h3 className="text-lg font-bold leading-tight">Smart Help</h3>
+                <p className="text-blue-100 text-xs mt-0.5">
                   {fieldState === 'empty' ? 'Get started with your content' : 'Improve your content'}
                 </p>
               </div>
@@ -241,7 +310,7 @@ const SmartHelpDialog = ({
               title="Close"
               type="button"
             >
-              <X size={24} />
+              <X size={20} />
             </button>
           </div>
         </div>
@@ -257,7 +326,7 @@ const SmartHelpDialog = ({
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`
-                    flex items-center gap-2 px-4 py-3 text-sm font-medium
+                    flex items-center gap-2 px-3.5 py-2.5 text-sm font-medium
                     border-b-2 transition-all
                     ${isActive
                       ? 'border-purple-500 text-purple-700 bg-white'
@@ -280,7 +349,7 @@ const SmartHelpDialog = ({
         </div>
 
         {/* Content */}
-        <div ref={contentRef} className="flex-1 min-h-0 overflow-y-auto -mx-6 -mb-4 p-6">
+        <div ref={contentRef} className="flex-1 min-h-0 overflow-y-auto -mx-6 -mb-4 px-5 py-4">
           {renderTabContent()}
         </div>
     </Modal>
@@ -299,27 +368,22 @@ const ExamplesTab = ({ fieldName, fieldState, onLoadExample }) => {
   const previewText = exampleText.length > 300 ? exampleText.substring(0, 300) + '...' : exampleText;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {fieldState !== 'empty' && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="text-amber-600 flex-shrink-0 mt-1" size={20} />
-            <div>
-              <h4 className="font-semibold text-amber-900 mb-1">⚠️ Warning</h4>
-              <p className="text-sm text-amber-800">
-                Loading this example will <strong>replace all current content</strong> in the editor.
-              </p>
-            </div>
-          </div>
+        <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2">
+          <AlertTriangle className="text-amber-600 flex-shrink-0" size={16} />
+          <p className="text-xs text-amber-800">
+            Loading this example will <strong>replace all current content</strong> in the editor.
+          </p>
         </div>
       )}
 
       <div>
-        <h4 className="font-medium text-gray-800 mb-2 flex items-center gap-2">
-          <span className="w-1 h-4 bg-blue-500 rounded"></span>
+        <h4 className="font-medium text-gray-800 mb-1.5 text-sm flex items-center gap-2">
+          <span className="w-1 h-3.5 bg-blue-500 rounded"></span>
           Professional Example for "{fieldName}"
         </h4>
-        <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+        <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
           <p className="text-sm text-gray-700 leading-relaxed italic">
             "{previewText}"
           </p>
@@ -328,14 +392,14 @@ const ExamplesTab = ({ fieldName, fieldState, onLoadExample }) => {
 
       <button
         onClick={onLoadExample}
-        className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg font-medium flex items-center justify-center gap-2"
+        className="w-full px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg font-medium text-sm flex items-center justify-center gap-2"
         type="button"
       >
-        <FileText size={20} />
+        <FileText size={18} />
         Load Example Text
       </button>
 
-      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+      <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
         <p className="text-xs text-blue-800">
           <strong>Tip:</strong> You can edit the example after loading, or use AI to customize it for your project.
         </p>
@@ -460,10 +524,10 @@ const GuidelinesTab = ({ fieldName, helpContent }) => {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Sub-tabs - Enhanced visibility */}
-      <div className="bg-gradient-to-r from-gray-50 to-white rounded-lg p-2 border border-gray-200">
-        <div className="flex gap-2 overflow-x-auto">
+    <div className="space-y-3">
+      {/* Sub-tabs */}
+      <div className="bg-gradient-to-r from-gray-50 to-white rounded-lg p-1.5 border border-gray-200">
+        <div className="flex gap-1.5 overflow-x-auto">
           {subTabs.map(tab => {
             const Icon = tab.icon;
             const isActive = activeSubTab === tab.id;
@@ -472,7 +536,7 @@ const GuidelinesTab = ({ fieldName, helpContent }) => {
                 key={tab.id}
                 onClick={() => setActiveSubTab(tab.id)}
                 className={`
-                  flex items-center gap-2 px-4 py-2.5 text-sm font-medium
+                  flex items-center gap-1.5 px-3 py-2 text-xs font-medium
                   rounded-md transition-all whitespace-nowrap
                   ${isActive
                     ? 'bg-white text-blue-700 shadow-sm border border-blue-200'
@@ -481,7 +545,7 @@ const GuidelinesTab = ({ fieldName, helpContent }) => {
                 `}
                 type="button"
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-blue-500' : 'text-gray-400'}`} />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-500' : 'text-gray-400'}`} />
                 <span>{tab.label}</span>
               </button>
             );

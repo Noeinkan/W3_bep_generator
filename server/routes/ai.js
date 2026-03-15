@@ -108,7 +108,8 @@ router.post('/generate', async (req, res) => {
       field_type,
       max_length = 200,
       temperature = 0.7,
-      model
+      model,
+      thinking_mode
     } = req.body;
 
     // Validate request
@@ -119,23 +120,23 @@ router.post('/generate', async (req, res) => {
       });
     }
 
-    if (prompt.length > 1000) {
+    if (prompt.length > 8000) {
       return res.status(400).json({
         error: 'Invalid request',
-        message: 'Prompt too long (max 1000 characters)'
+        message: 'Prompt too long (max 8000 characters)'
       });
     }
 
     console.log(`AI generation request: field_type=${field_type}, prompt_length=${prompt.length}`);
 
-    // Call ML service with dynamic URL
     const mlClient = getMLClient();
     const response = await mlClient.post('/generate', {
       prompt,
       field_type,
-      max_length: Math.min(Math.max(max_length, 50), 1000),
+      max_length: Math.min(Math.max(max_length, 50), 2000),
       temperature: Math.min(Math.max(temperature, 0.1), 2.0),
-      ...(model && { model })
+      ...(model && { model }),
+      ...(thinking_mode !== undefined && { thinking_mode })
     });
 
     res.json({

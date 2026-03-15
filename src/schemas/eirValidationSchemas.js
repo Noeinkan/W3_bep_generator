@@ -75,7 +75,7 @@ export const fullEirSchema = z.object({
  * Sanitize form values to a plain object so Zod never receives refs or non-plain values
  * that can trigger internal Zod errors (e.g. reading _zod from undefined).
  */
-function toPlainObject(value) {
+export function toPlainObject(value) {
   if (value === null || value === undefined) return value;
   if (typeof value !== 'object') return value;
   if (Array.isArray(value)) return value.map(toPlainObject);

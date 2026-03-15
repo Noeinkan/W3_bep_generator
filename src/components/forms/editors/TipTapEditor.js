@@ -20,6 +20,7 @@ import FontSize from './extensions/FontSize';
 import ResizableImage from './extensions/ResizableImage';
 import TipTapToolbar from './TipTapToolbar';
 import TipTapStatusBar from './TipTapStatusBar';
+import SmartHelpButton from '../ai/SmartHelpButton';
 import TipTapBubbleMenu from './TipTapBubbleMenu';
 import TipTapFloatingMenu from './TipTapFloatingMenu';
 import FindReplaceDialog from '../dialogs/FindReplaceDialog';
@@ -41,6 +42,7 @@ const TipTapEditor = ({
   autoSaveKey = 'tiptap-autosave',
   minHeight = '200px',
   fieldName,
+  fieldLabel,
   compactMode = false,
   showWordCount,
   stickyToolbar,
@@ -285,13 +287,26 @@ const TipTapEditor = ({
 
   return (
     <div
-      className={`tiptap-wrapper ${isFocused ? 'tiptap-wrapper--focused' : ''} ${isFullscreen ? 'tiptap-wrapper--fullscreen' : ''} ${className}`}
+      className={`tiptap-wrapper relative ${isFocused ? 'tiptap-wrapper--focused' : ''} ${isFullscreen ? 'tiptap-wrapper--fullscreen' : ''} ${className}`}
       style={{
         '--tiptap-padding': compactMode ? '0.375rem 0.5rem' : '0.75rem',
         '--tiptap-min-height': isFullscreen ? '100%' : minHeight,
       }}
       onKeyDown={(e) => { if (e.key === 'Escape' && isFullscreen) setIsFullscreen(false); }}
     >
+      {/* Smart Help — positioned outside the field, in the right gray margin */}
+      {fieldName && !isFullscreen && (
+        <div className="absolute -right-40 top-1 z-20">
+          <SmartHelpButton
+            editor={editor}
+            fieldName={fieldName}
+            fieldType={fieldName}
+            fieldLabel={fieldLabel}
+            helpContent={helpContent}
+          />
+        </div>
+      )}
+
       {/* Toolbar */}
       {showToolbar && (
         <div className={_stickyToolbar ? 'sticky top-0 z-10' : undefined}>
@@ -300,8 +315,6 @@ const TipTapEditor = ({
             zoom={zoom}
             onZoomChange={setZoom}
             onFindReplace={() => setShowFindReplace(true)}
-            fieldName={fieldName}
-            helpContent={helpContent}
             isFullscreen={isFullscreen}
             onToggleFullscreen={() => setIsFullscreen((v) => !v)}
           />

@@ -71,7 +71,7 @@ describe('AIAssistantTab — streaming loading UI (QuickGenerateView)', () => {
 
   it('shows success state when aiSuccess is true', () => {
     renderInQuickMode({ aiLoading: false, aiSuccess: true });
-    expect(screen.getByText('Success!')).toBeTruthy();
+    expect(screen.getByText('Content generated successfully.')).toBeTruthy();
   });
 
   it('shows error state when aiError is set', () => {

@@ -24,7 +24,6 @@ const EirFormViewContent = ({ draftId, draftTitle }) => {
     currentDraft,
     setCurrentDraft,
     getFormData,
-    updateField,
     completedSections,
     validateStep,
     markStepCompleted,
@@ -35,32 +34,6 @@ const EirFormViewContent = ({ draftId, draftTitle }) => {
   const isLastStep = currentStep === TOTAL_STEPS - 1;
 
   const stepConfig = EIR_CONFIG.getFormFields(currentStep);
-
-  // Field names that support "Ask AI" in this step (textarea/text only)
-  const eirAiSuggestFieldNames = React.useMemo(() => {
-    if (!stepConfig?.fields) return [];
-    return stepConfig.fields
-      .filter((f) => f.name && (f.type === 'textarea' || f.type === 'text'))
-      .map((f) => f.name);
-  }, [stepConfig]);
-
-  const handleEirSuggest = useCallback(
-    async (fieldName, fieldLabel) => {
-      const formData = getFormData();
-      const currentText = (formData && formData[fieldName]) ?? '';
-      const res = await apiService.suggestEirField({
-        fieldName,
-        fieldLabel,
-        currentText: typeof currentText === 'string' ? currentText : '',
-        eirDraftData: formData,
-      });
-      if (res?.suggestion != null) {
-        updateField(fieldName, res.suggestion);
-        toast.success('Suggestion applied');
-      }
-    },
-    [getFormData, updateField]
-  );
 
   const navigateToStep = useCallback((step) => {
     const next = Math.min(Math.max(step, 0), TOTAL_STEPS - 1);
@@ -197,8 +170,6 @@ const EirFormViewContent = ({ draftId, draftTitle }) => {
       <FormStepRHF
         stepIndex={currentStep}
         stepConfig={stepConfig}
-        eirAiSuggestFieldNames={eirAiSuggestFieldNames}
-        onEirSuggest={handleEirSuggest}
       />
     </DocumentEditorLayout>
   );

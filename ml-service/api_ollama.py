@@ -49,7 +49,7 @@ class GenerateRequest(BaseModel):
     """Request model for text generation"""
     prompt: str = Field(..., description="Starting text prompt")
     field_type: Optional[str] = Field(None, description="Type of BEP field")
-    max_length: int = Field(200, ge=50, le=1000, description="Maximum characters to generate")
+    max_length: int = Field(200, ge=50, le=2000, description="Maximum tokens to generate")
     temperature: float = Field(0.7, ge=0.1, le=2.0, description="Sampling temperature")
     model: Optional[str] = Field(None, description="Ollama model override (defaults to OLLAMA_MODEL env var)")
     thinking_mode: Optional[bool] = Field(None, description="Qwen3 thinking mode: True=/think, False=/no_think, None=default")

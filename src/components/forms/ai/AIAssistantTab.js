@@ -48,36 +48,21 @@ const AIAssistantTab = ({
   // ── Landing: two approach cards ──
   if (mode === 'pick') {
     return (
-      <div className="space-y-4">
-        {/* Header */}
-        <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg">
-          <div className="flex items-start gap-3">
-            <Sparkles className="text-purple-600 flex-shrink-0 mt-0.5" size={20} />
-            <div>
-              <h4 className="font-semibold text-purple-900 mb-1">AI Content Assistant</h4>
-              <p className="text-sm text-purple-800">
-                {fieldState === 'empty'
-                  ? 'Choose how you\'d like the AI to generate content for this field.'
-                  : 'Choose how you\'d like the AI to improve your content.'}
-              </p>
-            </div>
-          </div>
-        </div>
-
+      <div className="space-y-3">
         {/* Approach cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Quick AI Card */}
           <button
             type="button"
             onClick={() => setMode('quick')}
-            className="group text-left p-5 rounded-xl border-2 border-gray-200 bg-white hover:border-blue-400 hover:shadow-md transition-all"
+            className="group text-left p-4 rounded-xl border-2 border-gray-200 bg-white hover:border-blue-400 hover:shadow-md transition-all"
           >
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 group-hover:bg-blue-500 flex items-center justify-center transition-colors">
-                <Zap className="w-5 h-5 text-blue-600 group-hover:text-white transition-colors" />
+            <div className="flex items-center gap-3 mb-2.5">
+              <div className="w-9 h-9 rounded-lg bg-blue-100 group-hover:bg-blue-500 flex items-center justify-center transition-colors">
+                <Zap className="w-4.5 h-4.5 text-blue-600 group-hover:text-white transition-colors" />
               </div>
               <div>
-                <h5 className="font-semibold text-gray-900">Quick AI</h5>
+                <h5 className="font-semibold text-gray-900 text-sm">Quick AI</h5>
                 <span className="text-xs text-blue-600 font-medium">Fastest</span>
               </div>
             </div>
@@ -95,14 +80,14 @@ const AIAssistantTab = ({
               axios.get('/api/ai/warm-questions', { timeout: 15000 }).catch(() => {});
               setMode('guided');
             }}
-            className="group text-left p-5 rounded-xl border-2 border-gray-200 bg-white hover:border-purple-400 hover:shadow-md transition-all"
+            className="group text-left p-4 rounded-xl border-2 border-gray-200 bg-white hover:border-purple-400 hover:shadow-md transition-all"
           >
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-lg bg-purple-100 group-hover:bg-purple-500 flex items-center justify-center transition-colors">
-                <Wand2 className="w-5 h-5 text-purple-600 group-hover:text-white transition-colors" />
+            <div className="flex items-center gap-3 mb-2.5">
+              <div className="w-9 h-9 rounded-lg bg-purple-100 group-hover:bg-purple-500 flex items-center justify-center transition-colors">
+                <Wand2 className="w-4.5 h-4.5 text-purple-600 group-hover:text-white transition-colors" />
               </div>
               <div>
-                <h5 className="font-semibold text-gray-900">Guided AI</h5>
+                <h5 className="font-semibold text-gray-900 text-sm">Guided AI</h5>
                 <span className="text-xs text-purple-600 font-medium">Most tailored</span>
               </div>
             </div>
@@ -179,45 +164,41 @@ const AIAssistantTab = ({
 // QUICK GENERATE (empty field)
 // ============================================================================
 const QuickGenerateView = ({ onGenerate, isLoading, error, success, streamingText, thinkingStage }) => (
-  <div className="space-y-4">
-    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-      <div className="flex items-start gap-3">
-        <Sparkles className="text-blue-600 flex-shrink-0 mt-1" size={20} />
-        <div>
-          <h4 className="font-semibold text-blue-900 mb-1">Quick AI Generation</h4>
-          <p className="text-sm text-blue-800">
-            Generate professional, ISO 19650-compliant content tailored to this field in one click.
-          </p>
-        </div>
+  <div className="space-y-3">
+    <div className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
+      <Sparkles className="text-blue-600 flex-shrink-0" size={18} />
+      <div>
+        <h4 className="font-semibold text-blue-900 text-sm">Quick AI Generation</h4>
+        <p className="text-xs text-blue-800 mt-0.5">
+          Generate professional, ISO 19650-compliant content in one click.
+        </p>
       </div>
     </div>
 
     {isLoading && (
-      <div className="space-y-3">
-        {/* Thinking stage banner — shown until first token arrives */}
+      <div className="space-y-2">
         {thinkingStage && !streamingText && (
-          <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-lg flex items-center gap-3">
-            <Loader2 size={16} className="animate-spin text-indigo-500 flex-shrink-0" />
-            <p className="text-sm text-indigo-700 italic">{thinkingStage}</p>
+          <div className="px-3 py-2 bg-indigo-50 border border-indigo-200 rounded-lg flex items-center gap-2">
+            <Loader2 size={14} className="animate-spin text-indigo-500 flex-shrink-0" />
+            <p className="text-xs text-indigo-700 italic">{thinkingStage}</p>
           </div>
         )}
 
-        {/* Live token preview — appears once first token arrives */}
         {streamingText ? (
           <div className="border border-blue-200 rounded-lg bg-white overflow-hidden">
-            <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border-b border-blue-200">
-              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border-b border-blue-200">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
               <span className="text-xs font-medium text-blue-700">Generating…</span>
             </div>
-            <div className="p-3 max-h-48 overflow-y-auto">
-              <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap font-mono">
+            <div className="p-2.5 max-h-40 overflow-y-auto">
+              <p className="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap font-mono">
                 {streamingText}
-                <span className="inline-block w-0.5 h-4 bg-blue-500 animate-pulse ml-0.5 align-text-bottom" />
+                <span className="inline-block w-0.5 h-3.5 bg-blue-500 animate-pulse ml-0.5 align-text-bottom" />
               </p>
             </div>
           </div>
         ) : (
-          <div className="w-full bg-blue-200 rounded-full h-2 overflow-hidden">
+          <div className="w-full bg-blue-200 rounded-full h-1.5 overflow-hidden">
             <div className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 rounded-full animate-pulse" style={{ width: '100%' }} />
           </div>
         )}
@@ -225,22 +206,16 @@ const QuickGenerateView = ({ onGenerate, isLoading, error, success, streamingTex
     )}
 
     {error && (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-        <AlertCircleIcon className="text-red-600 flex-shrink-0" size={20} />
-        <div>
-          <h4 className="font-semibold text-red-900 mb-1">Error</h4>
-          <p className="text-sm text-red-800">{error}</p>
-        </div>
+      <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+        <AlertCircleIcon className="text-red-600 flex-shrink-0" size={16} />
+        <p className="text-sm text-red-800">{error}</p>
       </div>
     )}
 
     {success && (
-      <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
-        <CheckCircle className="text-green-600 flex-shrink-0" size={20} />
-        <div>
-          <h4 className="font-semibold text-green-900 mb-1">Success!</h4>
-          <p className="text-sm text-green-800">Content generated successfully.</p>
-        </div>
+      <div className="px-3 py-2 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+        <CheckCircle className="text-green-600 flex-shrink-0" size={16} />
+        <p className="text-sm text-green-800">Content generated successfully.</p>
       </div>
     )}
 
@@ -248,12 +223,12 @@ const QuickGenerateView = ({ onGenerate, isLoading, error, success, streamingTex
       type="button"
       onClick={onGenerate}
       disabled={isLoading || success}
-      className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+      className="w-full px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {isLoading ? (
-        <><Loader2 size={20} className="animate-spin" /> Generating...</>
+        <><Loader2 size={18} className="animate-spin" /> Generating...</>
       ) : (
-        <><Sparkles size={20} /> Generate Content with AI</>
+        <><Sparkles size={18} /> Generate Content with AI</>
       )}
     </button>
   </div>
@@ -284,64 +259,58 @@ const QuickImproveView = ({ fieldState, improveOptions, setImproveOptions, onImp
   };
 
   return (
-    <div className="space-y-4">
-      <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
-        <div className="flex items-start gap-3">
-          <Zap className="text-indigo-600 flex-shrink-0 mt-1" size={20} />
-          <div>
-            <h4 className="font-semibold text-indigo-900 mb-1">Quick AI Improvement</h4>
-            <p className="text-sm text-indigo-800">
-              {fieldState === 'hasSelection'
-                ? 'Improve the selected text with AI enhancements.'
-                : 'Enhance your existing content with AI-powered improvements.'
-              }
-            </p>
-          </div>
+    <div className="space-y-3">
+      <div className="px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-lg flex items-center gap-3">
+        <Zap className="text-indigo-600 flex-shrink-0" size={18} />
+        <div>
+          <h4 className="font-semibold text-indigo-900 text-sm">Quick AI Improvement</h4>
+          <p className="text-xs text-indigo-800 mt-0.5">
+            {fieldState === 'hasSelection'
+              ? 'Improve the selected text with AI enhancements.'
+              : 'Enhance your existing content with AI-powered improvements.'
+            }
+          </p>
         </div>
       </div>
 
       <div>
-        <h4 className="font-medium text-gray-800 mb-3">Choose improvement style:</h4>
-        <div className="space-y-3">
-          {/* Quick Polish */}
+        <h4 className="font-medium text-gray-800 mb-2 text-sm">Choose improvement style:</h4>
+        <div className="space-y-2">
           <StyleCard
             active={improvementStyle === 'quick-polish'}
             onClick={() => handleStyleChange('quick-polish')}
             icon={Zap}
-            title="⚡ Quick Polish"
+            title="Quick Polish"
             description="Fixes grammar and improves clarity"
             color="blue"
           />
-          {/* Professional */}
           <StyleCard
             active={improvementStyle === 'professional'}
             onClick={() => handleStyleChange('professional')}
             icon={Sparkles}
-            title="💼 Professional"
+            title="Professional"
             description="Formal tone + ISO 19650 terminology"
             color="purple"
           />
-          {/* Custom */}
           <StyleCard
             active={improvementStyle === 'custom'}
             onClick={() => handleStyleChange('custom')}
             icon={null}
             customIcon={
-              <svg className={`w-5 h-5 ${improvementStyle === 'custom' ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={`w-4 h-4 ${improvementStyle === 'custom' ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
               </svg>
             }
-            title="🎯 Custom"
+            title="Custom"
             description="Choose specific improvements"
             color="indigo"
           />
         </div>
       </div>
 
-      {/* Custom Options */}
       {showCustomOptions && (
-        <div className="space-y-2 animate-fadeIn">
-          <h4 className="font-medium text-gray-800 mb-2 text-sm">Select improvements:</h4>
+        <div className="space-y-1.5 animate-fadeIn">
+          <h4 className="font-medium text-gray-800 text-xs mb-1">Select improvements:</h4>
           {[
             { key: 'grammar', label: 'Improve grammar and clarity', icon: BookOpen },
             { key: 'professional', label: 'Make more professional', icon: Sparkles },
@@ -353,49 +322,46 @@ const QuickImproveView = ({ fieldState, improveOptions, setImproveOptions, onImp
             return (
               <label
                 key={option.key}
-                className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                className="flex items-center gap-2.5 px-2.5 py-2 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 cursor-pointer transition-colors"
               >
                 <input
                   type="checkbox"
                   checked={improveOptions[option.key]}
                   onChange={() => toggleOption(option.key)}
-                  className="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500"
+                  className="w-3.5 h-3.5 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500"
                 />
-                <Icon className="w-4 h-4 text-gray-600" />
-                <span className="text-sm text-gray-700">{option.label}</span>
+                <Icon className="w-3.5 h-3.5 text-gray-600" />
+                <span className="text-xs text-gray-700">{option.label}</span>
               </label>
             );
           })}
         </div>
       )}
 
-      {/* Loading */}
       {isLoading && (
-        <div className="space-y-3">
-          {/* Thinking stage banner */}
+        <div className="space-y-2">
           {thinkingStage && !streamingText && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
-              <Loader2 size={16} className="animate-spin text-green-600 flex-shrink-0" />
-              <p className="text-sm text-green-700 italic">{thinkingStage}</p>
+            <div className="px-3 py-2 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+              <Loader2 size={14} className="animate-spin text-green-600 flex-shrink-0" />
+              <p className="text-xs text-green-700 italic">{thinkingStage}</p>
             </div>
           )}
 
-          {/* Live token preview */}
           {streamingText ? (
             <div className="border border-green-200 rounded-lg bg-white overflow-hidden">
-              <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border-b border-green-200">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border-b border-green-200">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                 <span className="text-xs font-medium text-green-700">Improving…</span>
               </div>
-              <div className="p-3 max-h-48 overflow-y-auto">
-                <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap font-mono">
+              <div className="p-2.5 max-h-40 overflow-y-auto">
+                <p className="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap font-mono">
                   {streamingText}
-                  <span className="inline-block w-0.5 h-4 bg-green-500 animate-pulse ml-0.5 align-text-bottom" />
+                  <span className="inline-block w-0.5 h-3.5 bg-green-500 animate-pulse ml-0.5 align-text-bottom" />
                 </p>
               </div>
             </div>
           ) : (
-            <div className="w-full bg-green-200 rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-green-200 rounded-full h-1.5 overflow-hidden">
               <div className="h-full bg-gradient-to-r from-green-500 via-blue-500 to-indigo-500 rounded-full animate-pulse" style={{ width: '100%' }} />
             </div>
           )}
@@ -403,22 +369,16 @@ const QuickImproveView = ({ fieldState, improveOptions, setImproveOptions, onImp
       )}
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-          <AlertCircleIcon className="text-red-600 flex-shrink-0" size={20} />
-          <div>
-            <h4 className="font-semibold text-red-900 mb-1">Error</h4>
-            <p className="text-sm text-red-800">{error}</p>
-          </div>
+        <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+          <AlertCircleIcon className="text-red-600 flex-shrink-0" size={16} />
+          <p className="text-sm text-red-800">{error}</p>
         </div>
       )}
 
       {success && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
-          <CheckCircle className="text-green-600 flex-shrink-0" size={20} />
-          <div>
-            <h4 className="font-semibold text-green-900 mb-1">Success!</h4>
-            <p className="text-sm text-green-800">Content improved successfully.</p>
-          </div>
+        <div className="px-3 py-2 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+          <CheckCircle className="text-green-600 flex-shrink-0" size={16} />
+          <p className="text-sm text-green-800">Content improved successfully.</p>
         </div>
       )}
 
@@ -427,24 +387,24 @@ const QuickImproveView = ({ fieldState, improveOptions, setImproveOptions, onImp
           type="button"
           onClick={() => onImprove(false)}
           disabled={isLoading || success}
-          className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 px-5 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? (
-            <><Loader2 size={20} className="animate-spin" /> Improving...</>
+            <><Loader2 size={18} className="animate-spin" /> Improving...</>
           ) : (
-            <><Zap size={20} /> {fieldState === 'hasSelection' ? 'Improve Selection' : 'Append Improved'}</>
+            <><Zap size={18} /> {fieldState === 'hasSelection' ? 'Improve Selection' : 'Append Improved'}</>
           )}
         </button>
         <button
           type="button"
           onClick={() => onImprove(true)}
           disabled={isLoading || success}
-          className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? (
-            <><Loader2 size={20} className="animate-spin" /> Replacing...</>
+            <><Loader2 size={18} className="animate-spin" /> Replacing...</>
           ) : (
-            <><Sparkles size={20} /> Replace All</>
+            <><Sparkles size={18} /> Replace All</>
           )}
         </button>
       </div>
@@ -467,23 +427,23 @@ const StyleCard = ({ active, onClick, icon: Icon, customIcon, title, description
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
+      className={`w-full text-left px-3.5 py-3 rounded-lg border-2 transition-all ${
         active ? `${c.border} ${c.bg} shadow-sm` : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
       }`}
     >
-      <div className="flex items-start gap-3">
-        <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${active ? c.iconBg : 'bg-gray-200'}`}>
+      <div className="flex items-center gap-3">
+        <div className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${active ? c.iconBg : 'bg-gray-200'}`}>
           {Icon
-            ? <Icon className={`w-5 h-5 ${active ? 'text-white' : 'text-gray-500'}`} />
+            ? <Icon className={`w-4.5 h-4.5 ${active ? 'text-white' : 'text-gray-500'}`} />
             : customIcon}
         </div>
-        <div className="flex-1">
-          <h5 className="font-semibold text-gray-900 mb-1">{title}</h5>
-          <p className="text-sm text-gray-600">{description}</p>
+        <div className="flex-1 min-w-0">
+          <h5 className="font-semibold text-gray-900 text-sm leading-tight">{title}</h5>
+          <p className="text-xs text-gray-600 mt-0.5">{description}</p>
         </div>
         {active && (
           <div className="flex-shrink-0">
-            <div className={`w-5 h-5 ${c.check} rounded-full flex items-center justify-center`}>
+            <div className={`w-4.5 h-4.5 ${c.check} rounded-full flex items-center justify-center`}>
               <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
               </svg>

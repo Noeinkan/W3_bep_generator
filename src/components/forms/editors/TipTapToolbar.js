@@ -32,7 +32,6 @@ import {
   Minimize2,
 } from 'lucide-react';
 import TableInsertDialog from '../dialogs/TableInsertDialog';
-import SmartHelpButton from '../ai/SmartHelpButton';
 import apiService from '../../../services/apiService';
 
 const ToolbarButton = ({ onClick, active, disabled, children, title }) => (
@@ -606,15 +605,6 @@ const TipTapToolbar = ({ editor, zoom = 100, onZoomChange, onFindReplace, fieldN
           </ToolbarButton>
         </>
       )}
-
-      {/* Smart Help Button - Unified help interface */}
-      <SmartHelpButton
-        editor={editor}
-        fieldName={fieldName}
-        fieldType={fieldName}
-        helpContent={helpContent}
-        className="ml-2"
-      />
 
       {/* Table Insert Dialog */}
       {showTableDialog && (

@@ -76,7 +76,7 @@ export const useAISuggestion = () => {
   /**
    * Generate text based on a custom prompt
    */
-  const generateFromPrompt = useCallback(async (prompt, fieldType = null, maxLength = 200) => {
+  const generateFromPrompt = useCallback(async (prompt, fieldType = null, maxLength = 200, { thinkingMode } = {}) => {
     setIsLoading(true);
     setError(null);
 
@@ -88,10 +88,11 @@ export const useAISuggestion = () => {
           field_type: fieldType,
           max_length: maxLength,
           temperature: 0.7,
-          model: getPreferredModel()
+          model: getPreferredModel(),
+          ...(thinkingMode !== undefined && { thinking_mode: thinkingMode })
         },
         {
-          timeout: 30000
+          timeout: 60000
         }
       );
 
@@ -257,6 +258,7 @@ export const useAISuggestion = () => {
     streamingText,
     thinkingStage,
     error,
+    setError,
     generateSuggestion,
     generateSuggestionStream,
     generateFromPrompt,
