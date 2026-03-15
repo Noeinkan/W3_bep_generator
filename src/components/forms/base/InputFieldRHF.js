@@ -1,6 +1,7 @@
 import React from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
 import InputField from './InputField';
+import EirSuggestButton from '../../eir/EirSuggestButton';
 
 /**
  * Wrapper around InputField that integrates with React Hook Form
@@ -81,13 +82,22 @@ const InputFieldRHF = ({ field, error }) => {
         };
 
         return (
-          <InputField
-            field={field}
-            value={value}
-            onChange={handleChange}
-            error={error}
-            formData={formData}
-          />
+          <>
+            <InputField
+              field={field}
+              value={value}
+              onChange={handleChange}
+              error={error}
+              formData={formData}
+            />
+            {field.type !== 'textarea' && field.name && (
+              <EirSuggestButton
+                fieldName={field.name}
+                onSuggestion={(v) => rhfOnChange(v)}
+                partialText={typeof value === 'string' ? value : ''}
+              />
+            )}
+          </>
         );
       }}
     />

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useContext, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { Save, ChevronDown, Eye, Zap, FolderOpen, Upload, Sparkles, CheckCircle } from 'lucide-react';
+import { Save, ChevronDown, Eye, Zap, FolderOpen, Upload, Sparkles, CheckCircle, Table, FileText } from 'lucide-react';
 import { useBepForm } from '../../../contexts/BepFormContext';
 import FormStepRHF from '../../steps/FormStepRHF';
 import { FormBuilderProvider, DynamicFormStepRHF, FormBuilderContext } from '../../form-builder';
@@ -21,7 +21,8 @@ import { ROUTES } from '../../../constants/routes';
 import { EirStepWrapper } from '../../eir';
 import { bepUi } from './bepUiClasses';
 import { useEir } from '../../../contexts/EirContext';
-import apiService from '../../../services/apiService';
+import EirResponsivenessMatrixModal from './components/EirResponsivenessMatrixModal';
+import { buildEirMatrix, summariseMatrix } from '../../../utils/eirResponsivenessMatrix';
 
 /**
  * Decides between static (FormStepRHF) and dynamic (DynamicFormStepRHF) step renderers
@@ -201,100 +202,11 @@ const BepFormViewContent = () => {
     projectId: currentProject?.id || null,
   });
 
-  const { setEirAnalysis, clearEirAnalysis, hasAnalysis } = useEir();
+  const { hasAnalysis, analysis } = useEir();
 
-  const [eirDrafts, setEirDrafts] = useState([]);
-  const [eirDraftsLoading, setEirDraftsLoading] = useState(false);
-  const [eirDraftsError, setEirDraftsError] = useState(null);
-  const [loadingLinkedEir, setLoadingLinkedEir] = useState(false);
-
-  const linkedEirId = formData?.linkedEirId || null;
-
-  // Load authored EIR drafts for the current project (if any)
-  useEffect(() => {
-    if (!currentProject?.id) return;
-    let cancelled = false;
-    setEirDraftsLoading(true);
-    setEirDraftsError(null);
-    apiService
-      .getEirDrafts(currentProject.id)
-      .then((res) => {
-        if (cancelled) return;
-        if (res?.success && Array.isArray(res.drafts)) {
-          setEirDrafts(res.drafts);
-        } else {
-          setEirDrafts([]);
-        }
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        console.error('Failed to load EIR drafts for BEP linking:', err);
-        setEirDraftsError(err?.message || 'Failed to load EIR drafts');
-        setEirDrafts([]);
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setEirDraftsLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [currentProject?.id]);
-
-  const loadLinkedEirAnalysis = useCallback(
-    async (eirId) => {
-      if (!eirId) return;
-      setLoadingLinkedEir(true);
-      try {
-        const res = await apiService.getEirDraftAnalysis(eirId);
-        if (res?.success) {
-          setEirAnalysis(res);
-        }
-      } catch (err) {
-        console.error('Failed to load linked EIR analysis:', err);
-      } finally {
-        setLoadingLinkedEir(false);
-      }
-    },
-    [setEirAnalysis]
-  );
-
-  // On mount / form load, if a linkedEirId exists but no analysis is present yet,
-  // fetch the analysis from the authored EIR.
-  useEffect(() => {
-    if (linkedEirId && !hasAnalysis) {
-      loadLinkedEirAnalysis(linkedEirId);
-    }
-  }, [linkedEirId, hasAnalysis, loadLinkedEirAnalysis]);
-
-  // When EIR drafts are loaded and no EIR is linked yet, pre-select the project's published EIR if exactly one.
-  useEffect(() => {
-    if (eirDraftsLoading || eirDrafts.length === 0 || linkedEirId) return;
-    const published = eirDrafts.filter((d) => d.status === 'published');
-    if (published.length === 1) {
-      const id = published[0].id;
-      methods.setValue('linkedEirId', id, { shouldDirty: true });
-      loadLinkedEirAnalysis(id);
-    }
-  }, [eirDraftsLoading, eirDrafts, linkedEirId, methods, loadLinkedEirAnalysis]);
-
-  const handleChangeLinkedEir = useCallback(
-    async (event) => {
-      const value = event.target.value;
-      const newId = value === '' ? null : value;
-      methods.setValue('linkedEirId', newId, { shouldDirty: true });
-
-      if (!newId) {
-        clearEirAnalysis();
-        return;
-      }
-
-      await loadLinkedEirAnalysis(newId);
-    },
-    [methods, clearEirAnalysis, loadLinkedEirAnalysis]
-  );
+  const [showMatrix, setShowMatrix] = useState(false);
+  const [matrixRows, setMatrixRows] = useState([]);
+  const [matrixSummary, setMatrixSummary] = useState(null);
 
   // Scroll to top when step changes
   useEffect(() => {
@@ -302,6 +214,19 @@ const BepFormViewContent = () => {
       contentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [currentStep]);
+
+  const goToEirStep = useCallback(() => {
+    const basePath = location.pathname.split('/step/')[0];
+    navigate(`${basePath}/step/eir`);
+  }, [location.pathname, navigate]);
+
+  const handleOpenMatrix = useCallback(() => {
+    const rows = buildEirMatrix(analysis, getFormData());
+    const summary = summariseMatrix(rows);
+    setMatrixRows(rows);
+    setMatrixSummary(summary);
+    setShowMatrix(true);
+  }, [analysis, getFormData]);
 
   if (!isInitialized) {
     return (
@@ -318,40 +243,23 @@ const BepFormViewContent = () => {
 
   const steps = isDynamicMode ? (formBuilderContext?.visibleSteps ?? CONFIG.steps) : CONFIG.steps;
 
-  const goToEirStep = useCallback(() => {
-    const basePath = location.pathname.split('/step/')[0];
-    navigate(`${basePath}/step/eir`);
-  }, [location.pathname, navigate]);
-
-  const topBanner = currentProject?.id ? (
+  const topBanner = hasAnalysis ? (
     <div className="px-6 pt-3">
       <div className="max-w-[231mm] mx-auto">
-        <div className="flex items-center justify-between gap-3 text-xs sm:text-sm px-4 py-2.5 rounded-lg border border-dashed border-amber-300 bg-amber-50/70">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3">
-            <span className="font-medium text-amber-900">Linked EIR (authored):</span>
-            {eirDraftsLoading ? (
-              <span className="text-amber-700">Loading EIR drafts…</span>
-            ) : eirDrafts.length === 0 ? (
-              <span className="text-amber-700">No authored EIR documents for this project yet.</span>
-            ) : (
-              <select
-                value={linkedEirId || ''}
-                onChange={handleChangeLinkedEir}
-                className="border border-amber-300 rounded-md px-2 py-1 bg-white text-amber-900 text-xs sm:text-sm"
-              >
-                <option value="">No EIR linked</option>
-                {eirDrafts.map((d) => (
-                  <option key={d.id} value={d.id}>{d.title || 'Untitled EIR'}</option>
-                ))}
-              </select>
-            )}
-            {eirDraftsError && <span className="text-red-600">{eirDraftsError}</span>}
+        <div className="flex items-center justify-between gap-3 text-xs sm:text-sm px-4 py-2.5 rounded-lg border border-dashed border-emerald-300 bg-emerald-50/70">
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-emerald-600" />
+            <span className="font-medium text-emerald-900">EIR analysis loaded</span>
+            <span className="text-emerald-700">— AI suggestions and responsiveness matrix available</span>
           </div>
-          {linkedEirId && (
-            <span className="text-amber-800 text-xs">
-              {loadingLinkedEir ? 'Loading analysis…' : hasAnalysis ? 'Analysis ready for suggestions & matrix' : 'Link set – analysis pending'}
-            </span>
-          )}
+          <button
+            type="button"
+            onClick={handleOpenMatrix}
+            title="View Responsiveness Matrix"
+            className="p-1 rounded hover:bg-emerald-100 text-emerald-700"
+          >
+            <Table className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </div>
@@ -481,6 +389,14 @@ const BepFormViewContent = () => {
       />
 
       <HiddenComponentsRenderer formData={formData} bepType={bepType} />
+
+      <EirResponsivenessMatrixModal
+        isOpen={showMatrix}
+        onClose={() => setShowMatrix(false)}
+        rows={matrixRows}
+        summary={matrixSummary}
+        projectName={currentProject?.name || formData?.projectName || ''}
+      />
     </>
   );
 };

@@ -48,7 +48,8 @@
       "Bash(Test-Path:*)",
       "Bash(npm test:*)",
       "Bash(npx vitest:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

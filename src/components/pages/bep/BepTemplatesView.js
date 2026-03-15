@@ -3,17 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import TemplateGallery from './TemplateGallery';
 import { useBepForm } from '../../../contexts/BepFormContext';
-import { useProject } from '../../../contexts/ProjectContext';
-import { getTemplateById, getEirTemplateById } from '../../../data/templateRegistry';
-import apiService from '../../../services/apiService';
+import { getTemplateById } from '../../../data/templateRegistry';
 
 /**
- * View component for template gallery
+ * View component for template gallery.
+ * Loads BEP template data only — EIR is a separate document authored by the
+ * appointing party (ISO 19650), so we don't create EIR drafts here.
  */
 const BepTemplatesView = () => {
   const navigate = useNavigate();
-  const { loadFormData, setValue } = useBepForm();
-  const { currentProject } = useProject();
+  const { loadFormData } = useBepForm();
 
   const handleSelectTemplate = useCallback(async (template) => {
     const templateData = getTemplateById(template.id);
@@ -24,32 +23,9 @@ const BepTemplatesView = () => {
       return;
     }
 
-    // Load BEP template data into form
     loadFormData(templateData, template.bepType, null);
+    toast.success('BEP template loaded.');
 
-    // If a project is active, also create a pre-filled EIR draft and link it
-    const eirData = getEirTemplateById(template.id);
-    if (currentProject?.id && eirData) {
-      try {
-        const res = await apiService.createEirDraft({
-          projectId: currentProject.id,
-          title: `${template.name} – EIR`,
-          data: eirData,
-        });
-        if (res?.success && res?.draft?.id) {
-          setValue('linkedEirId', res.draft.id);
-          toast.success('Template loaded — pre-filled EIR draft created and linked.');
-        }
-      } catch (err) {
-        console.error('Failed to create EIR draft from template:', err);
-        // Non-blocking — BEP template still loaded; user can create EIR manually
-        toast.success('BEP template loaded.');
-      }
-    } else {
-      toast.success('BEP template loaded.');
-    }
-
-    // Create slug from template name
     const slug = encodeURIComponent(
       (template.name || 'template')
         .toLowerCase()
@@ -59,7 +35,7 @@ const BepTemplatesView = () => {
     );
 
     navigate(`/bep-generator/${slug}/step/0`);
-  }, [navigate, loadFormData, setValue, currentProject]);
+  }, [navigate, loadFormData]);
 
   const handleCancel = useCallback(() => {
     navigate('/bep-generator');

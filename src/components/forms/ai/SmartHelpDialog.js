@@ -16,6 +16,7 @@ import FIELD_EXAMPLES from '../../../constants/fieldExamples';
 import AIAssistantTab from './AIAssistantTab';
 import { useAISuggestion } from '../../../hooks/useAISuggestion';
 import { EirFormContext } from '../../../contexts/EirFormContext';
+import { useEir } from '../../../contexts/EirContext';
 import apiService from '../../../services/apiService';
 import toast from 'react-hot-toast';
 
@@ -38,6 +39,7 @@ const SmartHelpDialog = ({
 }) => {
   const contentRef = useRef(null);
   const eirFormCtx = useContext(EirFormContext);
+  const { hasAnalysis, hasDataForField, getValueForField, getSuggestionForField } = useEir();
 
   // Tab configuration based on field state
   const getTabsConfig = () => {
@@ -79,6 +81,10 @@ const SmartHelpDialog = ({
   const [eirSuggestLoading, setEirSuggestLoading] = useState(false);
   const [eirSuggestError, setEirSuggestError] = useState(null);
 
+  // EIR BEP-fill insights (when in BEP editor with EIR analysis loaded)
+  const [eirBepInsightLoading, setEirBepInsightLoading] = useState(false);
+  const [eirBepInsightError, setEirBepInsightError] = useState(null);
+
   const handleEirSuggest = async () => {
     if (!eirFormCtx || !fieldName) return;
     setEirSuggestError(null);
@@ -102,6 +108,45 @@ const SmartHelpDialog = ({
       setEirSuggestError(err?.message || 'Suggestion failed');
     } finally {
       setEirSuggestLoading(false);
+    }
+  };
+
+  // Format EIR value for preview display
+  const formatEirPreview = (value) => {
+    if (!value) return '';
+    if (Array.isArray(value)) return value.join(', ');
+    if (typeof value === 'object') return Object.values(value).find(v => typeof v === 'string') || '';
+    const str = String(value);
+    return str.length > 120 ? str.substring(0, 120) + '…' : str;
+  };
+
+  // Apply EIR value directly into the editor
+  const handleApplyEirValue = () => {
+    if (!editor || !fieldName) return;
+    const value = getValueForField(fieldName);
+    if (!value) return;
+    const htmlContent = markdownToTipTapHtml(String(value));
+    editor.chain().focus().setContent(htmlContent).run();
+    onClose();
+  };
+
+  // AI-enhance using EIR value as context
+  const handleAiEnhanceFromEir = async () => {
+    if (!editor || !fieldName) return;
+    setEirBepInsightLoading(true);
+    setEirBepInsightError(null);
+    try {
+      const currentText = editor.getText();
+      const suggestion = await getSuggestionForField(fieldName, currentText);
+      if (suggestion) {
+        const htmlContent = markdownToTipTapHtml(suggestion);
+        editor.chain().focus().setContent(htmlContent).run();
+        onClose();
+      }
+    } catch (err) {
+      setEirBepInsightError(err?.message || 'Suggestion failed');
+    } finally {
+      setEirBepInsightLoading(false);
     }
   };
 
@@ -214,6 +259,39 @@ const SmartHelpDialog = ({
       case 'ai-assistant':
         return (
           <div className="space-y-3">
+            {hasAnalysis && hasDataForField(fieldName) && (
+              <div className="px-4 py-3 bg-purple-50 border border-purple-200 rounded-lg space-y-2">
+                <h4 className="font-semibold text-purple-900 text-sm flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" /> EIR insight for this field
+                </h4>
+                <p className="text-xs text-purple-700 line-clamp-3 italic">
+                  {formatEirPreview(getValueForField(fieldName))}
+                </p>
+                {eirBepInsightError && (
+                  <p className="text-xs text-red-600">{eirBepInsightError}</p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleApplyEirValue}
+                    className="px-3 py-1.5 text-xs font-medium bg-purple-100 text-purple-800 rounded-md hover:bg-purple-200 transition-colors"
+                  >
+                    Apply directly
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAiEnhanceFromEir}
+                    disabled={eirBepInsightLoading}
+                    className="px-3 py-1.5 text-xs font-medium bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-colors"
+                  >
+                    {eirBepInsightLoading && (
+                      <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    )}
+                    AI-enhance from EIR
+                  </button>
+                </div>
+              </div>
+            )}
             {eirFormCtx && (
               <div className="px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between gap-3">
                 <div className="min-w-0">

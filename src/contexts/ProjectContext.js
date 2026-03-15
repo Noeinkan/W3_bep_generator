@@ -3,7 +3,7 @@ import { useAuth } from './AuthContext';
 import { draftStorageService } from '../services/draftStorageService';
 import apiService from '../services/apiService';
 import { draftApiService } from '../services/draftApiService';
-import { getTemplateById, getEirTemplateById } from '../data/templateRegistry';
+import { getTemplateById } from '../data/templateRegistry';
 
 const ProjectContext = createContext();
 
@@ -23,14 +23,8 @@ export const useProject = () => {
  */
 const seedSampleDrafts = async (projectId) => {
   try {
-    const [draftsRes, eirRes] = await Promise.all([
-      draftApiService.getAllDrafts(projectId),
-      apiService.getEirDrafts(projectId),
-    ]);
-
+    const draftsRes = await draftApiService.getAllDrafts(projectId);
     const existingDrafts = Array.isArray(draftsRes) ? draftsRes : [];
-    const existingEir = Array.isArray(eirRes?.drafts) ? eirRes.drafts : [];
-
     const promises = [];
 
     if (!existingDrafts.some(d => d.type === 'pre-appointment' || d.bepType === 'pre-appointment')) {
@@ -47,19 +41,6 @@ const seedSampleDrafts = async (projectId) => {
       if (postData) {
         promises.push(
           draftApiService.createDraft('Commercial Office — Post-Appointment BEP', 'post-appointment', postData, projectId)
-        );
-      }
-    }
-
-    if (existingEir.length === 0) {
-      const eirData = getEirTemplateById('commercial-office-pre');
-      if (eirData) {
-        promises.push(
-          apiService.createEirDraft({
-            projectId,
-            title: 'Commercial Office — EIR',
-            data: eirData,
-          })
         );
       }
     }

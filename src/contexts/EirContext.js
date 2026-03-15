@@ -102,7 +102,7 @@ export const EirProvider = ({ children }) => {
 
     // Format the value based on type
     if (Array.isArray(value)) {
-      return value.join('\n');
+      return value.join(', ');
     }
     if (typeof value === 'object' && value !== null) {
       return JSON.stringify(value, null, 2);

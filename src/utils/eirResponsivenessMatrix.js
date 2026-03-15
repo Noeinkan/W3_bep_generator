@@ -230,20 +230,58 @@ function isThin(value) {
 }
 
 /**
- * Determines addressed status for a clause given the mapped BEP fields.
+ * Extracts significant keywords from a clause string (stop-words filtered, len > 3).
+ */
+function extractKeywords(text) {
+  const stop = new Set(['the','a','an','and','or','for','of','in','to','with',
+                        'is','are','be','will','shall','should','must','that','this',
+                        'from','all','any','each','where','when','which']);
+  return text.toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 3 && !stop.has(w));
+}
+
+/**
+ * Flattens a BEP field value to a searchable lowercase string.
+ */
+function fieldToText(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return value.toLowerCase();
+  if (Array.isArray(value)) return value.join(' ').toLowerCase();
+  return JSON.stringify(value).toLowerCase();
+}
+
+/**
+ * Determines addressed status per clause using keyword matching against BEP fields.
  *
  * @returns {'addressed'|'partial'|'not-addressed'}
  */
-function determineStatus(formData, bepFields) {
+function determineClauseStatus(formData, bepFields, clauseText) {
   if (!formData) return 'not-addressed';
 
-  const populated = bepFields
-    .map((f) => formData[f])
-    .filter((v) => hasContent(v));
+  const keywords = extractKeywords(clauseText);
+  let bestStatus = 'not-addressed';
 
-  if (populated.length === 0) return 'not-addressed';
-  if (populated.some((v) => !isThin(v))) return 'addressed';
-  return 'partial';
+  for (const fieldName of bepFields) {
+    const value = formData[fieldName];
+    if (!hasContent(value)) continue;
+
+    const text = fieldToText(value);
+
+    if (keywords.length > 0) {
+      const hits = keywords.filter(kw => text.includes(kw)).length;
+      const ratio = hits / keywords.length;
+      if (ratio >= 0.5) return 'addressed';   // ≥50% keywords found
+      if (ratio > 0) bestStatus = 'partial';  // some keywords found
+      else if (bestStatus === 'not-addressed') bestStatus = 'partial'; // content but no keyword match
+    } else {
+      // No keywords extractable — fall back to content presence
+      return isThin(value) ? 'partial' : 'addressed';
+    }
+  }
+
+  return bestStatus;
 }
 
 // ---------------------------------------------------------------------------
@@ -276,10 +314,10 @@ export function buildEirMatrix(analysis, formData) {
     const clauses = extractClauses(value, def.type);
     if (clauses.length === 0) continue;
 
-    const status = determineStatus(formData, def.bepFields);
     const bepSectionRef = `§${def.bepSection.number} ${def.bepSection.title}`;
 
     for (const clause of clauses) {
+      const status = determineClauseStatus(formData, def.bepFields, clause);
       rows.push({
         id: `row-${idCounter++}`,
         eirCategory: def.eirCategory,
