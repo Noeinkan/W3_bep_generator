@@ -18,6 +18,8 @@ export const useResponsibilityMatrix = (projectId) => {
   const [syncStatus, setSyncStatus] = useState(null);
   const [syncStatusLoading, setSyncStatusLoading] = useState(false);
 
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
+
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -28,9 +30,9 @@ export const useResponsibilityMatrix = (projectId) => {
   // Load data when projectId changes
   useEffect(() => {
     if (projectId) {
-      loadImActivities();
-      loadDeliverables();
-      loadSyncStatus();
+      setInitialLoadDone(false);
+      Promise.all([loadImActivities(), loadDeliverables(), loadSyncStatus()])
+        .finally(() => { if (mountedRef.current) setInitialLoadDone(true); });
     }
   }, [projectId]);
 
@@ -218,6 +220,7 @@ export const useResponsibilityMatrix = (projectId) => {
     // IM Activities (Matrix 1)
     imActivities,
     imActivitiesLoading,
+    initialLoadDone,
     loadImActivities,
     createImActivity,
     updateImActivity,

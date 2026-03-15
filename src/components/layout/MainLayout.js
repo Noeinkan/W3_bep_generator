@@ -73,7 +73,7 @@ const MainLayout = () => {
           { name: 'AIR (coming soon)', href: '#', icon: Package, disabled: true }
         ]
       : [
-          { name: 'BEP Generator', href: '/bep-generator', icon: FileText },
+          { name: 'Arcquio', href: '/bep-generator', icon: FileText },
           { name: 'TIDP/MIDP Manager', href: '/tidp-midp', icon: BarChart3 },
           { name: 'Responsibility Matrix', href: '/responsibility-matrix', icon: Grid3x3 },
           { name: 'IFC Import', href: '/ifc-import', icon: FileUp },

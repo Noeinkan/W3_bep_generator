@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { FileText, ChevronLeft, ChevronRight, FolderOpen, ArrowLeftRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FolderOpen, ArrowLeftRight } from 'lucide-react';
+import ArcquioLogo from '../common/ArcquioLogo';
 import { useProject } from '../../contexts/ProjectContext';
 import { SIDEBAR_TOGGLE } from '../../constants/sidebarUi';
 
@@ -25,7 +26,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, navigation }) => {
               title="Home"
             >
               <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center flex-shrink-0">
-                <FileText className="w-5 h-5 text-white" />
+                <ArcquioLogo className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold text-gray-900 whitespace-nowrap">Arcquio</span>
             </NavLink>

@@ -37,6 +37,7 @@ const ResponsibilityMatrixManager = ({ projectId: projectIdProp, onClose }) => {
   const {
     imActivities,
     imActivitiesLoading,
+    initialLoadDone,
     loadImActivities,
     createImActivity,
     updateImActivity,
@@ -56,12 +57,12 @@ const ResponsibilityMatrixManager = ({ projectId: projectIdProp, onClose }) => {
     unsyncTIDP
   } = useResponsibilityMatrix(projectId);
 
-  // Initialize with default ISO 19650 activities if none exist
+  // Initialize with default ISO 19650 activities if none exist (after initial load)
   useEffect(() => {
-    if (!imActivitiesLoading && imActivities.length === 0 && projectId && !initialized) {
+    if (initialLoadDone && imActivities.length === 0 && projectId && !initialized) {
       initializeDefaultActivities();
     }
-  }, [imActivities, imActivitiesLoading, projectId, initialized]);
+  }, [initialLoadDone, imActivities, projectId, initialized]);
 
   const initializeDefaultActivities = async () => {
     try {

@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const db = require('../database');
 const {
   getIMActivities,
   getIMActivityById,
@@ -129,6 +130,14 @@ router.post('/im-activities/bulk', (req, res) => {
 
     if (!Array.isArray(activities) || activities.length === 0) {
       return res.status(400).json({ error: 'activities array is required' });
+    }
+
+    const projectIds = [...new Set(activities.map(a => a.projectId || a.project_id).filter(Boolean))];
+    for (const pid of projectIds) {
+      const exists = db.prepare('SELECT 1 FROM projects WHERE id = ?').get(pid);
+      if (!exists) {
+        return res.status(400).json({ error: `Project ${pid} does not exist` });
+      }
     }
 
     const count = bulkCreateIMActivities(activities);

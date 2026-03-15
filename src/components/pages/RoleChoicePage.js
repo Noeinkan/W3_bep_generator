@@ -47,7 +47,7 @@ const ROLE_CONFIG = {
   [PARTY_ROLE.LEAD_APPOINTED_PARTY]: {
     label: 'Lead Appointed Party',
     sublabel: 'BIM Manager / Delivery',
-    nextLabel: 'BEP Generator',
+    nextLabel: 'Arcquio',
     nextPath: '/bep-generator',
     Icon: FileText,
     accent: 'primary',

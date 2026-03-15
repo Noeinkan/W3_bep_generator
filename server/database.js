@@ -93,7 +93,8 @@ db.exec(`
     display_order INTEGER,
     is_custom INTEGER DEFAULT 0,
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   );
 
   CREATE TABLE IF NOT EXISTS information_deliverables (
@@ -114,6 +115,7 @@ db.exec(`
     is_auto_populated INTEGER DEFAULT 0,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
     FOREIGN KEY (tidp_id) REFERENCES tidps(id) ON DELETE SET NULL
   );
 
