@@ -25,7 +25,7 @@ const SAMPLE_LOIN_ROWS = [
 
 const seedSampleProject = (userId) => {
   try {
-    const existing = db.prepare('SELECT id FROM projects WHERE user_id = ? LIMIT 1').get(userId);
+    const existing = db.prepare("SELECT id FROM projects WHERE user_id = ? AND name = 'Sample Project' LIMIT 1").get(userId);
     if (!existing) {
       const id = uuidv4();
       const now = new Date().toISOString();

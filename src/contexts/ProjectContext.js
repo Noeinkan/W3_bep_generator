@@ -2,8 +2,12 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useAuth } from './AuthContext';
 import { draftStorageService } from '../services/draftStorageService';
 import apiService from '../services/apiService';
+import { draftApiService } from '../services/draftApiService';
+import { getTemplateById, getEirTemplateById } from '../data/templateRegistry';
 
 const ProjectContext = createContext();
+
+const SAMPLE_PROJECT_NAME = 'Sample Project';
 
 export const useProject = () => {
   const context = useContext(ProjectContext);
@@ -11,6 +15,62 @@ export const useProject = () => {
     throw new Error('useProject must be used within a ProjectProvider');
   }
   return context;
+};
+
+/**
+ * Seed BEP drafts and EIR draft into the Sample Project when it has none.
+ * Runs once per session after the project is created or found.
+ */
+const seedSampleDrafts = async (projectId) => {
+  try {
+    const [draftsRes, eirRes] = await Promise.all([
+      draftApiService.getAllDrafts(projectId),
+      apiService.getEirDrafts(projectId),
+    ]);
+
+    const existingDrafts = Array.isArray(draftsRes) ? draftsRes : [];
+    const existingEir = Array.isArray(eirRes?.drafts) ? eirRes.drafts : [];
+
+    const promises = [];
+
+    if (!existingDrafts.some(d => d.type === 'pre-appointment' || d.bepType === 'pre-appointment')) {
+      const preData = getTemplateById('commercial-office-pre');
+      if (preData) {
+        promises.push(
+          draftApiService.createDraft('Commercial Office — Pre-Appointment BEP', 'pre-appointment', preData, projectId)
+        );
+      }
+    }
+
+    if (!existingDrafts.some(d => d.type === 'post-appointment' || d.bepType === 'post-appointment')) {
+      const postData = getTemplateById('commercial-office-post');
+      if (postData) {
+        promises.push(
+          draftApiService.createDraft('Commercial Office — Post-Appointment BEP', 'post-appointment', postData, projectId)
+        );
+      }
+    }
+
+    if (existingEir.length === 0) {
+      const eirData = getEirTemplateById('commercial-office-pre');
+      if (eirData) {
+        promises.push(
+          apiService.createEirDraft({
+            projectId,
+            title: 'Commercial Office — EIR',
+            data: eirData,
+          })
+        );
+      }
+    }
+
+    if (promises.length > 0) {
+      await Promise.all(promises);
+      console.log(`Seeded ${promises.length} template draft(s) into Sample Project`);
+    }
+  } catch (err) {
+    console.error('Failed to seed Sample Project drafts:', err);
+  }
 };
 
 export const ProjectProvider = ({ children }) => {
@@ -34,29 +94,36 @@ export const ProjectProvider = ({ children }) => {
       if (response.success) {
         let projectList = response.projects;
 
-        // Auto-create "Sample Project" if no projects exist (once per successful attempt)
-        if (projectList.length === 0 && !seedRunRef.current) {
-          try {
-            const createRes = await apiService.createProject({
-              name: 'Sample Project'
-            });
-            if (createRes.success) {
-              seedRunRef.current = true; // only lock after success so failures allow a retry
-              const sampleProject = createRes.project;
-              projectList = [sampleProject];
+        // Ensure "Sample Project" always exists (once per session)
+        if (!seedRunRef.current) {
+          let sampleProject = projectList.find(p => p.name === SAMPLE_PROJECT_NAME);
 
-              // Migrate orphaned localStorage drafts to this project
-              const migrated = draftStorageService.migrateOrphanedDrafts(user.id, sampleProject.id);
-              if (migrated > 0) {
-                console.log(`Migrated ${migrated} orphaned draft(s) to Sample Project`);
+          if (!sampleProject) {
+            try {
+              const createRes = await apiService.createProject({ name: SAMPLE_PROJECT_NAME });
+              if (createRes.success) {
+                sampleProject = createRes.project;
+                projectList = [sampleProject, ...projectList];
+
+                const migrated = draftStorageService.migrateOrphanedDrafts(user.id, sampleProject.id);
+                if (migrated > 0) {
+                  console.log(`Migrated ${migrated} orphaned draft(s) to Sample Project`);
+                }
               }
+            } catch (seedErr) {
+              console.error('Failed to create Sample Project:', seedErr);
+            }
+          }
 
-              // Auto-select it
+          if (sampleProject) {
+            seedRunRef.current = true;
+            seedSampleDrafts(sampleProject.id);
+
+            // Auto-select Sample Project when no project is currently selected
+            if (!localStorage.getItem('currentProjectId')) {
               setCurrentProject(sampleProject);
               localStorage.setItem('currentProjectId', sampleProject.id);
             }
-          } catch (seedErr) {
-            console.error('Failed to seed Sample Project:', seedErr);
           }
         }
 
