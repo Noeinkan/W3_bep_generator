@@ -10,6 +10,7 @@ router.get('/', authenticateToken, (req, res, next) => {
       return res.status(401).json({ success: false, error: 'Authentication required' });
     }
     const userId = String(req.user.id);
+    projectService.seedSampleProject(userId);
     const projects = projectService.getAllProjects(userId);
     res.json({ success: true, projects });
   } catch (err) {
@@ -109,6 +110,9 @@ router.delete('/:id', authenticateToken, (req, res, next) => {
     // Verify ownership (compare as strings; user_id is TEXT)
     if (String(existing.user_id) !== String(req.user.id)) {
       return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+    if (existing.name === 'Sample Project') {
+      return res.status(403).json({ success: false, error: 'The Sample Project cannot be deleted.' });
     }
     projectService.deleteProject(req.params.id);
     res.json({ success: true, message: 'Project deleted' });

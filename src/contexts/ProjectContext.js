@@ -75,36 +75,35 @@ export const ProjectProvider = ({ children }) => {
       if (response.success) {
         let projectList = response.projects;
 
-        // Ensure "Sample Project" always exists (once per session)
-        if (!seedRunRef.current) {
-          let sampleProject = projectList.find(p => p.name === SAMPLE_PROJECT_NAME);
+        // Ensure "Sample Project" always exists
+        let sampleProject = projectList.find(p => p.name === SAMPLE_PROJECT_NAME);
 
-          if (!sampleProject) {
-            try {
-              const createRes = await apiService.createProject({ name: SAMPLE_PROJECT_NAME });
-              if (createRes.success) {
-                sampleProject = createRes.project;
-                projectList = [sampleProject, ...projectList];
+        if (!sampleProject) {
+          try {
+            const createRes = await apiService.createProject({ name: SAMPLE_PROJECT_NAME });
+            if (createRes.success) {
+              sampleProject = createRes.project;
+              projectList = [sampleProject, ...projectList];
 
-                const migrated = draftStorageService.migrateOrphanedDrafts(user.id, sampleProject.id);
-                if (migrated > 0) {
-                  console.log(`Migrated ${migrated} orphaned draft(s) to Sample Project`);
-                }
+              const migrated = draftStorageService.migrateOrphanedDrafts(user.id, sampleProject.id);
+              if (migrated > 0) {
+                console.log(`Migrated ${migrated} orphaned draft(s) to Sample Project`);
               }
-            } catch (seedErr) {
-              console.error('Failed to create Sample Project:', seedErr);
             }
+          } catch (seedErr) {
+            console.error('Failed to create Sample Project:', seedErr);
           }
+        }
 
-          if (sampleProject) {
-            seedRunRef.current = true;
-            seedSampleDrafts(sampleProject.id);
+        if (sampleProject && !seedRunRef.current) {
+          // Seed drafts only once per session to avoid duplicates
+          seedRunRef.current = true;
+          seedSampleDrafts(sampleProject.id);
 
-            // Auto-select Sample Project when no project is currently selected
-            if (!localStorage.getItem('currentProjectId')) {
-              setCurrentProject(sampleProject);
-              localStorage.setItem('currentProjectId', sampleProject.id);
-            }
+          // Auto-select Sample Project when no project is currently selected
+          if (!localStorage.getItem('currentProjectId')) {
+            setCurrentProject(sampleProject);
+            localStorage.setItem('currentProjectId', sampleProject.id);
           }
         }
 

@@ -333,13 +333,15 @@ const ProjectsPage = () => {
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
-                    <button
-                      onClick={(e) => handleDelete(e, project)}
-                      className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all"
-                      title="Delete project"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {project.name !== 'Sample Project' && (
+                      <button
+                        onClick={(e) => handleDelete(e, project)}
+                        className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all"
+                        title="Delete project"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-50 group-hover:bg-blue-100 transition-colors ml-1">
                       <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-blue-500 transition-colors" />
                     </div>

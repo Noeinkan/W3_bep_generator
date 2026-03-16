@@ -23,26 +23,34 @@ Windows host, bash shell — Unix syntax only (forward slashes, `&&`, `/dev/null
 
 ## Conventions
 - Forms: React Hook Form + Zod (`src/schemas/`)
-- State: React Context + local state (no Redux/Zustand)
+- State: React Context + local state (no Redux/Zustand). Contexts: `AuthContext`, `ProjectContext`, `BepFormContext`, `EirContext`, `EirFormContext`, `OirFormContext`, `PartyRoleContext`, `FormBuilderContext`.
 - Styles: Tailwind CSS (no custom CSS unless necessary)
 - Tests: Vitest — frontend `src/__tests__/`, backend `server/__tests__/`. Run: `npm test`
 - DB: better-sqlite3 is **synchronous** — no async patterns around DB calls
 
 ## Critical gotchas
 
-**BEP config split** — Frontend barrel: `bepConfig.js` (has lucide icons). Edit sub-modules: `bepSteps.js`, `bepTypeDefinitions.js`, `bepOptions.js`, `bepFormFields.js`. Server-safe versions (no icons): `bepStepsData.js`, `bepFormFieldsData.js`, `bepConfigForServer.js` → consumed by `loadBepConfig.js`. Never import icon-bearing files on the server.
+**Config split (BEP / EIR / OIR)** — All three follow the same pattern. Frontend barrel (`bepConfig.js`, `eirConfig.js`, `oirConfig.js`) imports lucide icons — never use on the server. Server-safe variants: `bepConfigForServer.js`, `eirConfigForServer.js`, `oirConfigForServer.js` → consumed by `loadBepConfig.js`. Sub-modules: `*Steps.js`, `*FormFields.js`, `*Options.js` (BEP only), `*TypeDefinitions.js` (BEP only). Server-safe data: `*StepsData.js`, `*FormFieldsData.js`.
 
 **Default BEP structure** — `bepConfigForServer.js` is single source of truth. No DB seed needed; changing config is enough.
 
 **EIR module** — `EirStepWrapper`, `EirFillSummaryModal` in `src/components/eir/`. Fill logic: `useEirFill`. Doc history: `useDocumentHistory`. Never put EIR/doc-history logic in `BepFormView.js`.
 
-**EIR authoring flow** — EirManagerPage → EirFormView (author) → `eirFormAnalysisMapper.js` maps form data to EirAnalysis JSON → GET `/api/eir/drafts/:id/analysis` (no ML). Publish: POST `/api/eir/drafts/:id/publish` (one per project). BEP links via `linkedEirId`; analysis feeds EirContext → responsiveness matrix.
+**EIR authoring flow** — EirManagerPage → EirFormView (author) → `eirFormAnalysisMapper.js` maps form data to EirAnalysis JSON → GET `/api/eir/drafts/:id/analysis` (no ML). Publish: POST `/api/eir/drafts/:id/publish` (one per project). BEP links via `linkedEirId`; analysis feeds EirContext → responsiveness matrix. RHF state via `EirFormContext`.
+
+**OIR module** — Mirrors EIR structure exactly. OirManagerPage → OirFormView → `oirService` → `oir_drafts` table. Routes: `/api/oir`. Context: `OirFormContext`. No analysis mapper or responsiveness matrix (OIR is Owner Information Requirements, simpler flow).
 
 **BepFormView is layout-only.** Orchestrates hooks and sub-components. Domain logic belongs in hooks.
 
 **FormBuilderProvider scope** — `useFormBuilder()` only works *inside* `<FormBuilderProvider>`. Components needing editor state must be defined inside the provider's children subtree, not above it.
 
 **form-builder barrels** — Import from `form-builder/field-editor`, `form-builder/step-editor`, etc. Top-level `form-builder/index.js` exports only `FormBuilderProvider`, `useFormBuilder`, `BepStructureMap`.
+
+**TipTap rich text** — Used in form fields via `src/components/forms/editors/`. Extensions live in `extensions/` subfolder. To insert a snippet chip use `editor.chain().focus().insertSnippetChip(key)` — never insert raw `{{snippet:key}}` text directly. Toolbar, BubbleMenu, FloatingMenu, StatusBar are all separate components in the same folder.
+
+**Snippets module** — `{{snippet:key}}` substitution. CRUD via `/api/snippets`; resolution via `snippetService.resolveSnippets()`. Frontend: `useSnippets` hook + `snippetUtils`. In TipTap, snippets render as `SnippetChip` inline nodes (not plain text).
+
+**PartyRoleContext** — `usePartyRole()` provides appointing party / lead appointed party role selection. Used across BEP steps that depend on the party role.
 
 **PDF export** — `htmlTemplateService` (HTML + `server/services/templates/bepStyles.css`) → Puppeteer → `server/temp/` → stream → cleanup. Keep Puppeteer server-side only.
 
@@ -51,6 +59,8 @@ Windows host, bash shell — Unix syntax only (forward slashes, `&&`, `/dev/null
 **Security middleware** — Helmet + rate-limit exist; some commented out in dev. Do not remove.
 
 **`.env` files** — Never commit. Only `.env.example` is tracked. Secrets via env vars or `encryptedSecretService`.
+
+**Sample Project invariant** — Must always exist per user. Self-heals on `GET /api/projects` (`seedSampleProject`), blocked on DELETE (403), hidden trash in `ProjectsPage`, recreated in `ProjectContext.loadProjects()`. Never add deletion paths or seed-gate logic that breaks this.
 
 ## Token optimization — MANDATORY
 
