@@ -50,7 +50,11 @@
       "Bash(npx vitest:*)",
       "Bash(curl:*)",
       "WebSearch",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(find /c/Users/andre/Downloads/W3_bep_generator/server -type f \\\\\\(-name *config* -o -name *brand* -o -name *appConfig* -o -name *constants* \\\\\\))",
+      "Bash(find /c/Users/andre/Downloads/W3_bep_generator -maxdepth 1 -type f \\\\\\(-name .env* -o -name *.config.* \\\\\\))",
+      "Bash(grep -r \"describe\\\\|it\\(\" /c/Users/andre/Downloads/W3_bep_generator/server/__tests__/*.test.js)",
+      "Bash(grep -r \"expect\\(\" /c/Users/andre/Downloads/W3_bep_generator/server/__tests__/*.test.js)"
     ],
     "deny": [],
     "ask": []

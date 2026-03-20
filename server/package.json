@@ -1,5 +1,5 @@
 {
-  "name": "arcquio-backend",
+  "name": "moliari-backend",
   "version": "1.0.0",
   "description": "Backend API for BEP, TIDP, and MIDP management",
   "main": "server.js",

@@ -1,4 +1,4 @@
-# CLAUDE.md — Arcquio
+# CLAUDE.md — Moliari
 
 ## Stack
 React 19 + Vite + Express + better-sqlite3 (SQLite) + Python/Ollama ML service. All start via `npm start`.
@@ -31,6 +31,8 @@ Windows host, bash shell — Unix syntax only (forward slashes, `&&`, `/dev/null
 ## Critical gotchas
 
 **Config split (BEP / EIR / OIR)** — All three follow the same pattern. Frontend barrel (`bepConfig.js`, `eirConfig.js`, `oirConfig.js`) imports lucide icons — never use on the server. Server-safe variants: `bepConfigForServer.js`, `eirConfigForServer.js`, `oirConfigForServer.js` → consumed by `loadBepConfig.js`. Sub-modules: `*Steps.js`, `*FormFields.js`, `*Options.js` (BEP only), `*TypeDefinitions.js` (BEP only). Server-safe data: `*StepsData.js`, `*FormFieldsData.js`.
+
+**Brand config** — `src/config/brandConfig.js` (frontend, ESM) and `server/config/brandConfig.js` (backend, CJS) are the **only** places that contain the product name, email subjects, and export creator strings. To rename the product, edit only those two files.
 
 **Default BEP structure** — `bepConfigForServer.js` is single source of truth. No DB seed needed; changing config is enough.
 

@@ -451,7 +451,7 @@ function buildBasicEirSummaryMarkdown(analysis) {
   if (pi.description) {
     lines.push(pi.description);
   } else {
-    lines.push('Exchange Information Requirements authored in Arcquio.');
+    lines.push('Exchange Information Requirements authored in Moliari.');
   }
 
   if (analysis.bim_objectives && analysis.bim_objectives.length > 0) {

@@ -190,7 +190,7 @@ router.post('/project/:projectId/consolidated-excel', async (req, res, next) => 
     const ExcelJS = require('exceljs');
     const workbook = new ExcelJS.Workbook();
 
-    workbook.creator = 'Arcquio';
+    workbook.creator = 'Moliari';
     workbook.created = new Date();
 
     // Add MIDP sheets

@@ -29,8 +29,8 @@ class ExportService {
     const workbook = new ExcelJS.Workbook();
 
     // Set workbook properties
-    workbook.creator = 'Arcquio';
-    workbook.lastModifiedBy = 'Arcquio';
+    workbook.creator = 'Moliari';
+    workbook.lastModifiedBy = 'Moliari';
     workbook.created = new Date();
     workbook.modified = new Date();
     workbook.lastPrinted = new Date();
@@ -68,7 +68,7 @@ class ExportService {
   async exportMIDPToExcel(midp) {
     const workbook = new ExcelJS.Workbook();
 
-    workbook.creator = 'Arcquio';
+    workbook.creator = 'Moliari';
     workbook.created = new Date();
 
     // Executive Summary
@@ -738,7 +738,7 @@ class ExportService {
     const { imActivities = [], deliverables = [], project = {}, options = {} } = data;
     const workbook = new ExcelJS.Workbook();
 
-    workbook.creator = 'Arcquio';
+    workbook.creator = 'Moliari';
     workbook.created = new Date();
     workbook.title = 'ISO 19650 Responsibility Matrices';
 

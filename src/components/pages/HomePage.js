@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
-import ArcquioLogo from '../common/ArcquioLogo';
+import AppLogo from '../common/AppLogo';
+import BRAND from '../../config/brandConfig';
 import { useNavigate } from 'react-router-dom';
 import {
   FileText,
@@ -57,7 +58,7 @@ const apFeatures = [
 const lapFeatures = [
   {
     icon: FileText,
-    title: 'Arcquio',
+    title: 'Moliari',
     desc: 'AI-powered BIM Execution Plans, 14-step wizard',
     color: 'text-blue-600',
   },
@@ -336,9 +337,9 @@ const HomePage = () => {
       <nav className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-white/85 backdrop-blur-xl border border-white/60 shadow-2xl rounded-3xl px-5 py-2.5 flex items-center gap-3">
         <div className="flex items-center gap-2 font-bold text-brand text-sm">
           <div className="w-6 h-6 bg-brand rounded flex items-center justify-center flex-shrink-0">
-            <ArcquioLogo className="w-4 h-4 text-white" variant="light" />
+            <AppLogo className="w-4 h-4 text-white" variant="light" />
           </div>
-          Arcquio
+          {BRAND.appName}
         </div>
         <div className="w-px h-5 bg-gray-200" />
         <div className="flex items-center gap-1 text-sm">
@@ -619,12 +620,12 @@ const HomePage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-500">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 bg-brand rounded flex items-center justify-center">
-              <ArcquioLogo className="w-3 h-3 text-white" />
+              <AppLogo className="w-3 h-3 text-white" />
             </div>
-            <span className="text-white font-semibold">Arcquio</span>
+            <span className="text-white font-semibold">{BRAND.appName}</span>
             <span>— ISO 19650 information management for BIM professionals</span>
           </div>
-          <span>© 2024–{new Date().getFullYear()} Arcquio · v2.0.0</span>
+          <span>© {BRAND.year}–{new Date().getFullYear()} {BRAND.appName} · {BRAND.version}</span>
         </div>
       </footer>
 

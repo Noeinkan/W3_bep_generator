@@ -333,7 +333,7 @@ const BepStartMenu = ({
             <Zap className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
           </div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 mb-1 tracking-tight">
-            Arcquio
+            Moliari
           </h1>
           <p className="text-xs lg:text-sm text-slate-600 max-w-2xl mx-auto">
             Professional BIM Execution Plans in minutes

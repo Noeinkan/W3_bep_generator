@@ -110,7 +110,7 @@ const Register = ({ onSwitchToLogin }) => {
             <UserPlus className="w-8 h-8 text-green-600" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Create Account</h1>
-          <p className="text-gray-600">Join Arcquio to save and manage your projects</p>
+          <p className="text-gray-600">Join Moliari to save and manage your projects</p>
         </div>
 
         {errors.general && (

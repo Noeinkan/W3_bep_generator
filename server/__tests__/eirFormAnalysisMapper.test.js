@@ -124,7 +124,7 @@ describe('eirFormAnalysisMapper', () => {
     test('returns default overview when project_info has no description', () => {
       const markdown = buildBasicEirSummaryMarkdown({ project_info: {} });
       expect(markdown).toContain('## Project Overview');
-      expect(markdown).toContain('Exchange Information Requirements authored in Arcquio');
+      expect(markdown).toContain('Exchange Information Requirements authored in Moliari');
     });
 
     test('includes project_info.description when set', () => {

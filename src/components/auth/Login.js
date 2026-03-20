@@ -130,7 +130,7 @@ const Login = ({ onSwitchToRegister }) => {
             <LogIn className="w-8 h-8 text-blue-600" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-          <p className="text-gray-600">Sign in to your Arcquio account</p>
+          <p className="text-gray-600">Sign in to your Moliari account</p>
         </div>
 
         {errors.general && (

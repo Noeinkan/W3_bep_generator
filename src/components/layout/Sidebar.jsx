@@ -1,7 +1,8 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, FolderOpen, ArrowLeftRight } from 'lucide-react';
-import ArcquioLogo from '../common/ArcquioLogo';
+import AppLogo from '../common/AppLogo';
+import BRAND from '../../config/brandConfig';
 import { useProject } from '../../contexts/ProjectContext';
 import { SIDEBAR_TOGGLE } from '../../constants/sidebarUi';
 
@@ -26,9 +27,9 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, navigation }) => {
               title="Home"
             >
               <div className="w-8 h-8 bg-brand rounded flex items-center justify-center flex-shrink-0">
-                <ArcquioLogo className="w-5 h-5 text-white" />
+                <AppLogo className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-gray-900 whitespace-nowrap">Arcquio</span>
+              <span className="text-xl font-bold text-gray-900 whitespace-nowrap">{BRAND.appName}</span>
             </NavLink>
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
@@ -43,7 +44,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, navigation }) => {
         ) : (
           <div className="flex flex-col items-center space-y-2 w-full">
             <div className="w-8 h-8 bg-brand rounded flex items-center justify-center">
-              <ArcquioLogo className="w-5 h-5 text-white" />
+              <AppLogo className="w-5 h-5 text-white" />
             </div>
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
