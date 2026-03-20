@@ -202,7 +202,23 @@ const BepFormViewContent = () => {
     projectId: currentProject?.id || null,
   });
 
-  const { hasAnalysis, analysis } = useEir();
+  const { hasAnalysis, analysis, setEirAnalysis } = useEir();
+
+  // Pick up EIR analysis stored by SharedEirPage after "Analyse EIR" is clicked
+  useEffect(() => {
+    if (!isInitialized || hasAnalysis) return;
+    const pending = sessionStorage.getItem('pendingEirAnalysis');
+    if (!pending) return;
+    try {
+      const data = JSON.parse(pending);
+      if (data?.analysis_json) {
+        setEirAnalysis(data);
+        sessionStorage.removeItem('pendingEirAnalysis');
+      }
+    } catch (_) {
+      sessionStorage.removeItem('pendingEirAnalysis');
+    }
+  }, [isInitialized]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [showMatrix, setShowMatrix] = useState(false);
   const [matrixRows, setMatrixRows] = useState([]);

@@ -32,6 +32,7 @@ import OirDraftsView from './components/pages/oir-manager/OirDraftsView';
 import LoinTablesPage from './components/pages/loin-tables/LoinTablesPage';
 import CapabilityAssessmentPage from './components/pages/capability-assessment/CapabilityAssessmentPage';
 import RoleChoicePage from './components/pages/RoleChoicePage';
+import SharedEirPage from './components/pages/SharedEirPage';
 
 // Auth components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -83,6 +84,9 @@ function App() {
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/verification-pending" element={<VerificationPendingPage />} />
+
+          {/* Public shared EIR view — no auth required */}
+          <Route path="/eir/shared/:token" element={<SharedEirPage />} />
 
           {/* Main layout wrapper with nested routes */}
           <Route element={<MainLayout />}>

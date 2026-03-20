@@ -3,12 +3,28 @@
  */
 const express = require('express');
 const router = express.Router();
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const eirService = require('../services/eirService');
 const {
   mapEirFormDataToAnalysis,
   buildBasicEirSummaryMarkdown,
+  eirFormDataToText,
 } = require('../services/eirFormAnalysisMapper');
+
+function getMLServiceURL() {
+  try {
+    const envPath = path.join(__dirname, '..', '..', '.env');
+    if (fs.existsSync(envPath)) {
+      const envContent = fs.readFileSync(envPath, 'utf8');
+      const match = envContent.match(/ML_SERVICE_URL=(.+)/);
+      if (match && match[1]) return match[1].trim();
+    }
+  } catch (_) {}
+  return process.env.ML_SERVICE_URL || 'http://localhost:8000';
+}
 
 /**
  * GET /api/eir/drafts
@@ -189,6 +205,74 @@ router.delete('/drafts/:id', authenticateToken, (req, res) => {
       message: 'Failed to delete EIR draft',
       error: error.message
     });
+  }
+});
+
+/**
+ * POST /api/eir/drafts/:id/share
+ * Generate (or regenerate) a share token for a published EIR draft.
+ * Only the owner can call this.
+ */
+router.post('/drafts/:id/share', authenticateToken, (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const token = eirService.generateShareToken(id, userId);
+    if (!token) {
+      return res.status(404).json({ success: false, message: 'EIR draft not found' });
+    }
+    res.json({ success: true, shareToken: token });
+  } catch (error) {
+    console.error('EIR share token error:', error);
+    res.status(500).json({ success: false, message: 'Failed to generate share token', error: error.message });
+  }
+});
+
+/**
+ * GET /api/eir/shared/:token
+ * Public — no auth. Returns read-only analysis JSON for a shared, published EIR.
+ */
+router.get('/shared/:token', (req, res) => {
+  try {
+    const draft = eirService.getByShareToken(req.params.token);
+    if (!draft) {
+      return res.status(404).json({ success: false, message: 'EIR not found or no longer published' });
+    }
+    const formData = draft.data && typeof draft.data === 'object' ? draft.data : {};
+    const analysis_json = mapEirFormDataToAnalysis(formData);
+    const summary_markdown = buildBasicEirSummaryMarkdown(analysis_json);
+    res.json({ success: true, title: draft.title, analysis_json, summary_markdown });
+  } catch (error) {
+    console.error('EIR shared get error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch shared EIR', error: error.message });
+  }
+});
+
+/**
+ * POST /api/eir/shared/:token/analyze
+ * Public — no auth. Runs the full ML analysis on the shared EIR's text representation.
+ * Equivalent to uploading the EIR as a PDF and running /analyze-eir.
+ */
+router.post('/shared/:token/analyze', async (req, res) => {
+  try {
+    const draft = eirService.getByShareToken(req.params.token);
+    if (!draft) {
+      return res.status(404).json({ success: false, message: 'EIR not found or no longer published' });
+    }
+    const formData = draft.data && typeof draft.data === 'object' ? draft.data : {};
+    const text = eirFormDataToText(formData);
+
+    const mlServiceUrl = getMLServiceURL();
+    const response = await axios.post(`${mlServiceUrl}/analyze-eir`, {
+      text,
+      filename: `${draft.title}.eir`
+    }, { timeout: 600000 });
+
+    const { analysis_json, summary_markdown } = response.data;
+    res.json({ success: true, analysis_json, summary_markdown });
+  } catch (error) {
+    console.error('EIR shared analyze error:', error);
+    res.status(503).json({ success: false, message: 'Analysis failed', error: error.message });
   }
 });
 

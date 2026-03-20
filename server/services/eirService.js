@@ -4,6 +4,7 @@
  */
 const db = require('../database');
 const { createId } = require('@paralleldrive/cuid2');
+const crypto = require('crypto');
 
 function listByUser(userId, projectId = null) {
   if (projectId) {
@@ -117,6 +118,38 @@ function remove(id, userId) {
   return result.changes > 0;
 }
 
+/**
+ * Generate (or regenerate) a share token for a published EIR draft.
+ * Only the owner can generate a share token.
+ * Returns the token string, or null if the draft is not found.
+ */
+function generateShareToken(id, userId) {
+  const draft = db.prepare('SELECT id, status FROM eir_drafts WHERE id = ? AND user_id = ?').get(id, userId);
+  if (!draft) return null;
+  const token = crypto.randomBytes(20).toString('hex');
+  const now = new Date().toISOString();
+  db.prepare('UPDATE eir_drafts SET share_token = ?, updated_at = ? WHERE id = ? AND user_id = ?').run(token, now, id, userId);
+  return token;
+}
+
+/**
+ * Fetch a published EIR draft by its share token (no auth required — public read).
+ * Returns null if the token is invalid or the EIR is not published.
+ */
+function getByShareToken(token) {
+  if (!token) return null;
+  const row = db.prepare(`
+    SELECT id, user_id, project_id, title, data, status, created_at, updated_at
+    FROM eir_drafts
+    WHERE share_token = ? AND status = 'published'
+  `).get(token);
+  if (!row) return null;
+  return {
+    ...row,
+    data: typeof row.data === 'string' ? JSON.parse(row.data) : row.data
+  };
+}
+
 module.exports = {
   listByUser,
   getById,
@@ -124,5 +157,7 @@ module.exports = {
   update,
   remove,
   publish,
-  getPublishedByProject
+  getPublishedByProject,
+  generateShareToken,
+  getByShareToken,
 };

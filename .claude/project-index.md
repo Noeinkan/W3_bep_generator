@@ -37,7 +37,8 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 | `src/components/pages/auth/` | Login, Register, ForgotPassword, ResetPassword, VerifyEmail, VerificationPending pages |
 | `src/components/pages/bep/` | BepLayout, BepStartMenuView, BepSelectTypeView, BepFormView, BepPreviewView, BepDraftsView, BepImportView, BepInfoRequirementsView, BepStructureMapView, BepTemplatesView, BepTypeSelector, ImportBepDialog, TemplateGallery; `components/` subfolder: BepHeader, BepSidebar, BepFooter, SuccessToast, EirResponsivenessMatrixModal, DocumentHistoryModal, DocumentStatusWidget |
 | `src/components/pages/loin-tables/` | LoinTablesPage, LoinRowForm, LoinRowsTable, LoinPropertyRequirementsModal — LOIN row manager + IDS properties (IFC entity, property requirements) and Export IDS |
-| `src/components/pages/eir-manager/` | EirManagerPage, EirFormView, EirDraftsView, EirStartMenu, EirStartMenuView — EIR authoring (create/edit drafts, Publish, export); BEP form links to project EIRs and loads analysis |
+| `src/components/pages/eir-manager/` | EirManagerPage, EirFormView, EirDraftsView (+ Share button on published drafts), EirStartMenu, EirStartMenuView — EIR authoring (create/edit drafts, Publish, Share link generation) |
+| `src/components/pages/SharedEirPage.js` | Public (no-auth) page for shared EIR links (`/eir/shared/:token`). Read-only EirAnalysisView + Download PDF + "Analyse EIR" button → stores result in `sessionStorage['pendingEirAnalysis']` → redirects to BEP |
 | `src/components/pages/oir-manager/` | OirManagerPage, OirFormView, OirDraftsView, OirStartMenu, OirStartMenuView — OIR (Owner Information Requirements) authoring, mirrors EIR module structure |
 | `src/components/pages/drafts/` | DraftManager, DraftListItem, SaveDraftDialog, SearchAndFilters |
 | `src/components/pages/tidp-midp/` | TIDPMIDPDashboard, TidpMidpManager, RiskRegister, ResourcePlan, QualityGates, DependencyMatrix, CascadingImpact; `dashboard/` subfolder: TIDPsView, MIDPsView, StatisticsCards, MIDPAnalyticsDrawer, MIDPSummaryPanel, HelpModal |
@@ -96,7 +97,7 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 | `/api/validation` | POST tidp/:id, POST midp/:id |
 | `/api/migrate` | DB migration endpoints |
 | `/api/loin` | LOIN rows CRUD (withPropertyCount=1 for badge); GET/POST /:rowId/properties, PUT/DELETE /properties/:id |
-| `/api/eir` | EIR drafts: GET/POST /drafts, GET/PUT/DELETE /drafts/:id, GET /drafts/:id/analysis (form→EirAnalysis JSON), POST /drafts/:id/publish |
+| `/api/eir` | EIR drafts: GET/POST /drafts, GET/PUT/DELETE /drafts/:id, GET /drafts/:id/analysis (form→EirAnalysis JSON), POST /drafts/:id/publish, POST /drafts/:id/share (generates share_token); **public (no auth):** GET /shared/:token (read-only analysis JSON), POST /shared/:token/analyze (ML analysis via eirFormDataToText → same shape as PDF upload) |
 | `/api/oir` | OIR drafts: GET/POST /drafts, GET/PUT/DELETE /drafts/:id, POST /drafts/:id/publish |
 | `/api/snippets` | Snippets CRUD + resolve ({{snippet:key}} substitution) |
 
@@ -104,7 +105,7 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 
 | File | Validates |
 |------|----------|
-| `bepValidationSchemas.js` | All BEP steps: projectInfo, teamStructure, bimUses, + fullBepSchema (includes linkedEirId). Functions: `getSchemaForStep(i)`, `validateStepData(i, data)` |
+| `bepValidationSchemas.js` | All BEP steps: projectInfo, teamStructure, bimUses, + fullBepSchema. Functions: `getSchemaForStep(i)`, `validateStepData(i, data)` |
 | `authSchemas.js` | loginSchema, registerSchema, forgotPasswordSchema, resetPasswordSchema |
 | `eirValidationSchemas.js` | EIR step schemas; mirrors BEP schema pattern |
 | `oirValidationSchemas.js` | OIR step schemas; mirrors BEP schema pattern |
@@ -118,7 +119,9 @@ Frontend (React 19)  →  Backend (Express)  →  SQLite (better-sqlite3)
 
 ## DB Tables
 
-users, projects, drafts, tidps, containers, midps, documents, steps, fields, field_types, responsibility_matrix (+ related), snippets, loin_rows (ifc_entity), loin_property_requirements, eir_drafts (id, user_id, project_id, title, data, status, created_at, updated_at), oir_drafts (same schema as eir_drafts)
+users, projects, drafts, tidps, containers, midps, documents, steps, fields, field_types, responsibility_matrix (+ related), snippets, loin_rows (ifc_entity), loin_property_requirements, eir_drafts (id, user_id, project_id, title, data, status, share_token, created_at, updated_at), oir_drafts (same schema as eir_drafts minus share_token)
+
+**AP / LAP role separation** — Appointing party (AP) and lead appointed party (LAP) are different accounts. AP authors/publishes EIRs; LAP authors BEPs. Cross-account data exchange happens via the EIR share link (`share_token` on `eir_drafts`) or PDF export. No account can see another's drafts.
 
 ## Startup
 

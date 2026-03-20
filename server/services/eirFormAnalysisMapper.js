@@ -510,8 +510,91 @@ function buildBasicEirSummaryMarkdown(analysis) {
   return lines.join('\n');
 }
 
+/**
+ * Serialize EIR form data into a plain-text representation that the ML /analyze-eir
+ * endpoint can parse — equivalent to the text extracted from a PDF by text_extractor.py.
+ * This enables the ML pipeline to run on an authored EIR in the same way it would on
+ * an uploaded PDF.
+ */
+function eirFormDataToText(formData) {
+  if (!formData || typeof formData !== 'object') return '';
+  const lines = [];
+
+  function addSection(title, value) {
+    if (!value) return;
+    if (typeof value === 'string' && value.trim()) {
+      lines.push(`\n## ${title}\n${value.trim()}`);
+    } else if (Array.isArray(value) && value.length > 0) {
+      lines.push(`\n## ${title}`);
+      for (const item of value) {
+        if (typeof item === 'string') lines.push(`- ${item}`);
+        else if (typeof item === 'object' && item !== null) {
+          const parts = Object.entries(item)
+            .filter(([, v]) => v != null && v !== '')
+            .map(([k, v]) => `${k}: ${v}`);
+          if (parts.length) lines.push(`- ${parts.join(' | ')}`);
+        }
+      }
+    }
+  }
+
+  lines.push(`# Exchange Information Requirements\n`);
+  if (formData.projectName) lines.push(`Project: ${formData.projectName}`);
+  if (formData.projectDescription) lines.push(`Description: ${formData.projectDescription}`);
+  if (formData.appointingParty) lines.push(`Appointing Party: ${formData.appointingParty}`);
+  if (formData.projectType) lines.push(`Project Type: ${formData.projectType}`);
+  if (formData.estimatedValue) lines.push(`Estimated Value: ${formData.estimatedValue}`);
+  if (formData.location) lines.push(`Location: ${formData.location}`);
+
+  addSection('BIM Objectives', formData.bimGoals || formData.bimObjectives || formData.primaryObjectives);
+  addSection('Information Requirements (OIR)', formData.oir);
+  addSection('Information Requirements (AIR)', formData.air);
+  addSection('Information Requirements (PIR)', formData.projectInformationRequirements || formData.pir);
+  addSection('Delivery Milestones', formData.milestones);
+  addSection('Naming Conventions', formData.namingConventions);
+  addSection('File Formats', Array.isArray(formData.fileFormats) ? formData.fileFormats : formData.informationFormats);
+  addSection('Classification Systems', formData.classificationSystems);
+  addSection('LOD/LOI Requirements', formData.lodRequirements || formData.loiRequirements);
+  addSection('CDE Strategy', formData.cdeStrategy);
+  addSection('CDE Platform', formData.cdePlatforms);
+  addSection('Software Requirements', Array.isArray(formData.bimSoftware) ? formData.bimSoftware : formData.softwarePlatforms);
+  addSection('Roles & Responsibilities', formData.roleResponsibilities);
+  addSection('Model Validation', formData.modelValidation);
+  addSection('Quality Assurance', formData.qualityAssurance);
+  addSection('Clash Detection', formData.clashDetection);
+  addSection('COBie Requirements', formData.cobieRequirements);
+  addSection('Handover Requirements', formData.handoverRequirements);
+  addSection('Training Requirements', formData.trainingRequirements);
+  addSection('Security & Access Control', formData.dataClassification || formData.accessPermissions);
+  addSection('Coordination Meetings', formData.coordinationMeetings);
+  addSection('Information Risks', formData.informationRisks);
+  addSection('LOIN Requirements', formData.loinRequirements);
+  addSection('Plain Language Questions', formData.plainLanguageQuestions);
+
+  // Catch-all: any remaining string fields not already serialized
+  const handled = new Set([
+    'projectName','projectDescription','appointingParty','projectType','estimatedValue','location',
+    'bimGoals','bimObjectives','primaryObjectives','oir','air','projectInformationRequirements','pir',
+    'milestones','namingConventions','fileFormats','informationFormats','classificationSystems',
+    'lodRequirements','loiRequirements','cdeStrategy','cdePlatforms','bimSoftware','softwarePlatforms',
+    'roleResponsibilities','modelValidation','qualityAssurance','clashDetection','cobieRequirements',
+    'handoverRequirements','trainingRequirements','dataClassification','accessPermissions',
+    'coordinationMeetings','informationRisks','loinRequirements','plainLanguageQuestions',
+  ]);
+  for (const [key, value] of Object.entries(formData)) {
+    if (handled.has(key)) continue;
+    if (typeof value === 'string' && value.trim()) {
+      const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
+      addSection(label, value);
+    }
+  }
+
+  return lines.join('\n');
+}
+
 module.exports = {
   mapEirFormDataToAnalysis,
   buildBasicEirSummaryMarkdown,
+  eirFormDataToText,
 };
 

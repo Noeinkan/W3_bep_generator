@@ -36,9 +36,15 @@ Windows host, bash shell — Unix syntax only (forward slashes, `&&`, `/dev/null
 
 **Default BEP structure** — `bepConfigForServer.js` is single source of truth. No DB seed needed; changing config is enough.
 
+**AP / LAP role separation** — The appointing party (AP) and lead appointed party (LAP) are **different user accounts**. AP authors the EIR in EIR Manager; LAP authors the BEP in BEP Generator. They share data only via the **EIR share link** flow (see below) or by exchanging PDFs externally. Never assume both roles are the same user or that one account can see the other's drafts.
+
 **EIR module** — `EirStepWrapper`, `EirFillSummaryModal` in `src/components/eir/`. Fill logic: `useEirFill`. Doc history: `useDocumentHistory`. Never put EIR/doc-history logic in `BepFormView.js`.
 
-**EIR authoring flow** — EirManagerPage → EirFormView (author) → `eirFormAnalysisMapper.js` maps form data to EirAnalysis JSON → GET `/api/eir/drafts/:id/analysis` (no ML). Publish: POST `/api/eir/drafts/:id/publish` (one per project). BEP links via `linkedEirId`; analysis feeds EirContext → responsiveness matrix. RHF state via `EirFormContext`.
+**EIR authoring flow (AP side)** — EirManagerPage → EirFormView (author) → `eirFormAnalysisMapper.js` maps form data to EirAnalysis JSON → GET `/api/eir/drafts/:id/analysis` (no ML). Publish: POST `/api/eir/drafts/:id/publish` (one per project). RHF state via `EirFormContext`.
+
+**EIR share link flow** — AP publishes an EIR → clicks "Share" in `EirDraftsView` → `POST /api/eir/drafts/:id/share` generates a `share_token` on the `eir_drafts` row → URL `/eir/shared/:token` is copied to clipboard. LAP opens the link (public, no auth) → `SharedEirPage` renders a read-only EIR view using `GET /api/eir/shared/:token` → LAP clicks "Analyse EIR" → `POST /api/eir/shared/:token/analyze` serialises form data via `eirFormDataToText()` and proxies to ML `/analyze-eir` → result stored in `sessionStorage` key `pendingEirAnalysis` → LAP redirected to BEP generator → `BepFormView` picks up the analysis on init and calls `setEirAnalysis()` → EirContext populated → AI suggestions + Responsiveness Matrix available.
+
+**EIR upload flow (alternative, still works)** — LAP receives EIR as PDF externally → uploads in BEP EIR step via `EirStepWrapper` → ML analysis → same EirContext result. Both paths produce an identical EirAnalysis JSON shape.
 
 **OIR module** — Mirrors EIR structure exactly. OirManagerPage → OirFormView → `oirService` → `oir_drafts` table. Routes: `/api/oir`. Context: `OirFormContext`. No analysis mapper or responsiveness matrix (OIR is Owner Information Requirements, simpler flow).
 

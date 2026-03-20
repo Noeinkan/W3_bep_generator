@@ -386,6 +386,24 @@ if (!eirDraftHasStatus) {
   }
 }
 
+// Migration: add share_token to eir_drafts for cross-account EIR sharing
+// SQLite does not allow ADD COLUMN with UNIQUE — add the column first, then a unique index.
+const eirDraftHasShareToken = eirDraftColumns.some(col => col.name === 'share_token');
+if (!eirDraftHasShareToken) {
+  try {
+    db.exec("ALTER TABLE eir_drafts ADD COLUMN share_token TEXT");
+    console.log("Migration: added share_token column to eir_drafts");
+  } catch (err) {
+    console.error("Could not add share_token to eir_drafts:", err.message);
+  }
+}
+try {
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_eir_drafts_share_token ON eir_drafts(share_token) WHERE share_token IS NOT NULL");
+} catch (err) {
+  // Index may already exist on older SQLite builds that don't support partial indexes — safe to ignore
+  console.warn("Could not create share_token index:", err.message);
+}
+
 // Migration: Add draft_id columns if they don't exist (for existing databases)
 const stepColumns = db.prepare("PRAGMA table_info(bep_step_configs)").all();
 const stepHasDraftId = stepColumns.some(col => col.name === 'draft_id');

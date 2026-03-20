@@ -885,6 +885,18 @@ class ApiService {
     return this._post(`/eir/drafts/${id}/publish`, {}, `Failed to publish EIR draft ${id}`);
   }
 
+  generateEirShareLink(id) {
+    return this._post(`/eir/drafts/${id}/share`, {}, `Failed to generate share link for EIR draft ${id}`);
+  }
+
+  getSharedEir(token) {
+    return this._get(`/eir/shared/${token}`, `Failed to fetch shared EIR`);
+  }
+
+  async analyzeSharedEir(token) {
+    return this._post(`/eir/shared/${token}/analyze`, {}, `Failed to analyse shared EIR`);
+  }
+
   /**
    * Export EIR document (authored form data) to PDF. Returns blob; caller should trigger download.
    * @param {Object} data - EIR form data

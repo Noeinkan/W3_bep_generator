@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileSearch, FileText, Trash2, ArrowLeft, Send } from 'lucide-react';
+import { FileSearch, FileText, Trash2, ArrowLeft, Send, Link2 } from 'lucide-react';
 import { useProject } from '../../../contexts/ProjectContext';
 import apiService from '../../../services/apiService';
 import ConfirmDialog from '../../common/ConfirmDialog';
@@ -58,6 +58,19 @@ const EirDraftsView = () => {
       loadDrafts();
     } catch (err) {
       toast.error(err?.message || 'Failed to publish EIR');
+    }
+  };
+
+  const handleShare = async (draft) => {
+    try {
+      const res = await apiService.generateEirShareLink(draft.id);
+      if (res?.shareToken) {
+        const url = `${window.location.origin}/eir/shared/${res.shareToken}`;
+        await navigator.clipboard.writeText(url);
+        toast.success('Share link copied — send it to the appointed party.');
+      }
+    } catch (err) {
+      toast.error(err?.message || 'Failed to generate share link');
     }
   };
 
@@ -130,6 +143,17 @@ const EirDraftsView = () => {
                       >
                         <Send className="w-4 h-4" />
                         Publish
+                      </button>
+                    )}
+                    {draft.status === 'published' && (
+                      <button
+                        type="button"
+                        onClick={() => handleShare(draft)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                        title="Copy share link to send to the appointed party"
+                      >
+                        <Link2 className="w-4 h-4" />
+                        Share
                       </button>
                     )}
                     <button
