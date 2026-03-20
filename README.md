@@ -1,6 +1,6 @@
-# BIM Execution Plan (BEP) Suite
+# Capsar.io
 
-> **The end-to-end platform for ISO 19650-compliant BIM Execution Plans — guided, AI-assisted, and entirely on your machine.**
+> **The end-to-end IM suite for ISO 19650-compliant BIM Execution Plans — guided, AI-assisted, and entirely on your machine.**
 
 ---
 
@@ -22,9 +22,9 @@ The result: BEPs take days to produce, are inconsistent across projects, and oft
 
 ## The Solution
 
-BEP Suite is a full-stack platform that solves every one of these problems:
+Capsar.io is a full-stack platform that solves every one of these problems:
 
-| Problem | How BEP Suite solves it |
+| Problem | How Capsar.io solves it |
 |---------|------------------------|
 | Blank-page paralysis | Multi-step guided wizard with field-level AI content generation — answer a few questions, get professional prose |
 | EIR extraction | Upload any EIR (PDF or DOCX) → AI extracts structured JSON → fields auto-populated with EIR-aligned suggestions |
@@ -135,15 +135,15 @@ Several Docker build issues affecting the Hetzner deployment have been resolved:
 
 ## Overview
 
-BEP Suite consists of two integrated products:
+Capsar.io consists of two integrated products:
 
 1. **BEP Generator** — Creates ISO 19650-compliant BIM Execution Plans with intelligent form wizards, AI-powered content suggestions, and professional export capabilities.
 
 2. **TIDP/MIDP Manager** — Manages Task Information Delivery Plans (TIDPs) and automatically generates Master Information Delivery Plans (MIDPs) with full project coordination, dependency tracking, and team collaboration features.
 
-### Why BEP Suite?
+### Why Capsar.io?
 
-Most BEP tools are static templates or basic form fillers. BEP Suite is different:
+Most BEP tools are static templates or basic form fillers. Capsar.io is different:
 
 - **EIR-to-BEP AI pipeline** — Upload an Exchange Information Requirements document (PDF/DOCX) and the AI extracts structured JSON, then generates field-specific content suggestions tailored to those requirements. No competitor offers this workflow.
 - **Guided Q&A authoring** — Instead of staring at a blank field, answer a few contextual questions and let the AI compose professional, ISO 19650-aligned prose from your responses.
@@ -289,7 +289,7 @@ The application follows a modern three-tier architecture:
 
 ## AI Features
 
-The BEP Suite integrates a full AI layer powered by **Ollama** running locally. All inference runs on your machine — no data leaves your network. The AI service exposes six distinct capabilities, each tuned for its task:
+Capsar.io integrates a full AI layer powered by **Ollama** running locally. All inference runs on your machine — no data leaves your network. The AI service exposes six distinct capabilities, each tuned for its task:
 
 ### 1. BEP Content Generation (`/suggest`)
 Generates professional, ISO 19650-aligned content for specific BEP fields (e.g., project description, BIM objectives, naming conventions).
@@ -455,7 +455,7 @@ These environment variables let you speed up EIR analysis without reducing accur
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd bep-generator
+   cd moliari
    ```
 
 2. **Install Node.js dependencies**
@@ -515,7 +515,7 @@ The application works without AI features — content generation will simply be 
 ## Project Structure
 
 ```
-bep-generator/
+moliari/
 ├── src/                          # React frontend source
 │   ├── components/               # React components (99+ files)
 │   │   ├── auth/                # Authentication components
@@ -528,14 +528,16 @@ bep-generator/
 │   │   │   ├── tidp-midp/      # TIDP/MIDP dashboard and management
 │   │   │   └── idrm-manager/   # Information Deliverables & Responsibility Matrix
 │   │   ├── layout/              # MainLayout (sidebar, header)
-│   │   └── common/              # Shared UI primitives
-│   ├── config/                  # BEP config barrel + sub-modules
+│   │   └── common/              # Shared UI primitives (AppLogo, SearchableSelect, …)
+│   ├── config/                  # App-wide and BEP config
+│   │   ├── brandConfig.js      # Single source of truth for product name, logo colors, tagline
 │   │   ├── bepConfig.js        # Barrel re-export (all consumers use this)
 │   │   ├── bepSteps.js         # 14-step list + categories
 │   │   ├── bepTypeDefinitions.js # Pre/post-appointment metadata
 │   │   ├── bepOptions.js       # BIM uses, file formats, software arrays
 │   │   └── bepFormFields.js    # All field definitions + getFormFields
-│   ├── contexts/                # AuthContext, ProjectContext, BepFormContext, EirContext
+│   ├── contexts/                # AuthContext, ProjectContext, BepFormContext, EirContext,
+│   │                            #   EirFormContext, OirFormContext, PartyRoleContext, FormBuilderContext
 │   ├── hooks/                   # useAISuggestion, useDraftSave, useDocumentHistory, useEirFill, ...
 │   ├── schemas/                 # Zod validation schemas
 │   ├── services/                # API calls, DOCX/PDF export services
@@ -547,6 +549,7 @@ bep-generator/
 │   ├── routes/                 # API route handlers
 │   ├── services/               # Business logic and export services
 │   │   └── templates/          # bepStyles.css (PDF/HTML export templates)
+│   ├── config/                 # Server-side brand config (brandConfig.js — CJS, no React)
 │   ├── middleware/             # authMiddleware.js (JWT verify)
 │   └── db/                     # SQLite database directory
 ├── ml-service/                  # Python ML service
@@ -561,6 +564,48 @@ bep-generator/
 ├── tailwind.config.js          # TailwindCSS configuration
 └── README.md                   # This file
 ```
+
+---
+
+## Brand Configuration
+
+All product name strings are centralised in two files — edit only these to rename the product:
+
+| File | Usage |
+|------|-------|
+| `src/config/brandConfig.js` | Frontend (ESM). Exports `BRAND` with `appName`, `appNameLong`, `tagline`, `url`, `version`, and `logo` colors. Import as `import BRAND from '../config/brandConfig'`. |
+| `server/config/brandConfig.js` | Backend (CJS, no React). Exports `appName`, `email.*` (subjects, body copy), and `export.creator`. Require as `const brandConfig = require('../config/brandConfig')`. |
+
+The logo component (`src/components/common/AppLogo.js`) reads its colors from `BRAND.logo.light` / `BRAND.logo.dark` — no hardcoded hex values in component code.
+
+---
+
+## Developer Notes
+
+### Sample Project Invariant
+
+Every user always has exactly one **Sample Project**. This is a hard invariant enforced at multiple levels:
+
+- **Self-heal on load** — `GET /api/projects` calls `seedSampleProject()` if none exists for the user.
+- **Blocked on delete** — `DELETE /api/projects/:id` returns `403` if the target is the sample project.
+- **Recreated in context** — `ProjectContext.loadProjects()` recreates the sample project if missing.
+
+Do not add deletion paths, seed-gate logic, or any code that breaks this invariant.
+
+### React Contexts
+
+| Context | Purpose |
+|---------|---------|
+| `AuthContext` | Current user, login/logout, JWT |
+| `ProjectContext` | Project list, active project, sample project seeding |
+| `BepFormContext` | BEP draft state and step navigation |
+| `EirContext` | Loaded EIR analysis JSON (feeds the Responsiveness Matrix) |
+| `EirFormContext` | RHF state for the EIR authoring wizard |
+| `OirFormContext` | RHF state for the OIR authoring wizard |
+| `PartyRoleContext` | Appointing party / lead appointed party role selection |
+| `FormBuilderContext` | Editor state for the form builder — only valid inside `<FormBuilderProvider>` |
+
+> **Note:** `useFormBuilder()` only works inside `<FormBuilderProvider>`. Components that need editor state must be children of that provider, not ancestors.
 
 ---
 
@@ -635,7 +680,7 @@ This single command handles the full pipeline: Docker image build, push, and ser
 **Useful commands:**
 ```bash
 # Quick rebuild after code changes
-cd /opt/bep-generator && git pull && docker compose up -d --build
+cd /opt/moliari && git pull && docker compose up -d --build
 
 # Rebuild single service
 docker compose up -d --build backend
@@ -658,9 +703,23 @@ docker compose exec backend wget -qO- http://ml-service:8000/health
 ```
 
 **Environment variables (`.env.production`, gitignored):**
-- `NODE_ENV=production`
-- `APP_BASE_URL=https://your-domain`
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` — email delivery
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NODE_ENV` | Yes | Set to `production` |
+| `DOMAIN` | Yes | Public domain (e.g. `your-domain.com`) |
+| `ALLOWED_ORIGINS` | Yes | CORS allowed origin (e.g. `https://your-domain.com`) |
+| `JWT_SECRET` | Yes | Long random string for signing JWTs — generate with `openssl rand -hex 32` |
+| `SMTP_HOST` | Yes | SMTP relay host |
+| `SMTP_PORT` | Yes | SMTP port (typically `587`) |
+| `SMTP_USER` | Yes | SMTP username |
+| `SMTP_PASS` | Yes | SMTP password |
+| `EMAIL_FROM` | Yes | Sender address for verification and reset emails |
+| `ML_SERVICE_URL` | No | ML service address (default: `http://ml-service:8000`) |
+| `OLLAMA_BASE_URL` | No | Ollama address (default: `http://ollama:11434`) |
+| `OLLAMA_MODEL` | No | Ollama model to use (default: `qwen3`) |
+| `OLLAMA_TIMEOUT` | No | Request timeout in seconds (default: `60`) |
+| `VITE_API_URL` | No | API base path (default: `/api`) |
 
 ### Email Diagnostics (Dev)
 

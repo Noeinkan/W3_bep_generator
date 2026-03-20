@@ -21,6 +21,7 @@ const loinRoutes = require('./routes/loin');
 const eirRoutes = require('./routes/eir');
 const oirRoutes = require('./routes/oir');
 const bimRoutes = require('./routes/bim');
+const capabilityAssessmentRoutes = require('./routes/capabilityAssessment');
 
 // Import services
 const puppeteerPdfService = require('./services/puppeteerPdfService');
@@ -101,6 +102,7 @@ app.use('/api/loin', loinRoutes);
 app.use('/api/eir', eirRoutes);
 app.use('/api/oir', oirRoutes);
 app.use('/api/bim', bimRoutes);
+app.use('/api/capability-assessments', capabilityAssessmentRoutes);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {

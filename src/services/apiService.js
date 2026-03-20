@@ -221,6 +221,38 @@ class ApiService {
   }
 
   // ======================
+  // Capability Assessment Services
+  // ======================
+
+  getCapabilityAssessments(projectId) {
+    return this._get(`/capability-assessments?projectId=${encodeURIComponent(projectId)}`, 'Failed to fetch capability assessments');
+  }
+
+  getCapabilityAssessment(id) {
+    return this._get(`/capability-assessments/${id}`, `Failed to fetch capability assessment ${id}`);
+  }
+
+  createCapabilityAssessment(data) {
+    return this._post('/capability-assessments', data, 'Failed to create capability assessment');
+  }
+
+  updateCapabilityAssessment(id, data) {
+    return this._put(`/capability-assessments/${id}`, data, `Failed to update capability assessment ${id}`);
+  }
+
+  deleteCapabilityAssessment(id) {
+    return this._delete(`/capability-assessments/${id}`, `Failed to delete capability assessment ${id}`);
+  }
+
+  generateCapabilityFromTidps(projectId) {
+    return this._post(`/capability-assessments/from-tidps/${encodeURIComponent(projectId)}`, {}, 'Failed to generate assessments from TIDPs');
+  }
+
+  getCapabilityAssessmentSummary(projectId) {
+    return this._get(`/capability-assessments/summary/${encodeURIComponent(projectId)}`, 'Failed to fetch capability assessment summary');
+  }
+
+  // ======================
   // TIDP Services
   // ======================
 

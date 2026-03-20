@@ -3,11 +3,11 @@
  * To rename the product, edit ONLY this file (frontend) and server/config/brandConfig.js (backend).
  */
 export const BRAND = {
-  appName: 'Moliari',
-  appNameLong: 'Moliari — The IM Suite for ISO 19650',
+  appName: 'Capsar.io',
+  appNameLong: 'Capsar.io — The IM Suite for ISO 19650',
   tagline: 'AI-powered BIM Execution Plans',
-  keywords: 'Moliari, BIM Execution Plan, ISO 19650, EIR, OIR, TIDP, MIDP, RACI Matrix, BIM workflow, construction technology, information management',
-  url: 'https://moliari.io/',
+  keywords: 'Capsar.io, BIM Execution Plan, ISO 19650, EIR, OIR, TIDP, MIDP, RACI Matrix, BIM workflow, construction technology, information management',
+  url: 'https://capsar.io/',
   year: '2024',
   version: 'v2.0.0',
   logo: {

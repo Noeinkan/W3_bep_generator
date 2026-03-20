@@ -344,6 +344,34 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_oir_drafts_user_id ON oir_drafts(user_id);
   CREATE INDEX IF NOT EXISTS idx_oir_drafts_project_id ON oir_drafts(project_id);
   CREATE INDEX IF NOT EXISTS idx_oir_drafts_updated_at ON oir_drafts(updated_at);
+
+  -- Capability assessments: supply chain capability per task team (ISO 19650-2 Clause 5.3)
+  CREATE TABLE IF NOT EXISTS capability_assessments (
+    id                   TEXT PRIMARY KEY,
+    project_id           TEXT NOT NULL,
+    tidp_id              TEXT,
+    team_name            TEXT NOT NULL,
+    team_role            TEXT,
+    organisation         TEXT,
+    fte_available        REAL,
+    fte_required         REAL,
+    key_personnel        TEXT,
+    software_platforms   TEXT,
+    iso19650_training    TEXT DEFAULT 'none',
+    other_certifications TEXT,
+    training_plan        TEXT,
+    similar_projects     TEXT,
+    capability_gaps      TEXT,
+    mitigation_actions   TEXT,
+    eir_requirements_met TEXT,
+    compliance_status    TEXT DEFAULT 'draft',
+    created_at           TEXT NOT NULL,
+    updated_at           TEXT NOT NULL,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY (tidp_id)    REFERENCES tidps(id)    ON DELETE SET NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_capability_assessments_project_id
+    ON capability_assessments(project_id);
 `);
 
 // Migration: add status to eir_drafts (draft | published) for "Publish EIR" flow

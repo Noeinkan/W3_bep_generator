@@ -30,6 +30,7 @@ import OirManagerPage from './components/pages/oir-manager/OirManagerPage';
 import OirFormView from './components/pages/oir-manager/OirFormView';
 import OirDraftsView from './components/pages/oir-manager/OirDraftsView';
 import LoinTablesPage from './components/pages/loin-tables/LoinTablesPage';
+import CapabilityAssessmentPage from './components/pages/capability-assessment/CapabilityAssessmentPage';
 import RoleChoicePage from './components/pages/RoleChoicePage';
 
 // Auth components
@@ -143,6 +144,9 @@ function App() {
 
             {/* LOIN Tables */}
             <Route path="/loin-tables" element={<ProtectedRoute><LoinTablesPage /></ProtectedRoute>} />
+
+            {/* Capability Assessment */}
+            <Route path="/capability-assessment" element={<ProtectedRoute><CapabilityAssessmentPage /></ProtectedRoute>} />
 
             {/* User Profile & Settings */}
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />

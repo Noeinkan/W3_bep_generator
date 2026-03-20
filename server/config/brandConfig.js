@@ -4,14 +4,14 @@
  * To rename the product, edit ONLY this file and src/config/brandConfig.js (frontend).
  */
 module.exports = {
-  appName: 'Moliari',
-  appNameLong: 'Moliari — The IM Suite for ISO 19650',
+  appName: 'Capsar.io',
+  appNameLong: 'Capsar.io — The IM Suite for ISO 19650',
   email: {
-    verificationSubject: 'Verify your Moliari email address',
-    verificationBody: 'Click the button below to verify your email address for Moliari.',
-    resetSubject: 'Moliari password reset',
+    verificationSubject: 'Verify your Capsar.io email address',
+    verificationBody: 'Click the button below to verify your email address for Capsar.io.',
+    resetSubject: 'Capsar.io password reset',
   },
   export: {
-    creator: 'Moliari',
+    creator: 'Capsar.io',
   },
 };

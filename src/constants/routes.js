@@ -6,6 +6,7 @@ export const ROUTES = {
   BEP_GENERATOR: '/bep-generator',
   BEP_DRAFTS: '/bep-generator/drafts',
   TIDP_MIDP: '/tidp-midp',
+  CAPABILITY_ASSESSMENT: '/capability-assessment',
 };
 
 /**

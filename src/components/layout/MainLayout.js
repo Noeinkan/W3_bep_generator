@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, useLocation, Navigate } from 'react-router-dom';
-import { FileText, BarChart3, Grid3x3, FileSearch, Layers, Building2, FolderInput, Package, FileUp } from 'lucide-react';
+import { FileText, BarChart3, Grid3x3, FileSearch, Layers, Building2, FolderInput, Package, FileUp, ClipboardList } from 'lucide-react';
 import Sidebar from './Sidebar';
 import UserDropdown from './UserDropdown';
 import { useProject } from '../../contexts/ProjectContext';
@@ -17,6 +17,7 @@ const WORK_ROUTE_PREFIXES = [
   '/responsibility-matrix',
   '/ifc-import',
   '/loin-tables',
+  '/capability-assessment',
   '/idrm-manager',
   '/tidp-editor'
 ];
@@ -28,6 +29,7 @@ const LAP_ONLY_PREFIXES = [
   '/responsibility-matrix',
   '/ifc-import',
   '/loin-tables',
+  '/capability-assessment',
   '/idrm-manager',
   '/tidp-editor'
 ];
@@ -73,12 +75,13 @@ const MainLayout = () => {
           { name: 'AIR (coming soon)', href: '#', icon: Package, disabled: true }
         ]
       : [
-          { name: 'Moliari', href: '/bep-generator', icon: FileText },
+          { name: 'BEP Manager', href: '/bep-generator', icon: FileText },
           { name: 'TIDP/MIDP Manager', href: '/tidp-midp', icon: BarChart3 },
           { name: 'Responsibility Matrix', href: '/responsibility-matrix', icon: Grid3x3 },
           { name: 'IFC Import', href: '/ifc-import', icon: FileUp },
           { name: 'EIR Manager', href: '/eir-manager', icon: FileSearch },
-          { name: 'LOIN Tables', href: '/loin-tables', icon: Layers }
+          { name: 'LOIN Tables', href: '/loin-tables', icon: Layers },
+          { name: 'Capability Assessment', href: '/capability-assessment', icon: ClipboardList }
         ];
 
   return (

@@ -9,7 +9,7 @@ const apTools = [
 ];
 
 const lapTools = [
-  { icon: FileText, label: 'Moliari BEP', desc: 'AI-powered BIM Execution Plans, 14-step wizard', color: 'text-blue-600' },
+  { icon: FileText, label: 'BEP Manager', desc: 'AI-powered BIM Execution Plans, 14-step wizard', color: 'text-blue-600' },
   { icon: BarChart3, label: 'TIDP / MIDP Manager', desc: 'Coordinate delivery across all task teams', color: 'text-green-600' },
   { icon: Table2, label: 'Responsibility Matrix', desc: 'ISO 19650 Annex A RACI with TIDP auto-sync', color: 'text-purple-600' },
   { icon: Layers, label: 'LOIN Tables', desc: 'Level of Information Need per deliverable', color: 'text-indigo-600' },

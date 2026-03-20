@@ -274,7 +274,7 @@ const BepFormViewContent = () => {
         isTransitioning={isTransitioning}
         sidebar={
           <DocumentEditorSidebar
-            title="Moliari"
+            title="BEP Manager"
             subtitle={CONFIG.bepTypeDefinitions[bepType]?.title}
             documentName={currentDraft?.name}
             steps={steps}

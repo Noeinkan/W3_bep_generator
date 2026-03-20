@@ -58,7 +58,7 @@ const apFeatures = [
 const lapFeatures = [
   {
     icon: FileText,
-    title: 'Moliari',
+    title: 'BEP Manager',
     desc: 'AI-powered BIM Execution Plans, 14-step wizard',
     color: 'text-blue-600',
   },
